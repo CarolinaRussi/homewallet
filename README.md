@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 3 — app shell**. Nav Me | Space | Overview, i18n PT/EN, theme switcher. Entries are Part 4.
+> Status: **Part 4 — entries**. Me ledger + categories + personal/shared. Leftover/reserve is Part 5.
 
 ## Quick start
 
@@ -33,8 +33,8 @@ Pick one. The API only cares about `DATABASE_URL` in `apps/api/.env`.
 3. Put it in `apps/api/.env`:
 
 ```env
-DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
-JWT_SECRET=change-me-in-dev
+DATABASE_URL=
+JWT_SECRET=
 WEB_ORIGIN=http://localhost:5173
 ```
 
@@ -48,7 +48,7 @@ docker compose up -d
 ```
 
 ```env
-DATABASE_URL=postgres://homewallet:homewallet@localhost:5432/homewallet
+DATABASE_URL=
 ```
 
 Same `check:db` command; expect `OK connected (local)`.
