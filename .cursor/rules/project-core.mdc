@@ -1,0 +1,12 @@
+---
+description: Core HomeWallet project context and delivery workflow
+alwaysApply: true
+---
+
+# HomeWallet core
+
+- Working title: **HomeWallet** (slug `homewallet`). Do not revive old temp names.
+- Read `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/UX.md`, `docs/ROADMAP.md` before large changes.
+- Part 0 = docs/rules only (done). Deliver **one roadmap part** at a time; stop for user review/commit unless asked to continue.
+- Product is a public beta (solo or multi-person **spaces**), free, portfolio-ready.
+- Never store or import passwords/credentials from user spreadsheets.

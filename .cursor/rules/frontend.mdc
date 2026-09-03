@@ -1,0 +1,15 @@
+---
+description: React feature structure, TanStack Query, and styling tokens
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# Frontend (`apps/web`)
+
+- Structure: `features/*` + `shared/ui` + `shared/lib`.
+- Server state: **TanStack Query**. UI-only state stays light (theme, month, nav).
+- Styling: Tailwind + CSS variables for light/dark tokens.
+- Font: **DM Sans**; money uses `tabular-nums`. No mono UI font.
+- Pillars: Me | Space | Overview. Desktop uses side nav.
+- My month: calm cards + list by default; optional table mode.
+- Do not copy reference dashboards layout-for-layout; sage palette is the color reference only.

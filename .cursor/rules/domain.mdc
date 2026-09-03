@@ -1,0 +1,16 @@
+---
+description: Domain rules for spaces, entries, transfers, and privacy
+alwaysApply: true
+---
+
+# Domain invariants
+
+- Members edit **only their own** entries.
+- Shared flag = aggregation/visibility, **not** settlement.
+- Transfers between members are a distinct type and **do not** count as space spend.
+- Personal leftover **carries** by default; reserve grows only via explicit contributions.
+- Space privacy default = personal private + shared/aggregates; transparent mode is opt-in.
+- Multi-owner: last owner leaving with members left → auto-transfer ownership; empty space → delete.
+- One currency per space.
+- Installments ≠ recurring bills — model separately.
+- Optional features (limits, 50/40/10, close month) must be toggleable without breaking core ledgers.

@@ -1,0 +1,14 @@
+---
+description: UX and visual constraints for HomeWallet UI and landing
+globs: apps/web/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# UX / visual
+
+- App personality: calm and clear. Landing may add light SaaS motion — no neon/purple glow.
+- Themes: light + dark via tokens; default light.
+- Landing first viewport: brand, one headline, one short line, one CTA, one dominant device visual on atmospheric background.
+- No hero card grids, floating promo badges, or inset collage heroes.
+- Cards are for interactive app surfaces, not marketing hero decoration.
+- Always label personal vs shared; make privacy mode obvious.

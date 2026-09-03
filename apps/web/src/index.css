@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+  HomeWallet design tokens — sage / mint finance palette.
+  Documented in docs/UX.md. Default theme: light.
+*/
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: var(--hw-bg);
+  --color-surface: var(--hw-surface);
+  --color-fg: var(--hw-fg);
+  --color-muted: var(--hw-muted);
+  --color-border: var(--hw-border);
+  --color-accent: var(--hw-accent);
+  --color-accent-fg: var(--hw-accent-fg);
+  --color-income: var(--hw-income);
+  --color-income-fg: var(--hw-income-fg);
+  --color-expense: var(--hw-expense);
+  --color-expense-fg: var(--hw-expense-fg);
+}
+
+:root {
+  color-scheme: light;
+
+  --hw-bg: #f4f7f5;
+  --hw-surface: #ffffff;
+  --hw-fg: #1c2420;
+  --hw-muted: #5c6b63;
+  --hw-border: #d5e0d9;
+  --hw-accent: #5f8f76;
+  --hw-accent-fg: #ffffff;
+  --hw-income: #d8efe4;
+  --hw-income-fg: #1f6b4a;
+  --hw-expense: #f5e0e0;
+  --hw-expense-fg: #8b3a3a;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --hw-bg: #121816;
+  --hw-surface: #1a221e;
+  --hw-fg: #e8efea;
+  --hw-muted: #9aaba2;
+  --hw-border: #2c3a33;
+  --hw-accent: #7fad93;
+  --hw-accent-fg: #0f1612;
+  --hw-income: #1e3d30;
+  --hw-income-fg: #a8e0c4;
+  --hw-expense: #3d2424;
+  --hw-expense-fg: #f0b4b4;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--hw-bg);
+    color: var(--hw-fg);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

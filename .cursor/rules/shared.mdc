@@ -1,0 +1,12 @@
+---
+description: Conventions for packages/shared in the monorepo
+globs: packages/shared/**/*
+alwaysApply: false
+---
+
+# `packages/shared`
+
+- Put cross-app **types**, constants, and validation schemas here.
+- Do not import React, Fastify, TypeORM, or DOM APIs into shared.
+- Prefer framework-agnostic Zod (or similar) schemas both apps can reuse.
+- Keep the package small; promote code here only when both apps need it.

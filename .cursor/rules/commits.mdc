@@ -1,0 +1,21 @@
+---
+description: Conventional commit message standards for HomeWallet
+alwaysApply: true
+---
+
+# Commits
+
+- English Conventional Commits.
+- Types: `feat`, `fix`, `docs`, `chore`, `refactor`.
+- Default scopes: `frontend` or `backend`.
+- Other scopes only when it does not fit those two (`repo`, `ci`, or omit scope for pure `docs:`).
+
+```text
+feat(frontend): add month summary cards
+feat(backend): create space invite endpoint
+docs: update product privacy section
+chore(ci): add typecheck job
+```
+
+- Prefer one logical change per commit when the user asks to commit.
+- Do not commit unless the user explicitly asks.

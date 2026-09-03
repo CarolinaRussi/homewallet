@@ -1,0 +1,42 @@
+{
+  "name": "homewallet",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.19.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @homewallet/web --filter @homewallet/api dev",
+    "dev:web": "pnpm --filter @homewallet/web dev",
+    "dev:api": "pnpm --filter @homewallet/api dev",
+    "build": "pnpm -r --filter @homewallet/shared --filter @homewallet/api --filter @homewallet/web build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --filter @homewallet/shared --filter @homewallet/api --filter @homewallet/web typecheck",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.33.0",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.40.0"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write",
+    "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --fix"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

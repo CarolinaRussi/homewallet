@@ -1,0 +1,22 @@
+---
+description: Fastify API layering and TypeORM Active Record conventions
+globs: apps/api/**/*
+alwaysApply: false
+---
+
+# Backend (`apps/api`)
+
+- Layers: `routes → controllers → services → repositories → db`.
+- No `modules/` folders until a second product surface needs them.
+- Business rules live in **services**, not routes/controllers.
+- Persistence: **TypeORM Active Record** entities; repositories orchestrate queries/saves.
+- Validate at the HTTP boundary (e.g. Zod).
+- Name files by domain: `entry.service.ts`, `space.controller.ts`.
+- Schema changes go through migrations.
+
+```ts
+// ✅ service calls repository / entity APIs
+await this.entryRepository.createForMember(...)
+
+// ❌ fat route with SQL / business branching
+```
