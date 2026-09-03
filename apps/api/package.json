@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "tsx src/lib/password.check.ts",
-    "check:db": "tsx src/lib/db-connect.check.ts"
+    "check:db": "tsx src/lib/db-connect.check.ts",
+    "check:leftover": "tsx src/lib/leftover.check.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

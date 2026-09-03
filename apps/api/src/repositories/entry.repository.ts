@@ -1,5 +1,5 @@
 import type { EntityManager } from "typeorm";
-import { Between } from "typeorm";
+import { Between, LessThanOrEqual } from "typeorm";
 import { Entry } from "../db/entities/entry.entity.js";
 
 export const entryRepository = {
@@ -18,6 +18,22 @@ export const entryRepository = {
       },
       relations: { category: true },
       order: { occurredOn: "DESC", createdAt: "DESC" },
+    });
+  },
+
+  listMineThrough(
+    spaceId: string,
+    userId: string,
+    throughDate: string,
+    manager: EntityManager
+  ) {
+    return manager.find(Entry, {
+      where: {
+        spaceId,
+        userId,
+        occurredOn: LessThanOrEqual(throughDate),
+      },
+      order: { occurredOn: "ASC", createdAt: "ASC" },
     });
   },
 
