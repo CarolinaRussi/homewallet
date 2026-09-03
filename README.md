@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 2 — identity & spaces**. Auth + create/join space. App shell is Part 3.
+> Status: **Part 3 — app shell**. Nav Me | Space | Overview, i18n PT/EN, theme switcher. Entries are Part 4.
 
 ## Quick start
 
