@@ -27,6 +27,7 @@ import {
   updateEntry,
 } from "../entries/entry-api";
 import { Spinner } from "../../shared/ui/Spinner";
+import { LeftoverReserveSection } from "./LeftoverReserveSection";
 
 function readEntryBody(
   form: HTMLFormElement,
@@ -144,6 +145,9 @@ export function MePage() {
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
     },
     onError: (error: Error) => {
       setSuccessMessage("");
@@ -157,6 +161,9 @@ export function MePage() {
     onSuccess: async () => {
       showSuccess(t("me.deleted"));
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
     },
     onError: (error: Error) => setErrorMessage(error.message),
     onSettled: () => setDeletingEntryId(null),
@@ -186,15 +193,6 @@ export function MePage() {
       form.reset();
     }
   }
-
-  const incomeTotal =
-    entriesQuery.data
-      ?.filter((entry) => entry.type === "income")
-      .reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
-  const expenseTotal =
-    entriesQuery.data
-      ?.filter((entry) => entry.type === "expense")
-      .reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
 
   if (!spaceId || !activeSpace) {
     return (
@@ -247,20 +245,17 @@ export function MePage() {
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg bg-income px-4 py-3 text-income-fg">
-          <p className="text-sm">{t("me.income")}</p>
-          <p className="tabular-nums text-xl font-semibold">
-            {formatMoney(incomeTotal, activeSpace.currency, locale)}
-          </p>
-        </div>
-        <div className="rounded-lg bg-expense px-4 py-3 text-expense-fg">
-          <p className="text-sm">{t("me.expense")}</p>
-          <p className="tabular-nums text-xl font-semibold">
-            {formatMoney(expenseTotal, activeSpace.currency, locale)}
-          </p>
-        </div>
-      </section>
+      <LeftoverReserveSection
+        spaceId={spaceId}
+        month={month}
+        currency={activeSpace.currency}
+        entryDateMode={activeSpace.entryDateMode}
+        onError={(message) => {
+          setSuccessMessage("");
+          setErrorMessage(message);
+        }}
+        onSuccess={showSuccess}
+      />
 
       {successMessage || errorMessage ? (
         <p
