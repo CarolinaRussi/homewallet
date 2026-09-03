@@ -1,17 +1,32 @@
-import { APP_NAME } from "@homewallet/shared";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { AuthPage } from "./features/auth/AuthPage";
+import { fetchSession } from "./features/auth/auth-api";
+import { SpacesPage } from "./features/spaces/SpacesPage";
+import { RequireSession } from "./shared/ui/RequireSession";
 
 export function App() {
+  const sessionQuery = useQuery({
+    queryKey: ["session"],
+    queryFn: fetchSession,
+    retry: false,
+  });
+
   return (
-    <main className="flex min-h-screen flex-col items-start justify-center gap-3 px-8">
-      <p className="text-sm font-medium tracking-wide text-muted uppercase">
-        Scaffold
-      </p>
-      <h1 className="text-4xl font-semibold text-fg">{APP_NAME}</h1>
-      <p className="max-w-md text-muted">
-        Calm personal &amp; shared finance. Part 1 — apps boot; product UI comes
-        later.
-      </p>
-      <p className="tabular-nums text-accent">R$ 0,00</p>
-    </main>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          sessionQuery.isSuccess ? (
+            <Navigate to="/spaces" replace />
+          ) : (
+            <AuthPage />
+          )
+        }
+      />
+      <Route element={<RequireSession />}>
+        <Route path="/spaces" element={<SpacesPage />} />
+      </Route>
+    </Routes>
   );
 }
