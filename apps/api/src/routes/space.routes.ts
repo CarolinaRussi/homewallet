@@ -1,0 +1,16 @@
+import type { FastifyInstance } from "fastify";
+import type { SpaceController } from "../controllers/space.controller.js";
+import { requireUser } from "../plugins/auth.js";
+
+export async function registerSpaceRoutes(
+  app: FastifyInstance,
+  controller: SpaceController
+) {
+  app.addHook("preHandler", requireUser);
+  app.get("/", (request) => controller.list(request));
+  app.post("/", (request) => controller.create(request));
+  app.post("/join", (request) => controller.join(request));
+  app.get<{ Params: { id: string } }>("/:id", (request) =>
+    controller.get(request)
+  );
+}
