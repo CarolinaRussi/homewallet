@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 4 — entries**. Me ledger + categories + personal/shared. Leftover/reserve is Part 5.
+> Status: **Part 5 — leftover & reserve**. Personal sobra with carry + Poupancinha. Recurring/installments are Part 6.
 
 ## Quick start
 
