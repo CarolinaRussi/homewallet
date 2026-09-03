@@ -3,3 +3,6 @@ export const APP_NAME = "HomeWallet" as const;
 
 /** Repo / folder slug. */
 export const APP_SLUG = "homewallet" as const;
+
+export * from "./auth.js";
+export * from "./space.js";
