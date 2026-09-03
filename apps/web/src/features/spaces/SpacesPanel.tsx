@@ -1,13 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { APP_NAME } from "@homewallet/shared";
-import { logoutAccount } from "../auth/auth-api";
+import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { createSpace, fetchSpaces, joinSpace } from "./space-api";
 
-export function SpacesPage() {
-  const navigate = useNavigate();
+export function SpacesPanel() {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState("");
   const spacesQuery = useQuery({ queryKey: ["spaces"], queryFn: fetchSpaces });
@@ -41,26 +39,11 @@ export function SpacesPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-8 px-6 py-10">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium tracking-wide text-muted uppercase">
-            {APP_NAME}
-          </p>
-          <h1 className="text-3xl font-semibold text-fg">Your spaces</h1>
-        </div>
-        <button
-          type="button"
-          className="text-sm text-muted underline"
-          onClick={async () => {
-            await logoutAccount();
-            await queryClient.clear();
-            navigate("/");
-          }}
-        >
-          Sign out
-        </button>
-      </header>
+    <div className="flex max-w-lg flex-col gap-8">
+      <div>
+        <h2 className="text-xl font-semibold text-fg">{t("spaces.title")}</h2>
+        <p className="mt-2 text-sm text-muted">{t("spaces.hint")}</p>
+      </div>
 
       {errorMessage ? (
         <p className="text-sm text-expense-fg">{errorMessage}</p>
@@ -72,12 +55,16 @@ export function SpacesPage() {
             key={space.id}
             className="rounded-lg border border-border bg-surface p-4"
           >
-            <h2 className="font-medium text-fg">{space.name}</h2>
+            <h3 className="font-medium text-fg">{space.name}</h3>
             <p className="text-sm text-muted">
-              {space.role} · {space.currency} · {space.privacyMode}
+              {space.role === "owner" ? t("spaces.owner") : t("spaces.member")}{" "}
+              · {space.currency} ·{" "}
+              {space.privacyMode === "private"
+                ? t("spaces.private")
+                : t("spaces.transparent")}
             </p>
             <p className="mt-2 text-sm text-muted">
-              Join code:{" "}
+              {t("spaces.joinCode")}:{" "}
               <span className="font-medium text-fg">{space.joinCode}</span>
             </p>
           </article>
@@ -85,37 +72,37 @@ export function SpacesPage() {
       </section>
 
       <form className="flex flex-col gap-2" onSubmit={onCreate}>
-        <h2 className="font-medium text-fg">Create space</h2>
+        <h3 className="font-medium text-fg">{t("spaces.create")}</h3>
         <input
           name="name"
           required
-          placeholder="Space name"
+          placeholder={t("spaces.createName")}
           className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
         />
         <button
           type="submit"
           className="rounded-md bg-accent px-3 py-2 font-medium text-accent-fg"
         >
-          Create
+          {t("spaces.createSubmit")}
         </button>
       </form>
 
       <form className="flex flex-col gap-2" onSubmit={onJoin}>
-        <h2 className="font-medium text-fg">Join with code</h2>
+        <h3 className="font-medium text-fg">{t("spaces.join")}</h3>
         <input
           name="joinCode"
           required
           minLength={8}
-          placeholder="Join code"
+          placeholder={t("spaces.joinPlaceholder")}
           className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
         />
         <button
           type="submit"
           className="rounded-md border border-border px-3 py-2 font-medium text-fg"
         >
-          Join
+          {t("spaces.joinSubmit")}
         </button>
       </form>
-    </main>
+    </div>
   );
 }

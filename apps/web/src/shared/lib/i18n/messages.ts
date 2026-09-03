@@ -1,0 +1,96 @@
+export type Locale = "pt-BR" | "en";
+
+export const LOCALES: Locale[] = ["pt-BR", "en"];
+
+export const messages = {
+  "pt-BR": {
+    "app.loading": "Carregando…",
+    "nav.overview": "Visão geral",
+    "nav.me": "Eu",
+    "nav.space": "Espaço",
+    "nav.settings": "Configurações",
+    "nav.signOut": "Sair",
+    "theme.light": "Claro",
+    "theme.dark": "Escuro",
+    "theme.toggle": "Tema",
+    "locale.label": "Idioma",
+    "auth.signIn": "Entrar",
+    "auth.createAccount": "Criar conta",
+    "auth.name": "Nome",
+    "auth.email": "E-mail",
+    "auth.password": "Senha",
+    "auth.needAccount": "Não tem conta? Criar conta",
+    "auth.haveAccount": "Já tem conta? Entrar",
+    "me.title": "Meu mês",
+    "me.placeholder":
+      "Seus lançamentos pessoais entram na Parte 4 — receitas, despesas, categorias e o que é compartilhado.",
+    "space.title": "Espaço",
+    "space.placeholder":
+      "A visão compartilhada do espaço vem nas próximas partes. Gerencie espaços em Configurações.",
+    "overview.title": "Visão geral",
+    "overview.placeholder":
+      "Resumo e gráficos do espaço entram depois dos lançamentos.",
+    "settings.title": "Configurações",
+    "spaces.title": "Seus espaços",
+    "spaces.hint":
+      "Ao criar a conta, já abrimos um espaço pra você. Compartilhe o código pra convidar alguém.",
+    "spaces.role": "papel",
+    "spaces.joinCode": "Código de convite",
+    "spaces.create": "Criar espaço",
+    "spaces.createName": "Nome do espaço",
+    "spaces.createSubmit": "Criar",
+    "spaces.join": "Entrar com código",
+    "spaces.joinPlaceholder": "Código de convite",
+    "spaces.joinSubmit": "Entrar",
+    "spaces.owner": "dono",
+    "spaces.member": "membro",
+    "spaces.private": "privado",
+    "spaces.transparent": "transparente",
+  },
+  en: {
+    "app.loading": "Loading…",
+    "nav.overview": "Overview",
+    "nav.me": "Me",
+    "nav.space": "Space",
+    "nav.settings": "Settings",
+    "nav.signOut": "Sign out",
+    "theme.light": "Light",
+    "theme.dark": "Dark",
+    "theme.toggle": "Theme",
+    "locale.label": "Language",
+    "auth.signIn": "Sign in",
+    "auth.createAccount": "Create account",
+    "auth.name": "Name",
+    "auth.email": "Email",
+    "auth.password": "Password",
+    "auth.needAccount": "Need an account? Register",
+    "auth.haveAccount": "Already have an account? Sign in",
+    "me.title": "My month",
+    "me.placeholder":
+      "Your personal ledger arrives in Part 4 — entries, categories, and sharing.",
+    "space.title": "Space",
+    "space.placeholder":
+      "The shared space view comes in later parts. Manage spaces in Settings.",
+    "overview.title": "Overview",
+    "overview.placeholder":
+      "Joined summary and charts come after entries land.",
+    "settings.title": "Settings",
+    "spaces.title": "Your spaces",
+    "spaces.hint":
+      "We create a space when you register. Share the join code to invite someone.",
+    "spaces.role": "role",
+    "spaces.joinCode": "Join code",
+    "spaces.create": "Create space",
+    "spaces.createName": "Space name",
+    "spaces.createSubmit": "Create",
+    "spaces.join": "Join with code",
+    "spaces.joinPlaceholder": "Join code",
+    "spaces.joinSubmit": "Join",
+    "spaces.owner": "owner",
+    "spaces.member": "member",
+    "spaces.private": "private",
+    "spaces.transparent": "transparent",
+  },
+} as const;
+
+export type MessageKey = keyof (typeof messages)["en"];

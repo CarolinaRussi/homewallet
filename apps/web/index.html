@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HomeWallet</title>
+    <script>
+      (() => {
+        const theme = localStorage.getItem("hw_theme");
+        if (theme === "dark") document.documentElement.classList.add("dark");
+        const locale = localStorage.getItem("hw_locale");
+        document.documentElement.lang =
+          locale === "en" || locale === "pt-BR" ? locale : "pt-BR";
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
