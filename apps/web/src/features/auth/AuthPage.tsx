@@ -96,7 +96,7 @@ export function AuthPage() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-muted">
-          {t("auth.password")}
+          {t("auth.passLabel")}
           <input
             name="password"
             type="password"
