@@ -3,19 +3,18 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 1 — scaffold**. Monorepo boots locally; product features start in Part 2.
+> Status: **Part 2 — identity & spaces**. Auth + create/join space. App shell is Part 3.
 
 ## Quick start
 
-Requires **Node 24+** and **pnpm 10**.
+Requires **Node 24+** and **pnpm 10**, plus a **PostgreSQL** database.
 
 ```bash
+cp apps/api/.env.example apps/api/.env
+# set DATABASE_URL (Neon or local Docker — see below)
 pnpm install
-pnpm dev          # web :5173 + api :3001
-pnpm dev:web      # Vite only
-pnpm dev:api      # Fastify only
-pnpm lint
-pnpm typecheck
+pnpm --filter @homewallet/api check:db   # optional: verify DB connection
+pnpm dev
 ```
 
 | App        | URL                          |
@@ -23,24 +22,48 @@ pnpm typecheck
 | Web        | http://localhost:5173        |
 | API health | http://localhost:3001/health |
 
-## Quick links
+### Database: Neon or Docker
 
-| Doc                                          | What it covers                   |
-| -------------------------------------------- | -------------------------------- |
-| [docs/PRODUCT.md](docs/PRODUCT.md)           | Product decisions from the grill |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Monorepo, layers, stack          |
-| [docs/UX.md](docs/UX.md)                     | Brand, IA, colors, typography    |
-| [docs/ROADMAP.md](docs/ROADMAP.md)           | Parts 0–11 delivery plan         |
-| [docs/DECISIONS/](docs/DECISIONS/)           | Short ADRs (why we chose X)      |
-| [.cursor/rules/](.cursor/rules/)             | Persistent agent coding rules    |
+Pick one. The API only cares about `DATABASE_URL` in `apps/api/.env`.
+
+**Neon (recommended for day-to-day)**
+
+1. Create a project at [neon.tech](https://neon.tech)
+2. Copy the connection string (use the one with SSL; Neon usually includes `sslmode=require`)
+3. Put it in `apps/api/.env`:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+JWT_SECRET=change-me-in-dev
+WEB_ORIGIN=http://localhost:5173
+```
+
+4. Run `pnpm --filter @homewallet/api check:db` — you should see `OK connected (neon)` and tables `users,spaces,memberships` (created by migrations on first connect)
+5. Browse tables in the Neon console
+
+**Docker (local Postgres)**
+
+```bash
+docker compose up -d
+```
+
+```env
+DATABASE_URL=postgres://homewallet:homewallet@localhost:5432/homewallet
+```
+
+Same `check:db` command; expect `OK connected (local)`.
+
+You can switch anytime by changing `DATABASE_URL` and restarting the API. Do not commit `.env`.
+
+Google sign-in is optional: set `GOOGLE_CLIENT_ID` in `apps/api/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`.
 
 ## Stack
 
 - **Monorepo (pnpm):** `apps/web`, `apps/api`, `packages/shared`
-- **Web:** Vite + React + TypeScript + Tailwind + CSS variables
-- **API:** Fastify + TypeScript (TypeORM in Part 2)
-- **DB:** PostgreSQL (Part 2)
-- **Deploy:** Vercel (web) + Render (API + Postgres)
+- **Web:** Vite + React + TypeScript + Tailwind + TanStack Query
+- **API:** Fastify + TypeORM (Active Record) + PostgreSQL (Neon or Docker locally)
+- **Auth:** email/password + Google ID token; JWT httpOnly cookie
+- **Deploy:** Vercel (web) + Render (API + Postgres) — later
 - **Tooling:** ESLint, Prettier, TS strict, Husky, lint-staged, commitlint, GitHub Actions CI
 
 ## Commit convention
@@ -48,14 +71,9 @@ pnpm typecheck
 ```
 feat(frontend): short message in English
 feat(backend): short message in English
-fix(frontend): ...
-docs: ...
-chore(ci): ...
-refactor(backend): ...
 ```
 
-Daily scopes: **`frontend`** | **`backend`**.  
-Other scopes only when it does not fit those two (e.g. `docs`, `chore(repo)`, `chore(ci)`, `chore(shared)`).
+Daily scopes: **`frontend`** | **`backend`**.
 
 ## Workflow
 
@@ -63,11 +81,3 @@ Other scopes only when it does not fit those two (e.g. `docs`, `chore(repo)`, `c
 2. You **review**
 3. You **commit** (when ready)
 4. Next part
-
-Do not treat the product as “ready to use” until the big-bang scope is done — but we still ship internal parts for review.
-
-## Local name / slug
-
-- Product display name: **HomeWallet**
-- Repo / folder slug: **`homewallet`**
-- Final public name: TBD (working title only)
