@@ -1,10 +1,15 @@
 import type { DataSource } from "typeorm";
-import type { CreateSpaceBody, SpaceSummary } from "@homewallet/shared";
+import type {
+  CreateSpaceBody,
+  SpaceSummary,
+  UpdateSpaceBody,
+} from "@homewallet/shared";
 import { Membership } from "../db/entities/membership.entity.js";
 import { HttpError } from "../lib/http-error.js";
 import { createJoinCode } from "../lib/join-code.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { spaceRepository } from "../repositories/space.repository.js";
+import { categoryRepository } from "../repositories/category.repository.js";
 
 function toSummary(
   space: Membership["space"],
@@ -15,6 +20,7 @@ function toSummary(
     name: space.name,
     currency: space.currency,
     privacyMode: space.privacyMode,
+    entryDateMode: space.entryDateMode,
     role,
     joinCode: space.joinCode,
   };
@@ -54,15 +60,17 @@ export function createSpaceService(dataSource: DataSource) {
       try {
         space = await spaceRepository.create(manager, {
           name: input.name,
-          currency: input.currency,
+          currency: input.currency ?? "BRL",
           privacyMode: "private",
+          entryDateMode: input.entryDateMode ?? "month",
           joinCode: createJoinCode(),
         });
       } catch {
         space = await spaceRepository.create(manager, {
           name: input.name,
-          currency: input.currency,
+          currency: input.currency ?? "BRL",
           privacyMode: "private",
+          entryDateMode: input.entryDateMode ?? "month",
           joinCode: createJoinCode(),
         });
       }
@@ -72,6 +80,7 @@ export function createSpaceService(dataSource: DataSource) {
         spaceId: space.id,
         role: "owner",
       });
+      await categoryRepository.seedDefaults(space.id, manager);
       return toSummary(space, "owner");
     },
 
@@ -99,6 +108,27 @@ export function createSpaceService(dataSource: DataSource) {
         role: "member",
       });
       return toSummary(space, "member");
+    },
+
+    async updateSettings(
+      userId: string,
+      spaceId: string,
+      input: UpdateSpaceBody
+    ): Promise<SpaceSummary> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      if (membership.role !== "owner") {
+        throw new HttpError(403, "Only owners can change space settings");
+      }
+      membership.space.entryDateMode = input.entryDateMode;
+      await spaceRepository.save(dataSource.manager, membership.space);
+      return toSummary(membership.space, membership.role);
     },
   };
 }

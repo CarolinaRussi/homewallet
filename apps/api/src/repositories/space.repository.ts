@@ -13,4 +13,8 @@ export const spaceRepository = {
   create(manager: EntityManager, fields: Partial<Space>) {
     return manager.save(manager.create(Space, fields));
   },
+
+  save(manager: EntityManager, space: Space) {
+    return manager.save(space);
+  },
 };

@@ -5,7 +5,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import type { SpaceCurrency, SpacePrivacyMode } from "@homewallet/shared";
+import type {
+  SpaceCurrency,
+  SpacePrivacyMode,
+  EntryDateMode,
+} from "@homewallet/shared";
 
 @Entity({ name: "spaces" })
 export class Space extends BaseEntity {
@@ -20,6 +24,9 @@ export class Space extends BaseEntity {
 
   @Column({ name: "privacy_mode", type: "text", default: "private" })
   privacyMode!: SpacePrivacyMode;
+
+  @Column({ name: "entry_date_mode", type: "text", default: "month" })
+  entryDateMode!: EntryDateMode;
 
   @Column({ name: "join_code", type: "text", unique: true })
   joinCode!: string;

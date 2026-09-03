@@ -10,6 +10,9 @@ export async function registerSpaceRoutes(
   app.get("/", (request) => controller.list(request));
   app.post("/", (request) => controller.create(request));
   app.post("/join", (request) => controller.join(request));
+  app.patch<{ Params: { id: string } }>("/:id", (request) =>
+    controller.update(request)
+  );
   app.get<{ Params: { id: string } }>("/:id", (request) =>
     controller.get(request)
   );

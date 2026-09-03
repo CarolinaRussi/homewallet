@@ -8,16 +8,23 @@ import Fastify from "fastify";
 import { ZodError } from "zod";
 import { loadConfig } from "./config.js";
 import { createAuthController } from "./controllers/auth.controller.js";
+import { createCategoryController } from "./controllers/category.controller.js";
+import { createEntryController } from "./controllers/entry.controller.js";
 import { createSpaceController } from "./controllers/space.controller.js";
 import { createDataSource } from "./db/data-source.js";
+import { Category } from "./db/entities/category.entity.js";
+import { Entry } from "./db/entities/entry.entity.js";
 import { Membership } from "./db/entities/membership.entity.js";
 import { Space } from "./db/entities/space.entity.js";
 import { User } from "./db/entities/user.entity.js";
 import { HttpError } from "./lib/http-error.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerAuthRoutes } from "./routes/auth.routes.js";
+import { registerLedgerRoutes } from "./routes/ledger.routes.js";
 import { registerSpaceRoutes } from "./routes/space.routes.js";
 import { createAuthService } from "./services/auth.service.js";
+import { createCategoryService } from "./services/category.service.js";
+import { createEntryService } from "./services/entry.service.js";
 import { createSpaceService } from "./services/space.service.js";
 
 loadEnv({
@@ -32,9 +39,13 @@ await dataSource.runMigrations();
 User.useDataSource(dataSource);
 Space.useDataSource(dataSource);
 Membership.useDataSource(dataSource);
+Category.useDataSource(dataSource);
+Entry.useDataSource(dataSource);
 
 const spaceService = createSpaceService(dataSource);
 const authService = createAuthService(dataSource, spaceService, config);
+const categoryService = createCategoryService(dataSource);
+const entryService = createEntryService(dataSource);
 
 const app = Fastify({ logger: true });
 
@@ -49,7 +60,10 @@ app.setErrorHandler((error, _request, reply) => {
     return reply.code(error.statusCode).send({ error: error.message });
   }
   if (error instanceof ZodError) {
-    return reply.code(400).send({ error: "Invalid request" });
+    const firstIssue = error.issues[0];
+    return reply.code(400).send({
+      error: firstIssue?.message ?? "Invalid request",
+    });
   }
   app.log.error(error);
   return reply.code(500).send({ error: "Internal server error" });
@@ -69,6 +83,11 @@ await app.register(
   async (scoped) =>
     registerSpaceRoutes(scoped, createSpaceController(spaceService)),
   { prefix: "/spaces" }
+);
+await registerLedgerRoutes(
+  app,
+  createCategoryController(categoryService),
+  createEntryController(entryService)
 );
 
 await app.listen({ port: config.port, host: config.host });
