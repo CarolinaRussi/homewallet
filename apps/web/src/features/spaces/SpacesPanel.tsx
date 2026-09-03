@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
-import { createSpace, fetchSpaces, joinSpace } from "./space-api";
+import {
+  createSpace,
+  fetchSpaces,
+  joinSpace,
+  updateSpaceEntryDateMode,
+} from "./space-api";
+import { Spinner } from "../../shared/ui/Spinner";
 
 export function SpacesPanel() {
   const { t } = useLocale();
@@ -18,6 +24,18 @@ export function SpacesPanel() {
 
   const joinMutation = useMutation({
     mutationFn: joinSpace,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["spaces"] }),
+    onError: (error: Error) => setErrorMessage(error.message),
+  });
+
+  const dateModeMutation = useMutation({
+    mutationFn: ({
+      spaceId,
+      entryDateMode,
+    }: {
+      spaceId: string;
+      entryDateMode: "month" | "day";
+    }) => updateSpaceEntryDateMode(spaceId, entryDateMode),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["spaces"] }),
     onError: (error: Error) => setErrorMessage(error.message),
   });
@@ -67,6 +85,33 @@ export function SpacesPanel() {
               {t("spaces.joinCode")}:{" "}
               <span className="font-medium text-fg">{space.joinCode}</span>
             </p>
+            {space.role === "owner" ? (
+              <label className="mt-3 flex flex-col gap-1 text-sm text-muted">
+                {t("spaces.entryDateMode")}
+                <select
+                  className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg disabled:opacity-70"
+                  value={space.entryDateMode}
+                  disabled={dateModeMutation.isPending}
+                  onChange={(event) =>
+                    dateModeMutation.mutate({
+                      spaceId: space.id,
+                      entryDateMode:
+                        event.target.value === "day" ? "day" : "month",
+                    })
+                  }
+                >
+                  <option value="month">{t("spaces.dateModeMonth")}</option>
+                  <option value="day">{t("spaces.dateModeDay")}</option>
+                </select>
+              </label>
+            ) : (
+              <p className="mt-2 text-sm text-muted">
+                {t("spaces.entryDateMode")}:{" "}
+                {space.entryDateMode === "month"
+                  ? t("spaces.dateModeMonth")
+                  : t("spaces.dateModeDay")}
+              </p>
+            )}
           </article>
         ))}
       </section>
@@ -81,9 +126,13 @@ export function SpacesPanel() {
         />
         <button
           type="submit"
-          className="rounded-md bg-accent px-3 py-2 font-medium text-accent-fg"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
+          disabled={createMutation.isPending}
         >
-          {t("spaces.createSubmit")}
+          {createMutation.isPending ? <Spinner /> : null}
+          {createMutation.isPending
+            ? t("spaces.creating")
+            : t("spaces.createSubmit")}
         </button>
       </form>
 
@@ -98,9 +147,13 @@ export function SpacesPanel() {
         />
         <button
           type="submit"
-          className="rounded-md border border-border px-3 py-2 font-medium text-fg"
+          className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 font-medium text-fg disabled:opacity-70"
+          disabled={joinMutation.isPending}
         >
-          {t("spaces.joinSubmit")}
+          {joinMutation.isPending ? <Spinner /> : null}
+          {joinMutation.isPending
+            ? t("spaces.joining")
+            : t("spaces.joinSubmit")}
         </button>
       </form>
     </div>

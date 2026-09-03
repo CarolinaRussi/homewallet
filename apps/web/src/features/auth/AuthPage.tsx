@@ -6,6 +6,7 @@ import { APP_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { loginAccount, loginWithGoogle, registerAccount } from "./auth-api";
 import { GoogleSignIn } from "./GoogleSignIn";
+import { Spinner } from "../../shared/ui/Spinner";
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -109,10 +110,17 @@ export function AuthPage() {
         ) : null}
         <button
           type="submit"
-          className="rounded-md bg-accent px-3 py-2 font-medium text-accent-fg"
-          disabled={mutation.isPending}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
+          disabled={mutation.isPending || googleMutation.isPending}
         >
-          {mode === "login" ? t("auth.signIn") : t("auth.createAccount")}
+          {mutation.isPending ? <Spinner /> : null}
+          {mutation.isPending
+            ? mode === "login"
+              ? t("auth.signingIn")
+              : t("auth.creatingAccount")
+            : mode === "login"
+              ? t("auth.signIn")
+              : t("auth.createAccount")}
         </button>
       </form>
 

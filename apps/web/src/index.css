@@ -68,4 +68,67 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@keyframes hw-feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hw-feedback-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes hw-entry-flash {
+  0% {
+    box-shadow: 0 0 0 2px var(--hw-accent);
+    background-color: color-mix(
+      in srgb,
+      var(--hw-accent) 12%,
+      var(--hw-surface)
+    );
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background-color: var(--hw-surface);
+  }
+}
+
+.hw-feedback {
+  animation: hw-feedback-in 0.2s ease-out;
+}
+
+.hw-feedback-out {
+  animation: hw-feedback-out 0.35s ease-in forwards;
+}
+
+.hw-entry-flash {
+  animation: hw-entry-flash 1.4s ease-out;
 }

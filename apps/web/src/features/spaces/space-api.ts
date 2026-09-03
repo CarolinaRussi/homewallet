@@ -1,4 +1,4 @@
-import type { SpaceSummary } from "@homewallet/shared";
+import type { EntryDateMode, SpaceSummary } from "@homewallet/shared";
 import { api } from "../../shared/lib/api";
 
 export function fetchSpaces() {
@@ -8,6 +8,7 @@ export function fetchSpaces() {
 export function createSpace(body: {
   name: string;
   currency?: "BRL" | "USD" | "EUR";
+  entryDateMode?: EntryDateMode;
 }) {
   return api<SpaceSummary>("/spaces", {
     method: "POST",
@@ -19,5 +20,15 @@ export function joinSpace(joinCode: string) {
   return api<SpaceSummary>("/spaces/join", {
     method: "POST",
     body: JSON.stringify({ joinCode }),
+  });
+}
+
+export function updateSpaceEntryDateMode(
+  spaceId: string,
+  entryDateMode: EntryDateMode
+) {
+  return api<SpaceSummary>(`/spaces/${spaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ entryDateMode }),
   });
 }
