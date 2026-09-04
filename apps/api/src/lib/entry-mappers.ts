@@ -21,6 +21,10 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     categoryId: entry.categoryId,
     categoryName: entry.category.name,
     userId: entry.userId,
+    recurringRuleId: entry.recurringRuleId,
+    installmentPlanId: entry.installmentPlanId,
+    installmentNumber: entry.installmentNumber,
+    installmentCount: entry.installmentPlan?.installmentCount ?? null,
   };
 }
 

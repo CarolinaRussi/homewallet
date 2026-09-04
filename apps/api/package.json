@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "tsx src/lib/password.check.ts",
     "check:db": "tsx src/lib/db-connect.check.ts",
-    "check:leftover": "tsx src/lib/leftover.check.ts"
+    "check:leftover": "tsx src/lib/leftover.check.ts",
+    "check:recurring": "tsx src/lib/recurring.check.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

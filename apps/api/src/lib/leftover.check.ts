@@ -17,6 +17,7 @@ const buckets: MonthFlowBucket[] = [
     expense: 400,
     contributed: 100,
     withdrawn: 0,
+    openingLeftover: 300,
   },
   {
     month: "2026-02",
@@ -24,10 +25,18 @@ const buckets: MonthFlowBucket[] = [
     expense: 200,
     contributed: 0,
     withdrawn: 50,
+    openingLeftover: 0,
   },
 ];
 
 const movements: ReserveMovementSummary[] = [
+  {
+    id: "0",
+    type: "seed",
+    amount: 2000,
+    description: "",
+    occurredOn: "2026-01-01",
+  },
   {
     id: "1",
     type: "contribute",
@@ -46,13 +55,12 @@ const movements: ReserveMovementSummary[] = [
 
 const january = computeMonthSummary("2026-01", buckets, movements);
 assertEqual(january.carriedIn, 0, "jan carriedIn");
-assertEqual(january.leftover, 500, "jan leftover"); // 0+1000-400-100+0
-assertEqual(january.reserveBalance, 100, "jan reserve");
+assertEqual(january.leftover, 800, "jan leftover with opening"); // 0+1000-400-100+0+300
+assertEqual(january.reserveBalance, 2100, "jan reserve with seed");
 
 const february = computeMonthSummary("2026-02", buckets, movements);
-assertEqual(february.carriedIn, 500, "feb carriedIn");
-assertEqual(february.leftover, 850, "feb leftover"); // 500+500-200-0+50
-assertEqual(february.reserveBalance, 50, "feb reserve");
-assertEqual(february.movements.length, 1, "feb movements");
+assertEqual(february.carriedIn, 800, "feb carriedIn");
+assertEqual(february.leftover, 1150, "feb leftover");
+assertEqual(february.reserveBalance, 2050, "feb reserve");
 
 console.log("leftover check ok");

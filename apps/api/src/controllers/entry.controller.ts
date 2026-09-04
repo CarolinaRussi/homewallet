@@ -9,6 +9,7 @@ import type { EntryService } from "../services/entry.service.js";
 type SpaceParams = { spaceId: string };
 type EntryParams = { entryId: string };
 type MonthQuery = { month?: string };
+type DeleteQuery = { installmentScope?: string };
 
 function resolveMonth(query: MonthQuery) {
   if (query.month) {
@@ -17,6 +18,10 @@ function resolveMonth(query: MonthQuery) {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   return `${now.getFullYear()}-${month}`;
+}
+
+function resolveInstallmentScope(query: DeleteQuery) {
+  return query.installmentScope === "forward" ? "forward" : "one";
 }
 
 export function createEntryController(entryService: EntryService) {
@@ -60,10 +65,17 @@ export function createEntryController(entryService: EntryService) {
     },
 
     async remove(
-      request: FastifyRequest<{ Params: EntryParams }>,
+      request: FastifyRequest<{
+        Params: EntryParams;
+        Querystring: DeleteQuery;
+      }>,
       reply: FastifyReply
     ) {
-      await entryService.remove(request.user.sub, request.params.entryId);
+      await entryService.remove(
+        request.user.sub,
+        request.params.entryId,
+        resolveInstallmentScope(request.query)
+      );
       return reply.code(204).send();
     },
   };

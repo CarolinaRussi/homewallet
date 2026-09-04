@@ -2,13 +2,15 @@ import type { FastifyInstance } from "fastify";
 import type { CategoryController } from "../controllers/category.controller.js";
 import type { EntryController } from "../controllers/entry.controller.js";
 import type { LeftoverController } from "../controllers/leftover.controller.js";
+import type { RecurringController } from "../controllers/recurring.controller.js";
 import { requireUser } from "../plugins/auth.js";
 
 export async function registerLedgerRoutes(
   app: FastifyInstance,
   categoryController: CategoryController,
   entryController: EntryController,
-  leftoverController: LeftoverController
+  leftoverController: LeftoverController,
+  recurringController: RecurringController
 ) {
   app.addHook("preHandler", requireUser);
 
@@ -36,9 +38,11 @@ export async function registerLedgerRoutes(
   app.patch<{ Params: { entryId: string } }>("/entries/:entryId", (request) =>
     entryController.update(request)
   );
-  app.delete<{ Params: { entryId: string } }>(
-    "/entries/:entryId",
-    (request, reply) => entryController.remove(request, reply)
+  app.delete<{
+    Params: { entryId: string };
+    Querystring: { installmentScope?: string };
+  }>("/entries/:entryId", (request, reply) =>
+    entryController.remove(request, reply)
   );
 
   app.get<{ Params: { spaceId: string }; Querystring: { month?: string } }>(
@@ -52,5 +56,40 @@ export async function registerLedgerRoutes(
   app.delete<{ Params: { movementId: string } }>(
     "/reserve-movements/:movementId",
     (request, reply) => leftoverController.removeMovement(request, reply)
+  );
+
+  app.post<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/leftover-seeds",
+    (request) => leftoverController.createLeftoverSeed(request)
+  );
+  app.delete<{ Params: { seedId: string } }>(
+    "/leftover-seeds/:seedId",
+    (request, reply) => leftoverController.removeLeftoverSeed(request, reply)
+  );
+
+  app.get<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/recurring-rules",
+    (request) => recurringController.listRules(request)
+  );
+  app.post<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/recurring-rules",
+    (request) => recurringController.createRule(request)
+  );
+  app.delete<{ Params: { ruleId: string } }>(
+    "/recurring-rules/:ruleId",
+    (request, reply) => recurringController.removeRule(request, reply)
+  );
+
+  app.get<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/installment-plans",
+    (request) => recurringController.listPlans(request)
+  );
+  app.post<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/installment-plans",
+    (request) => recurringController.createPlan(request)
+  );
+  app.delete<{ Params: { planId: string } }>(
+    "/installment-plans/:planId",
+    (request, reply) => recurringController.removePlan(request, reply)
   );
 }

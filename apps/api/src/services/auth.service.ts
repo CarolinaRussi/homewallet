@@ -86,7 +86,7 @@ export function createAuthService(
           manager
         );
         if (byGoogle) {
-          return toSessionUser(byGoogle);
+          return { user: toSessionUser(byGoogle), createdSpace: false };
         }
 
         const byEmail = await userRepository.findByEmail(
@@ -96,7 +96,7 @@ export function createAuthService(
         if (byEmail) {
           byEmail.googleSub = googleSub;
           await userRepository.save(manager, byEmail);
-          return toSessionUser(byEmail);
+          return { user: toSessionUser(byEmail), createdSpace: false };
         }
 
         const user = await userRepository.create(manager, {
@@ -112,7 +112,7 @@ export function createAuthService(
           manager
         );
 
-        return toSessionUser(user);
+        return { user: toSessionUser(user), createdSpace: true };
       });
     },
 

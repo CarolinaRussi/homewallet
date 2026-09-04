@@ -9,12 +9,11 @@ import {
 } from "typeorm";
 import type { EntryType, EntryVisibility } from "@homewallet/shared";
 import { Category } from "./category.entity.js";
-import { InstallmentPlan } from "./installment-plan.entity.js";
 import { Space } from "./space.entity.js";
 import { User } from "./user.entity.js";
 
-@Entity({ name: "entries" })
-export class Entry extends BaseEntity {
+@Entity({ name: "recurring_rules" })
+export class RecurringRule extends BaseEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -30,7 +29,6 @@ export class Entry extends BaseEntity {
   @Column({ type: "text" })
   type!: EntryType;
 
-  /** Stored as numeric; read/write as string from pg driver. */
   @Column({ type: "numeric", precision: 14, scale: 2 })
   amount!: string;
 
@@ -40,17 +38,11 @@ export class Entry extends BaseEntity {
   @Column({ type: "text" })
   visibility!: EntryVisibility;
 
-  @Column({ name: "occurred_on", type: "date" })
-  occurredOn!: string;
+  @Column({ name: "start_month", type: "text" })
+  startMonth!: string;
 
-  @Column({ name: "recurring_rule_id", type: "uuid", nullable: true })
-  recurringRuleId!: string | null;
-
-  @Column({ name: "installment_plan_id", type: "uuid", nullable: true })
-  installmentPlanId!: string | null;
-
-  @Column({ name: "installment_number", type: "int", nullable: true })
-  installmentNumber!: number | null;
+  @Column({ name: "end_month", type: "text", nullable: true })
+  endMonth!: string | null;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
@@ -66,8 +58,4 @@ export class Entry extends BaseEntity {
   @ManyToOne(() => Category, { onDelete: "RESTRICT" })
   @JoinColumn({ name: "category_id" })
   category!: Category;
-
-  @ManyToOne(() => InstallmentPlan, { onDelete: "SET NULL", nullable: true })
-  @JoinColumn({ name: "installment_plan_id" })
-  installmentPlan!: InstallmentPlan | null;
 }

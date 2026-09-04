@@ -11,11 +11,16 @@ import { createAuthController } from "./controllers/auth.controller.js";
 import { createCategoryController } from "./controllers/category.controller.js";
 import { createEntryController } from "./controllers/entry.controller.js";
 import { createLeftoverController } from "./controllers/leftover.controller.js";
+import { createRecurringController } from "./controllers/recurring.controller.js";
 import { createSpaceController } from "./controllers/space.controller.js";
 import { createDataSource } from "./db/data-source.js";
 import { Category } from "./db/entities/category.entity.js";
 import { Entry } from "./db/entities/entry.entity.js";
+import { InstallmentPlan } from "./db/entities/installment-plan.entity.js";
+import { LeftoverSeed } from "./db/entities/leftover-seed.entity.js";
 import { Membership } from "./db/entities/membership.entity.js";
+import { RecurrenceSkip } from "./db/entities/recurrence-skip.entity.js";
+import { RecurringRule } from "./db/entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./db/entities/reserve-movement.entity.js";
 import { Space } from "./db/entities/space.entity.js";
 import { User } from "./db/entities/user.entity.js";
@@ -28,6 +33,7 @@ import { createAuthService } from "./services/auth.service.js";
 import { createCategoryService } from "./services/category.service.js";
 import { createEntryService } from "./services/entry.service.js";
 import { createLeftoverService } from "./services/leftover.service.js";
+import { createRecurringService } from "./services/recurring.service.js";
 import { createSpaceService } from "./services/space.service.js";
 
 loadEnv({
@@ -45,12 +51,17 @@ Membership.useDataSource(dataSource);
 Category.useDataSource(dataSource);
 Entry.useDataSource(dataSource);
 ReserveMovement.useDataSource(dataSource);
+RecurringRule.useDataSource(dataSource);
+InstallmentPlan.useDataSource(dataSource);
+RecurrenceSkip.useDataSource(dataSource);
+LeftoverSeed.useDataSource(dataSource);
 
 const spaceService = createSpaceService(dataSource);
 const authService = createAuthService(dataSource, spaceService, config);
 const categoryService = createCategoryService(dataSource);
-const entryService = createEntryService(dataSource);
-const leftoverService = createLeftoverService(dataSource);
+const recurringService = createRecurringService(dataSource);
+const entryService = createEntryService(dataSource, recurringService);
+const leftoverService = createLeftoverService(dataSource, recurringService);
 
 const app = Fastify({ logger: true });
 
@@ -93,7 +104,8 @@ await registerLedgerRoutes(
   app,
   createCategoryController(categoryService),
   createEntryController(entryService),
-  createLeftoverController(leftoverService)
+  createLeftoverController(leftoverService),
+  createRecurringController(recurringService)
 );
 
 await app.listen({ port: config.port, host: config.host });

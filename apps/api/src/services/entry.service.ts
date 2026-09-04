@@ -8,9 +8,17 @@ import { HttpError } from "../lib/http-error.js";
 import { monthBounds, toEntrySummary } from "../lib/entry-mappers.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
+import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
+import { recurrenceSkipRepository } from "../repositories/recurrence-skip.repository.js";
+import type { RecurringService } from "./recurring.service.js";
 
-export function createEntryService(dataSource: DataSource) {
+export type InstallmentDeleteScope = "one" | "forward";
+
+export function createEntryService(
+  dataSource: DataSource,
+  recurringService: RecurringService
+) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
       userId,
@@ -42,6 +50,7 @@ export function createEntryService(dataSource: DataSource) {
       month: string
     ): Promise<EntrySummary[]> {
       await requireMember(userId, spaceId);
+      await recurringService.ensureThrough(userId, spaceId, month);
       const { start, end } = monthBounds(month);
       const entries = await entryRepository.listMineForMonth(
         spaceId,
@@ -85,6 +94,9 @@ export function createEntryService(dataSource: DataSource) {
         description: input.description,
         visibility: input.visibility,
         occurredOn: input.occurredOn,
+        recurringRuleId: null,
+        installmentPlanId: null,
+        installmentNumber: null,
       });
       const loaded = await entryRepository.findById(
         entry.id,
@@ -132,7 +144,11 @@ export function createEntryService(dataSource: DataSource) {
       return toEntrySummary(loaded);
     },
 
-    async remove(userId: string, entryId: string): Promise<void> {
+    async remove(
+      userId: string,
+      entryId: string,
+      installmentScope: InstallmentDeleteScope = "one"
+    ): Promise<void> {
       const entry = await entryRepository.findById(entryId, dataSource.manager);
       if (!entry) {
         throw new HttpError(404, "Entry not found");
@@ -141,7 +157,69 @@ export function createEntryService(dataSource: DataSource) {
         throw new HttpError(403, "You can only delete your own entries");
       }
       await requireMember(userId, entry.spaceId);
+
+      if (
+        installmentScope === "forward" &&
+        entry.installmentPlanId &&
+        entry.installmentNumber != null
+      ) {
+        const planId = entry.installmentPlanId;
+        await entryRepository.removeInstallmentFromNumber(
+          planId,
+          entry.installmentNumber,
+          dataSource.manager
+        );
+        const left = await entryRepository.countForInstallmentPlan(
+          planId,
+          dataSource.manager
+        );
+        if (left === 0) {
+          const plan = await installmentPlanRepository.findById(
+            planId,
+            dataSource.manager
+          );
+          if (plan) {
+            await installmentPlanRepository.remove(dataSource.manager, plan);
+          }
+        }
+        return;
+      }
+
+      if (entry.recurringRuleId) {
+        const month = entry.occurredOn.slice(0, 7);
+        const existingSkip = await recurrenceSkipRepository.find(
+          entry.recurringRuleId,
+          month,
+          dataSource.manager
+        );
+        if (!existingSkip) {
+          await recurrenceSkipRepository.create(dataSource.manager, {
+            spaceId: entry.spaceId,
+            userId,
+            recurringRuleId: entry.recurringRuleId,
+            month,
+          });
+        }
+      }
+
+      const planId = entry.installmentPlanId;
       await entryRepository.remove(dataSource.manager, entry);
+
+      if (planId) {
+        const left = await entryRepository.countForInstallmentPlan(
+          planId,
+          dataSource.manager
+        );
+        if (left === 0) {
+          const plan = await installmentPlanRepository.findById(
+            planId,
+            dataSource.manager
+          );
+          if (plan) {
+            await installmentPlanRepository.remove(dataSource.manager, plan);
+          }
+        }
+      }
     },
   };
 }

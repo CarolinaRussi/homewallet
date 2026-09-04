@@ -30,9 +30,9 @@ export function createAuthController(authService: AuthService) {
 
     async google(request: FastifyRequest, reply: FastifyReply) {
       const body = googleBodySchema.parse(request.body);
-      const user = await authService.loginWithGoogle(body);
-      await setSession(reply, user.id);
-      return { user };
+      const result = await authService.loginWithGoogle(body);
+      await setSession(reply, result.user.id);
+      return result;
     },
 
     async logout(_request: FastifyRequest, reply: FastifyReply) {
