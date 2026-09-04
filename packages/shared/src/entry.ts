@@ -1,10 +1,23 @@
 import { z } from "zod";
 import type { BudgetLayer } from "./limits.js";
 
-export const ENTRY_TYPES = ["income", "expense", "saving"] as const;
+export const ENTRY_TYPES = [
+  "income",
+  "expense",
+  "saving",
+  "transfer_out",
+  "transfer_in",
+] as const;
+export const CREATE_ENTRY_TYPES = [
+  "income",
+  "expense",
+  "saving",
+  "transfer",
+] as const;
 export const ENTRY_VISIBILITIES = ["personal", "shared"] as const;
 
 export type EntryType = (typeof ENTRY_TYPES)[number];
+export type CreateEntryType = (typeof CREATE_ENTRY_TYPES)[number];
 export type EntryVisibility = (typeof ENTRY_VISIBILITIES)[number];
 
 export const monthQuerySchema = z
@@ -17,15 +30,26 @@ export const createCategoryBodySchema = z.object({
 
 export const createEntryBodySchema = z
   .object({
-    type: z.enum(ENTRY_TYPES),
+    type: z.enum(CREATE_ENTRY_TYPES),
     amount: z.coerce.number().positive().finite(),
     categoryId: z.string().uuid().optional(),
     reservePotId: z.string().uuid().optional(),
+    peerUserId: z.string().uuid().optional(),
     description: z.string().trim().max(200).optional().default(""),
     visibility: z.enum(ENTRY_VISIBILITIES).optional().default("personal"),
     occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
   })
   .superRefine((body, context) => {
+    if (body.type === "transfer") {
+      if (!body.peerUserId) {
+        context.addIssue({
+          code: "custom",
+          message: "peerUserId is required for transfers",
+          path: ["peerUserId"],
+        });
+      }
+      return;
+    }
     if (body.type === "saving") {
       if (!body.reservePotId) {
         context.addIssue({
@@ -47,9 +71,9 @@ export const createEntryBodySchema = z
 
 export const updateEntryBodySchema = z
   .object({
-    type: z.enum(ENTRY_TYPES).optional(),
+    type: z.enum(["income", "expense", "saving"]).optional(),
     amount: z.coerce.number().positive().finite().optional(),
-    categoryId: z.string().uuid().optional(),
+    categoryId: z.string().uuid().nullable().optional(),
     reservePotId: z.string().uuid().nullable().optional(),
     description: z.string().trim().max(200).optional(),
     visibility: z.enum(ENTRY_VISIBILITIES).optional(),
@@ -78,8 +102,8 @@ export type EntrySummary = {
   description: string;
   visibility: EntryVisibility;
   occurredOn: string;
-  categoryId: string;
-  categoryName: string;
+  categoryId: string | null;
+  categoryName: string | null;
   userId: string;
   userName: string;
   reservePotId: string | null;
@@ -88,4 +112,7 @@ export type EntrySummary = {
   installmentPlanId: string | null;
   installmentNumber: number | null;
   installmentCount: number | null;
+  transferGroupId: string | null;
+  counterpartyUserId: string | null;
+  counterpartyName: string | null;
 };
