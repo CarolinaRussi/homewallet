@@ -8,9 +8,11 @@ alwaysApply: true
 - Members edit **only their own** entries.
 - Shared flag = aggregation/visibility, **not** settlement.
 - Transfers between members are a distinct type (`transfer_out` / `transfer_in`): reduce the sender’s leftover like personal spend, increase the receiver’s like income, and **do not** count as space spend.
+- Credit-card statement detail is optional on expenses whose **category** has line detail enabled (default seed: Cartão de Crédito; toggleable per category). Log the statement total first; break down lines later from the entry card. Parent amount hits leftover once; subitems allocate categories/50-40-10; auto **Outros** = total − sum of lines (not stored).
+- Card-line **parcelas** (optional): materialize future Cartão expenses with subitems `2/N`… . No future statement → create expense (total = parcel, `cardInstallmentSeeded`); exists + seeded → add line and sync total to sum of lines; exists + manual → add line only (Outros shrinks). Editing amount/description on a seeded entry clears the seeded flag.
 - Personal leftover **carries** by default; reserve grows via **saving entries** (and opening seeds); withdraw returns to leftover on the Reserve tab.
 - Space privacy default = personal private + shared/aggregates; transparent mode is opt-in.
 - Multi-owner: last owner leaving with members left → auto-transfer ownership; empty space → delete.
 - One currency per space.
-- Installments ≠ recurring bills — model separately.
+- Installments ≠ recurring bills — model separately. (Card-line parcelas seed future **statement expenses**, not installment-plan entries.)
 - Optional features (limits, 50/40/10, close month) must be toggleable without breaking core ledgers.
