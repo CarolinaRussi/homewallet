@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 6 — recurring & installments**. Recurring bills + parcel plans. Limits/month close are Part 7.
+> Status: **Part 7 — limits & 50/40/10**. Soft personal/space/leftover limits + optional category layers. Close month deferred.
 
 ## Quick start
 
