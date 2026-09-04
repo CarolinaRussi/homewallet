@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
-import type { EntryDateMode, ReserveMovementType } from "@homewallet/shared";
+import type {
+  EntryDateMode,
+  ProgressSnapshot,
+  ReserveMovementType,
+} from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import {
   formatEntryDate,
@@ -9,6 +13,7 @@ import {
   todayIsoDate,
 } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
+import { updateMyLimits } from "../spaces/space-api";
 import {
   createLeftoverSeed,
   createReserveMovement,
@@ -101,6 +106,18 @@ export function LeftoverReserveSection({
     onError: (error: Error) => onError(error.message),
   });
 
+  const myLimitsMutation = useMutation({
+    mutationFn: (body: Parameters<typeof updateMyLimits>[1]) =>
+      updateMyLimits(spaceId, body),
+    onSuccess: async () => {
+      onSuccess(t("limits.saved"));
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => onError(error.message),
+  });
+
   function onReserveSubmit(
     event: FormEvent<HTMLFormElement>,
     type: ReserveMovementType
@@ -133,6 +150,21 @@ export function LeftoverReserveSection({
       description: String(data.get("description") ?? ""),
     });
     form.reset();
+  }
+
+  function onMyLimitsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const personalEnabled = data.get("personalLimitEnabled") === "on";
+    const leftoverEnabled = data.get("leftoverTargetEnabled") === "on";
+    const personalRaw = String(data.get("personalLimitAmount") ?? "").trim();
+    const leftoverRaw = String(data.get("leftoverTargetAmount") ?? "").trim();
+    myLimitsMutation.mutate({
+      personalLimitEnabled: personalEnabled,
+      personalLimitAmount: personalEnabled ? Number(personalRaw) : null,
+      leftoverTargetEnabled: leftoverEnabled,
+      leftoverTargetAmount: leftoverEnabled ? Number(leftoverRaw) : null,
+    });
   }
 
   const summary = summaryQuery.data;
@@ -180,6 +212,130 @@ export function LeftoverReserveSection({
           </p>
         </article>
       </div>
+
+      {summary?.personalLimit ||
+      summary?.leftoverTarget ||
+      summary?.budgetLayers ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {summary.personalLimit ? (
+            <LimitProgressCard
+              title={t("limits.personal")}
+              progress={summary.personalLimit}
+              currency={currency}
+              locale={locale}
+              overLabel={t("limits.over")}
+              remainingLabel={t("limits.remaining")}
+            />
+          ) : null}
+          {summary.leftoverTarget ? (
+            <LimitProgressCard
+              title={t("limits.leftoverTarget")}
+              progress={summary.leftoverTarget}
+              currency={currency}
+              locale={locale}
+              overLabel={t("limits.targetMet")}
+              remainingLabel={t("limits.toTarget")}
+            />
+          ) : null}
+          {summary.budgetLayers ? (
+            <article className="rounded-lg border border-border bg-surface p-4 lg:col-span-2">
+              <h3 className="font-medium text-fg">{t("limits.layersTitle")}</h3>
+              <p className="mt-1 text-xs text-muted">
+                {t("limits.layersHint")} · {t("me.income")}:{" "}
+                {formatMoney(summary.budgetLayers.income, currency, locale)}
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {(
+                  [
+                    ["essential", t("limits.layerEssential")],
+                    ["personal", t("limits.layerPersonal")],
+                    ["future", t("limits.layerFuture")],
+                  ] as const
+                ).map(([key, label]) => (
+                  <LimitProgressCard
+                    key={key}
+                    title={label}
+                    progress={summary.budgetLayers!.byLayer[key]}
+                    currency={currency}
+                    locale={locale}
+                    overLabel={t("limits.over")}
+                    remainingLabel={t("limits.remaining")}
+                    compact
+                  />
+                ))}
+              </div>
+              {summary.budgetLayers.unmappedExpense > 0 ? (
+                <p className="mt-2 text-xs text-muted">
+                  {t("limits.unmapped")}:{" "}
+                  {formatMoney(
+                    summary.budgetLayers.unmappedExpense,
+                    currency,
+                    locale
+                  )}
+                </p>
+              ) : null}
+            </article>
+          ) : null}
+        </div>
+      ) : null}
+
+      <details className="rounded-md border border-dashed border-border px-3 py-2 text-sm">
+        <summary className="cursor-pointer text-muted">
+          {t("limits.myLimits")}
+        </summary>
+        <p className="mt-2 text-xs text-muted">{t("limits.myLimitsHint")}</p>
+        <form
+          className="mt-3 grid gap-3 sm:grid-cols-2"
+          onSubmit={onMyLimitsSubmit}
+        >
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            <span className="flex items-center gap-2 text-fg">
+              <input
+                name="personalLimitEnabled"
+                type="checkbox"
+                defaultChecked={summary?.myLimits.personalLimitEnabled}
+              />
+              {t("limits.personal")}
+            </span>
+            <input
+              name="personalLimitAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              defaultValue={summary?.myLimits.personalLimitAmount ?? ""}
+              placeholder={t("limits.amount")}
+              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            <span className="flex items-center gap-2 text-fg">
+              <input
+                name="leftoverTargetEnabled"
+                type="checkbox"
+                defaultChecked={summary?.myLimits.leftoverTargetEnabled}
+              />
+              {t("limits.leftoverTarget")}
+            </span>
+            <input
+              name="leftoverTargetAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              defaultValue={summary?.myLimits.leftoverTargetAmount ?? ""}
+              placeholder={t("limits.amount")}
+              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+            />
+          </label>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-fg disabled:opacity-70 sm:col-span-2 sm:justify-self-start"
+            disabled={myLimitsMutation.isPending}
+          >
+            {myLimitsMutation.isPending ? <Spinner /> : null}
+            {t("limits.save")}
+          </button>
+        </form>
+      </details>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <form
@@ -369,6 +525,53 @@ export function LeftoverReserveSection({
         </ul>
       ) : null}
     </section>
+  );
+}
+
+function LimitProgressCard({
+  title,
+  progress,
+  currency,
+  locale,
+  overLabel,
+  remainingLabel,
+  compact = false,
+}: {
+  title: string;
+  progress: ProgressSnapshot;
+  currency: string;
+  locale: string;
+  overLabel: string;
+  remainingLabel: string;
+  compact?: boolean;
+}) {
+  const ratio = Math.min(progress.ratio, 1);
+  const over = progress.overBy > 0;
+  return (
+    <article
+      className={
+        compact
+          ? "rounded-md border border-border bg-bg p-3"
+          : "rounded-lg border border-border bg-surface p-4"
+      }
+    >
+      <p className="text-sm font-medium text-fg">{title}</p>
+      <p className="mt-1 text-sm tabular-nums text-muted">
+        {formatMoney(progress.current, currency, locale)} /{" "}
+        {formatMoney(progress.target, currency, locale)}
+      </p>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
+        <div
+          className={`h-full rounded-full ${over ? "bg-expense-fg" : "bg-accent"}`}
+          style={{ width: `${Math.max(ratio * 100, over ? 100 : 0)}%` }}
+        />
+      </div>
+      <p className="mt-1 text-xs text-muted">
+        {over
+          ? `${overLabel}: ${formatMoney(progress.overBy, currency, locale)}`
+          : `${remainingLabel}: ${formatMoney(progress.remaining, currency, locale)}`}
+      </p>
+    </article>
   );
 }
 

@@ -1,4 +1,11 @@
-import type { EntryDateMode, SpaceSummary } from "@homewallet/shared";
+import type {
+  BudgetLayer,
+  EntryDateMode,
+  SpaceMonthSummary,
+  SpaceSummary,
+  UpdateMyLimitsBody,
+  UpdateSpaceBody,
+} from "@homewallet/shared";
 import { api } from "../../shared/lib/api";
 
 export function fetchSpaces() {
@@ -23,12 +30,40 @@ export function joinSpace(joinCode: string) {
   });
 }
 
+export function updateSpace(spaceId: string, body: UpdateSpaceBody) {
+  return api<SpaceSummary>(`/spaces/${spaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
 export function updateSpaceEntryDateMode(
   spaceId: string,
   entryDateMode: EntryDateMode
 ) {
-  return api<SpaceSummary>(`/spaces/${spaceId}`, {
+  return updateSpace(spaceId, { entryDateMode });
+}
+
+export function updateMyLimits(spaceId: string, body: UpdateMyLimitsBody) {
+  return api<SpaceSummary>(`/spaces/${spaceId}/my-limits`, {
     method: "PATCH",
-    body: JSON.stringify({ entryDateMode }),
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchSpaceMonth(spaceId: string, month: string) {
+  return api<SpaceMonthSummary>(
+    `/spaces/${spaceId}/space-month?month=${encodeURIComponent(month)}`
+  );
+}
+
+export function updateCategoryLayer(
+  spaceId: string,
+  categoryId: string,
+  budgetLayer: BudgetLayer | null
+) {
+  return api(`/spaces/${spaceId}/categories/${categoryId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ budgetLayer }),
   });
 }

@@ -8,6 +8,7 @@ import {
   shiftMonth,
 } from "../../shared/lib/money";
 import { fetchSharedEntries } from "../entries/entry-api";
+import { fetchSpaceMonth } from "../spaces/space-api";
 import { useActiveSpace } from "../spaces/use-active-space";
 
 export function SpacePage() {
@@ -21,6 +22,12 @@ export function SpacePage() {
     enabled: Boolean(spaceId),
   });
 
+  const spaceMonthQuery = useQuery({
+    queryKey: ["space-month", spaceId, month],
+    queryFn: () => fetchSpaceMonth(spaceId!, month),
+    enabled: Boolean(spaceId),
+  });
+
   if (!spaceId || !activeSpace) {
     return (
       <main className="px-6 py-8 md:px-10">
@@ -29,6 +36,8 @@ export function SpacePage() {
       </main>
     );
   }
+
+  const spaceLimit = spaceMonthQuery.data?.spaceLimit;
 
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
@@ -70,6 +79,40 @@ export function SpacePage() {
           </button>
         </div>
       </header>
+
+      {spaceLimit?.progress ? (
+        <article className="rounded-lg border border-border bg-surface p-4">
+          <p className="text-sm font-medium text-fg">{t("limits.space")}</p>
+          <p className="mt-1 text-sm tabular-nums text-muted">
+            {formatMoney(
+              spaceLimit.progress.current,
+              activeSpace.currency,
+              locale
+            )}{" "}
+            /{" "}
+            {formatMoney(
+              spaceLimit.progress.target,
+              activeSpace.currency,
+              locale
+            )}
+          </p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
+            <div
+              className={`h-full rounded-full ${
+                spaceLimit.progress.overBy > 0 ? "bg-expense-fg" : "bg-accent"
+              }`}
+              style={{
+                width: `${Math.min(Math.max(spaceLimit.progress.ratio, 0), 1) * 100}%`,
+              }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            {spaceLimit.progress.overBy > 0
+              ? `${t("limits.over")}: ${formatMoney(spaceLimit.progress.overBy, activeSpace.currency, locale)}`
+              : `${t("limits.remaining")}: ${formatMoney(spaceLimit.progress.remaining, activeSpace.currency, locale)}`}
+          </p>
+        </article>
+      ) : null}
 
       <section className="flex flex-col gap-2">
         {sharedQuery.data?.length === 0 ? (
