@@ -48,6 +48,108 @@ export type OverviewSeriesSummary = {
   points: OverviewMonthPoint[];
 };
 
+export const overviewBreakdownQuerySchema = z
+  .object({
+    month: monthQuerySchema.optional(),
+    scope: z.enum(OVERVIEW_SCOPES).default("me"),
+    memberUserId: z.string().uuid().optional(),
+  })
+  .superRefine((query, context) => {
+    if (query.scope === "member" && !query.memberUserId) {
+      context.addIssue({
+        code: "custom",
+        message: "memberUserId is required when scope is member",
+        path: ["memberUserId"],
+      });
+    }
+  });
+
+export type OverviewBreakdownQuery = z.infer<
+  typeof overviewBreakdownQuerySchema
+>;
+
+export type OverviewCategorySlice = {
+  categoryId: string | null;
+  name: string;
+  amount: number;
+  /** 0–1 of totalExpense. */
+  share: number;
+  isOther: boolean;
+};
+
+export type OverviewBreakdownSummary = {
+  month: string;
+  scope: OverviewScope;
+  memberUserId: string | null;
+  totalExpense: number;
+  slices: OverviewCategorySlice[];
+};
+
+export type OverviewCategoryAmount = {
+  categoryId: string;
+  name: string;
+  amount: number;
+};
+
+/** Merge amounts by category, keep Top N, roll the rest into Other. */
+export function buildCategoryBreakdown(
+  amounts: OverviewCategoryAmount[],
+  topN = 5
+): Pick<OverviewBreakdownSummary, "totalExpense" | "slices"> {
+  const merged = new Map<string, { name: string; amount: number }>();
+  for (const item of amounts) {
+    if (item.amount <= 0) {
+      continue;
+    }
+    const existing = merged.get(item.categoryId);
+    if (existing) {
+      existing.amount += item.amount;
+    } else {
+      merged.set(item.categoryId, {
+        name: item.name,
+        amount: item.amount,
+      });
+    }
+  }
+
+  const ranked = [...merged.entries()]
+    .map(([categoryId, value]) => ({
+      categoryId,
+      name: value.name,
+      amount: value.amount,
+    }))
+    .sort((left, right) => right.amount - left.amount);
+
+  const totalExpense = ranked.reduce((sum, item) => sum + item.amount, 0);
+  if (totalExpense <= 0) {
+    return { totalExpense: 0, slices: [] };
+  }
+
+  const top = ranked.slice(0, topN);
+  const rest = ranked.slice(topN);
+  const otherAmount = rest.reduce((sum, item) => sum + item.amount, 0);
+
+  const slices: OverviewCategorySlice[] = top.map((item) => ({
+    categoryId: item.categoryId,
+    name: item.name,
+    amount: item.amount,
+    share: item.amount / totalExpense,
+    isOther: false,
+  }));
+
+  if (otherAmount > 0) {
+    slices.push({
+      categoryId: null,
+      name: "",
+      amount: otherAmount,
+      share: otherAmount / totalExpense,
+      isOther: true,
+    });
+  }
+
+  return { totalExpense, slices };
+}
+
 /** Consecutive months ending at `endMonth` for a range preset. */
 export function overviewRangeMonths(
   endMonth: string,

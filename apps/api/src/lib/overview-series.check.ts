@@ -1,4 +1,5 @@
 import {
+  buildCategoryBreakdown,
   buildOverviewSeries,
   overviewEntryDeltas,
   overviewFlowOptionsForScope,
@@ -86,5 +87,23 @@ const everyonePoints = buildOverviewSeries(
   overviewFlowOptionsForScope("everyone")
 );
 assertEqual(everyonePoints[0]!.expense, 0, "everyone series skips transfer");
+
+const breakdown = buildCategoryBreakdown(
+  [
+    { categoryId: "a", name: "Food", amount: 100 },
+    { categoryId: "b", name: "Rent", amount: 80 },
+    { categoryId: "c", name: "Fun", amount: 60 },
+    { categoryId: "d", name: "Transport", amount: 40 },
+    { categoryId: "e", name: "Health", amount: 30 },
+    { categoryId: "f", name: "Pets", amount: 20 },
+    { categoryId: "a", name: "Food", amount: 10 },
+  ],
+  5
+);
+assertEqual(breakdown.totalExpense, 340, "breakdown total");
+assert(breakdown.slices.length === 6, "top 5 + other");
+assertEqual(breakdown.slices[0]!.amount, 110, "food merged first");
+assert(breakdown.slices[5]!.isOther, "last slice is Other");
+assertEqual(breakdown.slices[5]!.amount, 20, "Other = pets only");
 
 console.log("overview-series check ok");

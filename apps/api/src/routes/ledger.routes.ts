@@ -71,6 +71,12 @@ export async function registerLedgerRoutes(
   }>("/spaces/:spaceId/overview-series", (request) =>
     overviewController.series(request)
   );
+  app.get<{
+    Params: { spaceId: string };
+    Querystring: Record<string, string | undefined>;
+  }>("/spaces/:spaceId/overview-breakdown", (request) =>
+    overviewController.breakdown(request)
+  );
   app.post<{ Params: { spaceId: string } }>(
     "/spaces/:spaceId/reserve-movements",
     (request) => leftoverController.createMovement(request)
