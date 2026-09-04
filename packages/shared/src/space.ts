@@ -24,6 +24,7 @@ export const joinSpaceBodySchema = z.object({
 export const updateSpaceBodySchema = z
   .object({
     entryDateMode: z.enum(ENTRY_DATE_MODES).optional(),
+    privacyMode: z.enum(SPACE_PRIVACY_MODES).optional(),
     spaceLimitEnabled: z.boolean().optional(),
     spaceLimitAmount: z.coerce
       .number()
@@ -41,6 +42,14 @@ export const updateSpaceBodySchema = z
 export type CreateSpaceBody = z.input<typeof createSpaceBodySchema>;
 export type JoinSpaceBody = z.infer<typeof joinSpaceBodySchema>;
 export type UpdateSpaceBody = z.infer<typeof updateSpaceBodySchema>;
+
+export type SpaceMemberSummary = {
+  userId: string;
+  name: string;
+  email: string;
+  role: MembershipRole;
+  joinedAt: string;
+};
 
 export type SpaceSummary = {
   id: string;

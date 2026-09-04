@@ -81,6 +81,7 @@ export type EntrySummary = {
   categoryId: string;
   categoryName: string;
   userId: string;
+  userName: string;
   reservePotId: string | null;
   reservePotName: string | null;
   recurringRuleId: string | null;
