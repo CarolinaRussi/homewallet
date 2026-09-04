@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const registerBodySchema = z.object({
   email: z.string().trim().email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Passcode must be at least 8 characters"),
   name: z
     .string()
     .trim()
@@ -12,7 +12,7 @@ export const registerBodySchema = z.object({
 
 export const loginBodySchema = z.object({
   email: z.string().trim().email("Invalid email"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Passcode is required"),
 });
 
 export const googleBodySchema = z.object({
@@ -25,7 +25,7 @@ export const forgotPasswordBodySchema = z.object({
 
 export const resetPasswordBodySchema = z.object({
   token: z.string().min(1, "Invalid or expired reset link"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Passcode must be at least 8 characters"),
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;

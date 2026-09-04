@@ -79,12 +79,12 @@ export function createAuthService(
         dataSource.manager
       );
       if (!user?.passwordHash) {
-        throw new HttpError(401, "Invalid email or password");
+        throw new HttpError(401, "Invalid email or passcode");
       }
 
       const matches = await verifyPassword(input.password, user.passwordHash);
       if (!matches) {
-        throw new HttpError(401, "Invalid email or password");
+        throw new HttpError(401, "Invalid email or passcode");
       }
 
       return toSessionUser(user);

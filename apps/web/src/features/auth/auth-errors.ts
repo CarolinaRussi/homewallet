@@ -2,12 +2,12 @@ import type { MessageKey } from "../../shared/lib/i18n/messages";
 
 const AUTH_ERROR_KEYS: Record<string, MessageKey> = {
   "Invalid email": "auth.errorInvalidEmail",
-  "Password must be at least 8 characters": "auth.errorPassMin",
-  "Password is required": "auth.errorPassRequired",
+  "Passcode must be at least 8 characters": "auth.errorPassMin",
+  "Passcode is required": "auth.errorPassRequired",
   "Name is required": "auth.errorNameRequired",
   "Name is too long": "auth.errorNameTooLong",
   "Email already registered": "auth.errorEmailTaken",
-  "Invalid email or password": "auth.errorInvalidCredentials",
+  "Invalid email or passcode": "auth.errorInvalidCredentials",
   "Google sign-in is not configured": "auth.errorGoogleUnavailable",
   "Google sign-in failed": "auth.errorGoogleFailed",
   "Invalid or expired reset link": "auth.errorResetInvalid",
