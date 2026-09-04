@@ -11,6 +11,12 @@ export async function registerAuthRoutes(
   );
   app.post("/login", (request, reply) => controller.login(request, reply));
   app.post("/google", (request, reply) => controller.google(request, reply));
+  app.post("/forgot-password", (request, reply) =>
+    controller.forgotPassword(request, reply)
+  );
+  app.post("/reset-password", (request, reply) =>
+    controller.resetPassword(request, reply)
+  );
   app.post("/logout", (request, reply) => controller.logout(request, reply));
   app.get("/me", { preHandler: requireUser }, (request) =>
     controller.me(request)

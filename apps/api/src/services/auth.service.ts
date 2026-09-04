@@ -1,6 +1,14 @@
 import { OAuth2Client } from "google-auth-library";
+import { createHash, randomBytes } from "node:crypto";
 import type { DataSource } from "typeorm";
-import type { GoogleBody, LoginBody, RegisterBody } from "@homewallet/shared";
+import { APP_NAME } from "@homewallet/shared";
+import type {
+  ForgotPasswordBody,
+  GoogleBody,
+  LoginBody,
+  RegisterBody,
+  ResetPasswordBody,
+} from "@homewallet/shared";
 import type { AppConfig } from "../config.js";
 import { Entry } from "../db/entities/entry.entity.js";
 import { InstallmentPlan } from "../db/entities/installment-plan.entity.js";
@@ -11,20 +19,30 @@ import { ReserveMovement } from "../db/entities/reserve-movement.entity.js";
 import { ReservePot } from "../db/entities/reserve-pot.entity.js";
 import { User } from "../db/entities/user.entity.js";
 import { HttpError } from "../lib/http-error.js";
+import { passwordResetEmailHtml } from "../lib/mail-templates.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
+import { passwordResetTokenRepository } from "../repositories/password-reset-token.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
+import type { MailService } from "./mail.service.js";
 import type { SpaceService } from "./space.service.js";
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function toSessionUser(user: User) {
   return { id: user.id, email: user.email, name: user.name };
 }
 
+function hashResetToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 export function createAuthService(
   dataSource: DataSource,
   spaceService: SpaceService,
-  config: AppConfig
+  config: AppConfig,
+  mailService: MailService
 ) {
   const googleClient = config.googleClientId
     ? new OAuth2Client(config.googleClientId)
@@ -45,13 +63,13 @@ export function createAuthService(
           googleSub: null,
         });
 
-        await spaceService.createForOwner(
+        const space = await spaceService.createForOwner(
           user.id,
           { name: `${input.name}'s space`, currency: "BRL" },
           manager
         );
 
-        return toSessionUser(user);
+        return { user: toSessionUser(user), spaceId: space.id };
       });
     },
 
@@ -115,13 +133,70 @@ export function createAuthService(
           googleSub,
         });
 
-        await spaceService.createForOwner(
+        const space = await spaceService.createForOwner(
           user.id,
           { name: `${name}'s space`, currency: "BRL" },
           manager
         );
 
-        return { user: toSessionUser(user), createdSpace: true };
+        return {
+          user: toSessionUser(user),
+          createdSpace: true,
+          spaceId: space.id,
+        };
+      });
+    },
+
+    async forgotPassword(input: ForgotPasswordBody): Promise<void> {
+      const user = await userRepository.findByEmail(
+        input.email.toLowerCase(),
+        dataSource.manager
+      );
+      if (!user?.passwordHash) {
+        return;
+      }
+
+      const rawToken = randomBytes(32).toString("base64url");
+      const tokenHash = hashResetToken(rawToken);
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+      await dataSource.transaction(async (manager) => {
+        await passwordResetTokenRepository.deleteForUser(user.id, manager);
+        await passwordResetTokenRepository.create(manager, {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        });
+      });
+
+      const resetUrl = `${config.webOrigin}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      await mailService.send({
+        to: user.email,
+        subject: `Reset your ${APP_NAME} password`,
+        html: passwordResetEmailHtml({ name: user.name, resetUrl }),
+        debugLink: resetUrl,
+      });
+    },
+
+    async resetPassword(input: ResetPasswordBody): Promise<void> {
+      const tokenHash = hashResetToken(input.token);
+      const row = await passwordResetTokenRepository.findByTokenHash(
+        tokenHash,
+        dataSource.manager
+      );
+      if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
+        throw new HttpError(400, "Invalid or expired reset link");
+      }
+
+      await dataSource.transaction(async (manager) => {
+        const user = await userRepository.findById(row.userId, manager);
+        if (!user) {
+          throw new HttpError(400, "Invalid or expired reset link");
+        }
+
+        user.passwordHash = await hashPassword(input.password);
+        await userRepository.save(manager, user);
+        await passwordResetTokenRepository.deleteForUser(user.id, manager);
       });
     },
 
@@ -185,6 +260,7 @@ export function createAuthService(
       }
 
       await dataSource.transaction(async (manager) => {
+        await passwordResetTokenRepository.deleteForUser(userId, manager);
         await manager.delete(Entry, { userId });
         await manager.delete(ReserveMovement, { userId });
         await manager.delete(LeftoverSeed, { userId });

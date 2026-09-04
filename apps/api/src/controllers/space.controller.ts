@@ -1,6 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import {
   createSpaceBodySchema,
+  inviteSpaceEmailBodySchema,
   joinSpaceBodySchema,
   monthQuerySchema,
   updateMyLimitsBodySchema,
@@ -69,6 +70,15 @@ export function createSpaceController(spaceService: SpaceService) {
       return spaceService.regenerateJoinCode(
         request.user.sub,
         request.params.id
+      );
+    },
+
+    inviteEmail(request: FastifyRequest<{ Params: SpaceParams }>) {
+      const body = inviteSpaceEmailBodySchema.parse(request.body);
+      return spaceService.inviteByEmail(
+        request.user.sub,
+        request.params.id,
+        body.email
       );
     },
 

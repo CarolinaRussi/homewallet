@@ -4,6 +4,7 @@ import { Entry } from "./entities/entry.entity.js";
 import { InstallmentPlan } from "./entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./entities/leftover-seed.entity.js";
 import { Membership } from "./entities/membership.entity.js";
+import { PasswordResetToken } from "./entities/password-reset-token.entity.js";
 import { RecurrenceSkip } from "./entities/recurrence-skip.entity.js";
 import { RecurringRule } from "./entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./entities/reserve-movement.entity.js";
@@ -19,6 +20,7 @@ import { LeftoverSeeds20260903240000 } from "./migrations/20260903240000-leftove
 import { LimitsAndBudgetLayers20260903250000 } from "./migrations/20260903250000-limits-budget-layers.js";
 import { ReservePots20260904010000 } from "./migrations/20260904010000-reserve-pots.js";
 import { MembershipCreatedAt20260904020000 } from "./migrations/20260904020000-membership-created-at.js";
+import { PasswordResetTokens20260904100000 } from "./migrations/20260904100000-password-reset-tokens.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -36,6 +38,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       InstallmentPlan,
       RecurrenceSkip,
       LeftoverSeed,
+      PasswordResetToken,
     ],
     migrations: [
       InitialIdentity20260903180000,
@@ -47,6 +50,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       LimitsAndBudgetLayers20260903250000,
       ReservePots20260904010000,
       MembershipCreatedAt20260904020000,
+      PasswordResetTokens20260904100000,
     ],
   });
 }

@@ -20,6 +20,7 @@ import { Entry } from "./db/entities/entry.entity.js";
 import { InstallmentPlan } from "./db/entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./db/entities/leftover-seed.entity.js";
 import { Membership } from "./db/entities/membership.entity.js";
+import { PasswordResetToken } from "./db/entities/password-reset-token.entity.js";
 import { RecurrenceSkip } from "./db/entities/recurrence-skip.entity.js";
 import { RecurringRule } from "./db/entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./db/entities/reserve-movement.entity.js";
@@ -35,6 +36,7 @@ import { createAuthService } from "./services/auth.service.js";
 import { createCategoryService } from "./services/category.service.js";
 import { createEntryService } from "./services/entry.service.js";
 import { createLeftoverService } from "./services/leftover.service.js";
+import { createMailService } from "./services/mail.service.js";
 import { createRecurringService } from "./services/recurring.service.js";
 import { createReservePotService } from "./services/reserve-pot.service.js";
 import { createSpaceService } from "./services/space.service.js";
@@ -59,9 +61,20 @@ RecurringRule.useDataSource(dataSource);
 InstallmentPlan.useDataSource(dataSource);
 RecurrenceSkip.useDataSource(dataSource);
 LeftoverSeed.useDataSource(dataSource);
+PasswordResetToken.useDataSource(dataSource);
 
-const spaceService = createSpaceService(dataSource);
-const authService = createAuthService(dataSource, spaceService, config);
+const mailService = createMailService(config);
+const spaceService = createSpaceService(
+  dataSource,
+  mailService,
+  config.webOrigin
+);
+const authService = createAuthService(
+  dataSource,
+  spaceService,
+  config,
+  mailService
+);
 const categoryService = createCategoryService(dataSource);
 const recurringService = createRecurringService(dataSource);
 const reservePotService = createReservePotService(dataSource);
@@ -88,15 +101,42 @@ app.setErrorHandler((error, _request, reply) => {
   if (error instanceof HttpError) {
     return reply.code(error.statusCode).send({ error: error.message });
   }
-  if (error instanceof ZodError) {
+  if (isZodError(error)) {
     const firstIssue = error.issues[0];
     return reply.code(400).send({
       error: firstIssue?.message ?? "Invalid request",
     });
   }
+  if (isClientFastifyError(error)) {
+    return reply.code(error.statusCode).send({ error: error.message });
+  }
   app.log.error(error);
   return reply.code(500).send({ error: "Internal server error" });
 });
+
+function isZodError(error: unknown): error is ZodError {
+  return (
+    error instanceof ZodError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      (error as { name: string }).name === "ZodError" &&
+      "issues" in error &&
+      Array.isArray((error as { issues: unknown }).issues))
+  );
+}
+
+function isClientFastifyError(
+  error: unknown
+): error is Error & { statusCode: number } {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const statusCode = (error as { statusCode?: unknown }).statusCode;
+  return (
+    typeof statusCode === "number" && statusCode >= 400 && statusCode < 500
+  );
+}
 
 app.get("/health", async () => ({
   status: "ok",
@@ -113,13 +153,15 @@ await app.register(
     registerSpaceRoutes(scoped, createSpaceController(spaceService)),
   { prefix: "/spaces" }
 );
-await registerLedgerRoutes(
-  app,
-  createCategoryController(categoryService),
-  createEntryController(entryService),
-  createLeftoverController(leftoverService),
-  createRecurringController(recurringService),
-  createReservePotController(reservePotService)
+await app.register(async (scoped) =>
+  registerLedgerRoutes(
+    scoped,
+    createCategoryController(categoryService),
+    createEntryController(entryService),
+    createLeftoverController(leftoverService),
+    createRecurringController(recurringService),
+    createReservePotController(reservePotService)
+  )
 );
 
 await app.listen({ port: config.port, host: config.host });

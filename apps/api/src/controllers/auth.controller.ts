@@ -1,8 +1,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
+  forgotPasswordBodySchema,
   googleBodySchema,
   loginBodySchema,
   registerBodySchema,
+  resetPasswordBodySchema,
 } from "@homewallet/shared";
 import { SESSION_COOKIE, sessionCookieOptions } from "../lib/session-cookie.js";
 import type { AuthService } from "../services/auth.service.js";
@@ -16,9 +18,9 @@ export function createAuthController(authService: AuthService) {
   return {
     async register(request: FastifyRequest, reply: FastifyReply) {
       const body = registerBodySchema.parse(request.body);
-      const user = await authService.register(body);
-      await setSession(reply, user.id);
-      return { user };
+      const result = await authService.register(body);
+      await setSession(reply, result.user.id);
+      return result;
     },
 
     async login(request: FastifyRequest, reply: FastifyReply) {
@@ -33,6 +35,18 @@ export function createAuthController(authService: AuthService) {
       const result = await authService.loginWithGoogle(body);
       await setSession(reply, result.user.id);
       return result;
+    },
+
+    async forgotPassword(request: FastifyRequest, reply: FastifyReply) {
+      const body = forgotPasswordBodySchema.parse(request.body);
+      await authService.forgotPassword(body);
+      return reply.code(204).send();
+    },
+
+    async resetPassword(request: FastifyRequest, reply: FastifyReply) {
+      const body = resetPasswordBodySchema.parse(request.body);
+      await authService.resetPassword(body);
+      return reply.code(204).send();
     },
 
     async logout(_request: FastifyRequest, reply: FastifyReply) {

@@ -26,6 +26,13 @@ export async function registerSpaceRoutes(
   app.post<{ Params: { id: string } }>("/:id/regenerate-join-code", (request) =>
     controller.regenerateJoinCode(request)
   );
+  app.post<{ Params: { id: string } }>(
+    "/:id/invite-email",
+    async (request, reply) => {
+      await controller.inviteEmail(request);
+      return reply.code(204).send();
+    }
+  );
   app.post<{ Params: { id: string } }>("/:id/leave", (request) =>
     controller.leave(request)
   );

@@ -8,16 +8,19 @@ import type {
   UpdateMyLimitsBody,
   UpdateSpaceBody,
 } from "@homewallet/shared";
-import { monthQuerySchema, progressToward } from "@homewallet/shared";
+import { APP_NAME, monthQuerySchema, progressToward } from "@homewallet/shared";
 import { Membership } from "../db/entities/membership.entity.js";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds } from "../lib/entry-mappers.js";
 import { createJoinCode } from "../lib/join-code.js";
+import { spaceInviteEmailHtml } from "../lib/mail-templates.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { spaceRepository } from "../repositories/space.repository.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
+import { userRepository } from "../repositories/user.repository.js";
+import type { MailService } from "./mail.service.js";
 
 function amountOrNull(value: string | null | undefined) {
   if (value == null || value === "") {
@@ -82,7 +85,11 @@ function requirePositiveWhenEnabled(
   }
 }
 
-export function createSpaceService(dataSource: DataSource) {
+export function createSpaceService(
+  dataSource: DataSource,
+  mailService: MailService,
+  webOrigin: string
+) {
   return {
     async listForUser(userId: string): Promise<SpaceSummary[]> {
       const memberships = await membershipRepository.findForUser(
@@ -332,6 +339,42 @@ export function createSpaceService(dataSource: DataSource) {
         membership.role,
         myLimitsFrom(membership)
       );
+    },
+
+    async inviteByEmail(
+      userId: string,
+      spaceId: string,
+      email: string
+    ): Promise<void> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      if (membership.role !== "owner") {
+        throw new HttpError(403, "Only owners can send invites");
+      }
+
+      const inviter = await userRepository.findById(userId, dataSource.manager);
+      if (!inviter) {
+        throw new HttpError(401, "Unauthorized");
+      }
+
+      const joinUrl = `${webOrigin}/settings?join=${encodeURIComponent(membership.space.joinCode)}`;
+      await mailService.send({
+        to: email.toLowerCase(),
+        subject: `${inviter.name} invited you to ${membership.space.name} on ${APP_NAME}`,
+        html: spaceInviteEmailHtml({
+          inviterName: inviter.name,
+          spaceName: membership.space.name,
+          joinUrl,
+          joinCode: membership.space.joinCode,
+        }),
+        debugLink: joinUrl,
+      });
     },
 
     async leave(
