@@ -62,7 +62,11 @@ export function AuthPage({ mode }: AuthPageProps) {
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       await queryClient.invalidateQueries({ queryKey: ["spaces"] });
-      if (mode === "register" && "spaceId" in result) {
+      if (
+        mode === "register" &&
+        "spaceId" in result &&
+        typeof result.spaceId === "string"
+      ) {
         afterAuth({ welcomeSpace: true, spaceId: result.spaceId });
         return;
       }
