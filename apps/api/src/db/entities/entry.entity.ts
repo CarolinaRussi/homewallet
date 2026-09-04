@@ -5,10 +5,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import type { EntryType, EntryVisibility } from "@homewallet/shared";
 import { Category } from "./category.entity.js";
+import { EntryCardLine } from "./entry-card-line.entity.js";
 import { InstallmentPlan } from "./installment-plan.entity.js";
 import { ReservePot } from "./reserve-pot.entity.js";
 import { Space } from "./space.entity.js";
@@ -62,6 +64,10 @@ export class Entry extends BaseEntity {
   @Column({ name: "counterparty_user_id", type: "uuid", nullable: true })
   counterpartyUserId!: string | null;
 
+  /** Auto-created by card-line installments; bump total when adding more installment lines. */
+  @Column({ name: "card_installment_seeded", type: "boolean", default: false })
+  cardInstallmentSeeded!: boolean;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 
@@ -88,4 +94,7 @@ export class Entry extends BaseEntity {
   @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "counterparty_user_id" })
   counterparty!: User | null;
+
+  @OneToMany(() => EntryCardLine, (line) => line.entry)
+  cardLines!: EntryCardLine[];
 }

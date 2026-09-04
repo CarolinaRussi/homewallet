@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { Category } from "./entities/category.entity.js";
 import { Entry } from "./entities/entry.entity.js";
+import { EntryCardLine } from "./entities/entry-card-line.entity.js";
 import { InstallmentPlan } from "./entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./entities/leftover-seed.entity.js";
 import { Membership } from "./entities/membership.entity.js";
@@ -22,6 +23,10 @@ import { ReservePots20260904010000 } from "./migrations/20260904010000-reserve-p
 import { MembershipCreatedAt20260904020000 } from "./migrations/20260904020000-membership-created-at.js";
 import { PasswordResetTokens20260904100000 } from "./migrations/20260904100000-password-reset-tokens.js";
 import { EntryTransfers20260904120000 } from "./migrations/20260904120000-entry-transfers.js";
+import { EntryCardLines20260904130000 } from "./migrations/20260904130000-entry-card-lines.js";
+import { EntryCardLinesSortOrder20260904140000 } from "./migrations/20260904140000-entry-card-lines-sort-order.js";
+import { CategoryLineDetail20260904150000 } from "./migrations/20260904150000-category-line-detail.js";
+import { CardLineInstallments20260904160000 } from "./migrations/20260904160000-card-line-installments.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -33,6 +38,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       Membership,
       Category,
       Entry,
+      EntryCardLine,
       ReserveMovement,
       ReservePot,
       RecurringRule,
@@ -53,6 +59,10 @@ export function createDataSource(databaseUrl: string): DataSource {
       MembershipCreatedAt20260904020000,
       PasswordResetTokens20260904100000,
       EntryTransfers20260904120000,
+      EntryCardLines20260904130000,
+      EntryCardLinesSortOrder20260904140000,
+      CategoryLineDetail20260904150000,
+      CardLineInstallments20260904160000,
     ],
   });
 }

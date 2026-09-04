@@ -28,6 +28,9 @@ export class Category extends BaseEntity {
   @Column({ name: "budget_layer", type: "text", nullable: true })
   budgetLayer!: BudgetLayer | null;
 
+  @Column({ name: "line_detail_enabled", type: "boolean", default: false })
+  lineDetailEnabled!: boolean;
+
   @ManyToOne(() => Space, { onDelete: "CASCADE" })
   @JoinColumn({ name: "space_id" })
   space!: Space;
