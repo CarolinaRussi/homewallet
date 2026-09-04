@@ -178,7 +178,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 
       {mode === "login" ? (
         <Link to="/forgot-password" className="text-sm text-muted underline">
-          {t("auth.forgotPassword")}
+          {t("auth.forgotPass")}
         </Link>
       ) : null}
 

@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 11 — Landing & email**. Public landing, password reset, and invite-by-email (Resend). Email confirmation + monthly summary deferred. Polish/deploy is Part 12.
+> Status: **Part 11 — Landing & email**. Public landing, passcode reset, and invite-by-email (Resend). Email confirmation + monthly summary deferred. Polish/deploy is Part 12.
 
 **Later (export):** filters by space/date, Excel-friendly PT (BOM + `;` + localized headers), optional reserve movements + recurring/installment files — today is a flat entries dump.
 
@@ -59,14 +59,14 @@ You can switch anytime by changing `DATABASE_URL` and restarting the API. Do not
 
 Google sign-in is optional: set `GOOGLE_CLIENT_ID` in `apps/api/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`.
 
-Email (password reset + invites) is optional locally: set `RESEND_API_KEY` and `RESEND_FROM`. Without them, the API logs the message and link to the console.
+Email (passcode reset + invites) is optional locally: set `RESEND_API_KEY` and `RESEND_FROM`. Without them, the API logs the message and link to the console.
 
 ## Stack
 
 - **Monorepo (pnpm):** `apps/web`, `apps/api`, `packages/shared`
 - **Web:** Vite + React + TypeScript + Tailwind + TanStack Query
 - **API:** Fastify + TypeORM (Active Record) + PostgreSQL (Neon or Docker locally)
-- **Auth:** email/password + Google ID token; JWT httpOnly cookie
+- **Auth:** email + passcode + Google ID token; JWT httpOnly cookie
 - **Deploy:** Vercel (web) + Render (API + Postgres) — later
 - **Tooling:** ESLint, Prettier, TS strict, Husky, lint-staged, commitlint, GitHub Actions CI
 

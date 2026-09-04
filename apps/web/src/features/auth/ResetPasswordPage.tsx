@@ -65,7 +65,7 @@ export function ResetPasswordPage() {
       ) : (
         <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("auth.newPassword")}
+            {t("auth.newPass")}
             <input
               name="password"
               type="password"
@@ -75,7 +75,7 @@ export function ResetPasswordPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("auth.confirmPassword")}
+            {t("auth.confirmPass")}
             <input
               name="confirm"
               type="password"
