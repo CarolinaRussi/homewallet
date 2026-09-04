@@ -20,7 +20,7 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     visibility: entry.visibility,
     occurredOn: entry.occurredOn,
     categoryId: entry.categoryId,
-    categoryName: entry.category.name,
+    categoryName: entry.category?.name ?? null,
     userId: entry.userId,
     userName: entry.user?.name ?? "",
     recurringRuleId: entry.recurringRuleId,
@@ -29,6 +29,9 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     installmentCount: entry.installmentPlan?.installmentCount ?? null,
     reservePotId: entry.reservePotId,
     reservePotName: entry.reservePot?.name ?? null,
+    transferGroupId: entry.transferGroupId,
+    counterpartyUserId: entry.counterpartyUserId,
+    counterpartyName: entry.counterparty?.name ?? null,
   };
 }
 

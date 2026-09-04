@@ -21,6 +21,7 @@ import { LimitsAndBudgetLayers20260903250000 } from "./migrations/20260903250000
 import { ReservePots20260904010000 } from "./migrations/20260904010000-reserve-pots.js";
 import { MembershipCreatedAt20260904020000 } from "./migrations/20260904020000-membership-created-at.js";
 import { PasswordResetTokens20260904100000 } from "./migrations/20260904100000-password-reset-tokens.js";
+import { EntryTransfers20260904120000 } from "./migrations/20260904120000-entry-transfers.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -51,6 +52,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       ReservePots20260904010000,
       MembershipCreatedAt20260904020000,
       PasswordResetTokens20260904100000,
+      EntryTransfers20260904120000,
     ],
   });
 }

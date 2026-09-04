@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DataSource } from "typeorm";
 import type {
   CreateEntryBody,
@@ -99,6 +100,68 @@ export function createEntryService(
     ): Promise<EntrySummary> {
       await requireMember(userId, spaceId);
 
+      if (input.type === "transfer") {
+        const peerUserId = input.peerUserId!;
+        if (peerUserId === userId) {
+          throw new HttpError(400, "Cannot transfer to yourself");
+        }
+        await requireMember(peerUserId, spaceId);
+
+        let categoryId: string | null = null;
+        if (input.categoryId) {
+          await requireOwnCategory(spaceId, input.categoryId);
+          categoryId = input.categoryId;
+        }
+
+        const transferGroupId = randomUUID();
+        const amount = input.amount.toFixed(2);
+
+        const outEntry = await dataSource.transaction(async (manager) => {
+          const outgoing = await entryRepository.create(manager, {
+            spaceId,
+            userId,
+            categoryId,
+            type: "transfer_out",
+            amount,
+            description: input.description,
+            visibility: "personal",
+            occurredOn: input.occurredOn,
+            recurringRuleId: null,
+            installmentPlanId: null,
+            installmentNumber: null,
+            reservePotId: null,
+            transferGroupId,
+            counterpartyUserId: peerUserId,
+          });
+          await entryRepository.create(manager, {
+            spaceId,
+            userId: peerUserId,
+            categoryId,
+            type: "transfer_in",
+            amount,
+            description: input.description,
+            visibility: "personal",
+            occurredOn: input.occurredOn,
+            recurringRuleId: null,
+            installmentPlanId: null,
+            installmentNumber: null,
+            reservePotId: null,
+            transferGroupId,
+            counterpartyUserId: userId,
+          });
+          return outgoing;
+        });
+
+        const loaded = await entryRepository.findById(
+          outEntry.id,
+          dataSource.manager
+        );
+        if (!loaded) {
+          throw new HttpError(500, "Failed to load entry");
+        }
+        return toEntrySummary(loaded);
+      }
+
       if (input.type === "saving") {
         await reservePotService.requireOwnPot(
           userId,
@@ -119,6 +182,8 @@ export function createEntryService(
           installmentPlanId: null,
           installmentNumber: null,
           reservePotId: input.reservePotId!,
+          transferGroupId: null,
+          counterpartyUserId: null,
         });
         const loaded = await entryRepository.findById(
           entry.id,
@@ -144,6 +209,8 @@ export function createEntryService(
         installmentPlanId: null,
         installmentNumber: null,
         reservePotId: null,
+        transferGroupId: null,
+        counterpartyUserId: null,
       });
       const loaded = await entryRepository.findById(
         entry.id,
@@ -169,6 +236,62 @@ export function createEntryService(
       }
       await requireMember(userId, entry.spaceId);
 
+      if (entry.type === "transfer_out" || entry.type === "transfer_in") {
+        if (input.type !== undefined) {
+          throw new HttpError(400, "Cannot change transfer type");
+        }
+        if (input.visibility !== undefined) {
+          throw new HttpError(400, "Transfers stay personal");
+        }
+        if (input.reservePotId !== undefined) {
+          throw new HttpError(400, "Transfers cannot use a reserve pot");
+        }
+
+        if (input.categoryId !== undefined) {
+          if (input.categoryId) {
+            await requireOwnCategory(entry.spaceId, input.categoryId);
+            entry.categoryId = input.categoryId;
+          } else {
+            entry.categoryId = null;
+          }
+        }
+        if (input.amount !== undefined) entry.amount = input.amount.toFixed(2);
+        if (input.description !== undefined)
+          entry.description = input.description;
+        if (input.occurredOn) entry.occurredOn = input.occurredOn;
+
+        await dataSource.transaction(async (manager) => {
+          await entryRepository.save(manager, entry);
+          if (!entry.transferGroupId) {
+            return;
+          }
+          const pair = await entryRepository.findByTransferGroup(
+            entry.transferGroupId,
+            manager
+          );
+          const other = pair.find((row) => row.id !== entry.id);
+          if (!other) {
+            return;
+          }
+          if (input.amount !== undefined) other.amount = entry.amount;
+          if (input.occurredOn) other.occurredOn = entry.occurredOn;
+          if (input.description !== undefined)
+            other.description = entry.description;
+          if (input.categoryId !== undefined)
+            other.categoryId = entry.categoryId;
+          await entryRepository.save(manager, other);
+        });
+
+        const loaded = await entryRepository.findById(
+          entry.id,
+          dataSource.manager
+        );
+        if (!loaded) {
+          throw new HttpError(500, "Failed to load entry");
+        }
+        return toEntrySummary(loaded);
+      }
+
       const nextType = input.type ?? entry.type;
 
       if (nextType === "saving") {
@@ -189,7 +312,7 @@ export function createEntryService(
         if (input.categoryId) {
           await requireOwnCategory(entry.spaceId, input.categoryId);
           entry.categoryId = input.categoryId;
-        } else if (entry.type === "saving") {
+        } else if (entry.type === "saving" || !entry.categoryId) {
           throw new HttpError(
             400,
             "categoryId is required when changing from saving"
@@ -229,6 +352,17 @@ export function createEntryService(
         throw new HttpError(403, "You can only delete your own entries");
       }
       await requireMember(userId, entry.spaceId);
+
+      if (entry.transferGroupId) {
+        const pair = await entryRepository.findByTransferGroup(
+          entry.transferGroupId,
+          dataSource.manager
+        );
+        for (const row of pair) {
+          await entryRepository.remove(dataSource.manager, row);
+        }
+        return;
+      }
 
       if (
         installmentScope === "forward" &&

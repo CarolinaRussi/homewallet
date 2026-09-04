@@ -21,6 +21,7 @@ export const entryRepository = {
         installmentPlan: true,
         reservePot: true,
         user: true,
+        counterparty: true,
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -59,6 +60,7 @@ export const entryRepository = {
         installmentPlan: true,
         reservePot: true,
         user: true,
+        counterparty: true,
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -80,6 +82,7 @@ export const entryRepository = {
         installmentPlan: true,
         reservePot: true,
         user: true,
+        counterparty: true,
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -105,6 +108,18 @@ export const entryRepository = {
         installmentPlan: true,
         reservePot: true,
         user: true,
+        counterparty: true,
+      },
+    });
+  },
+
+  findByTransferGroup(transferGroupId: string, manager: EntityManager) {
+    return manager.find(Entry, {
+      where: { transferGroupId },
+      relations: {
+        category: true,
+        user: true,
+        counterparty: true,
       },
     });
   },

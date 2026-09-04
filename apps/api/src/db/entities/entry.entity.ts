@@ -25,8 +25,8 @@ export class Entry extends BaseEntity {
   @Column({ name: "user_id", type: "uuid" })
   userId!: string;
 
-  @Column({ name: "category_id", type: "uuid" })
-  categoryId!: string;
+  @Column({ name: "category_id", type: "uuid", nullable: true })
+  categoryId!: string | null;
 
   @Column({ type: "text" })
   type!: EntryType;
@@ -56,6 +56,12 @@ export class Entry extends BaseEntity {
   @Column({ name: "reserve_pot_id", type: "uuid", nullable: true })
   reservePotId!: string | null;
 
+  @Column({ name: "transfer_group_id", type: "uuid", nullable: true })
+  transferGroupId!: string | null;
+
+  @Column({ name: "counterparty_user_id", type: "uuid", nullable: true })
+  counterpartyUserId!: string | null;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 
@@ -67,9 +73,9 @@ export class Entry extends BaseEntity {
   @JoinColumn({ name: "user_id" })
   user!: User;
 
-  @ManyToOne(() => Category, { onDelete: "RESTRICT" })
+  @ManyToOne(() => Category, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "category_id" })
-  category!: Category;
+  category!: Category | null;
 
   @ManyToOne(() => InstallmentPlan, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "installment_plan_id" })
@@ -78,4 +84,8 @@ export class Entry extends BaseEntity {
   @ManyToOne(() => ReservePot, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "reserve_pot_id" })
   reservePot!: ReservePot | null;
+
+  @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "counterparty_user_id" })
+  counterparty!: User | null;
 }

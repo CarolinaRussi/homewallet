@@ -83,9 +83,9 @@ function buildBuckets(
   for (const entry of entries) {
     const bucket = bucketFor(monthKey(entry.occurredOn));
     const amount = Number(entry.amount);
-    if (entry.type === "income") {
+    if (entry.type === "income" || entry.type === "transfer_in") {
       bucket.income += amount;
-    } else if (entry.type === "expense") {
+    } else if (entry.type === "expense" || entry.type === "transfer_out") {
       bucket.expense += amount;
     } else if (entry.type === "saving") {
       bucket.contributed += amount;
@@ -192,7 +192,7 @@ export function createLeftoverService(
       };
       let unmappedExpense = 0;
       for (const entry of monthEntries) {
-        if (entry.type !== "expense") {
+        if (entry.type !== "expense" && entry.type !== "transfer_out") {
           continue;
         }
         const amount = Number(entry.amount);
