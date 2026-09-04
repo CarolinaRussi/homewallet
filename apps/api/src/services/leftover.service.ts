@@ -8,7 +8,7 @@ import type {
   ReserveMovementSummary,
 } from "@homewallet/shared";
 import {
-  cardOthersAmount,
+  allocateExpenseToCategories,
   computeMonthSummary,
   layerTargets,
   progressToward,
@@ -209,21 +209,34 @@ export function createLeftoverService(
         if (entry.type !== "expense" && entry.type !== "transfer_out") {
           continue;
         }
-        const lines = entry.cardLines ?? [];
-        if (entry.type === "expense" && lines.length > 0) {
-          for (const line of lines) {
-            addToLayer(Number(line.amount), line.category?.budgetLayer);
-          }
-          const others = cardOthersAmount(
-            Number(entry.amount),
-            lines.map((line) => Number(line.amount))
-          );
-          if (others > 0) {
-            addToLayer(others, entry.category?.budgetLayer);
-          }
+        if (!entry.categoryId) {
+          addToLayer(Number(entry.amount), null);
           continue;
         }
-        addToLayer(Number(entry.amount), entry.category?.budgetLayer);
+        const lines = entry.type === "expense" ? (entry.cardLines ?? []) : [];
+        const layerByCategoryId = new Map<string, string | null>();
+        layerByCategoryId.set(
+          entry.categoryId,
+          entry.category?.budgetLayer ?? null
+        );
+        for (const line of lines) {
+          layerByCategoryId.set(
+            line.categoryId,
+            line.category?.budgetLayer ?? null
+          );
+        }
+
+        const slices = allocateExpenseToCategories({
+          amount: Number(entry.amount),
+          categoryId: entry.categoryId,
+          cardLines: lines.map((line) => ({
+            amount: Number(line.amount),
+            categoryId: line.categoryId,
+          })),
+        });
+        for (const slice of slices) {
+          addToLayer(slice.amount, layerByCategoryId.get(slice.categoryId));
+        }
       }
       const targets = layerTargets(summary.income);
       budgetLayers = {

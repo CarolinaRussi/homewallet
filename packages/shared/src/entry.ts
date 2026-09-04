@@ -60,6 +60,58 @@ export function cardOthersAmount(
   return (statementCents - linesCents) / 100;
 }
 
+/** One spend destination after exploding card lines (Overview / 50/40/10). */
+export type ExpenseAllocationSlice = {
+  categoryId: string;
+  amount: number;
+};
+
+export type ExpenseAllocationInput = {
+  amount: number;
+  /** Parent / statement category; also receives auto Outros. */
+  categoryId: string;
+  cardLines?: { amount: number; categoryId: string }[];
+};
+
+/**
+ * Where an expense went for charts and budget layers.
+ * With lines: each line category + Outros on the parent category.
+ * Without lines: the whole amount on the parent category.
+ */
+export function allocateExpenseToCategories(
+  input: ExpenseAllocationInput
+): ExpenseAllocationSlice[] {
+  const lines = input.cardLines ?? [];
+  if (lines.length === 0) {
+    return [{ categoryId: input.categoryId, amount: input.amount }];
+  }
+
+  const amountByCategoryId = new Map<string, number>();
+  function addAmount(categoryId: string, amount: number) {
+    amountByCategoryId.set(
+      categoryId,
+      (amountByCategoryId.get(categoryId) ?? 0) + amount
+    );
+  }
+
+  for (const line of lines) {
+    addAmount(line.categoryId, line.amount);
+  }
+
+  const others = cardOthersAmount(
+    input.amount,
+    lines.map((line) => line.amount)
+  );
+  if (others > 0) {
+    addAmount(input.categoryId, others);
+  }
+
+  return [...amountByCategoryId.entries()].map(([categoryId, amount]) => ({
+    categoryId,
+    amount,
+  }));
+}
+
 function refineCardLinesAgainstAmount(
   amount: number | undefined,
   cardLines: EntryCardLineInput[] | undefined,
