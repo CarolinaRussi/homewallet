@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 5 — leftover & reserve**. Personal sobra with carry + Poupancinha. Recurring/installments are Part 6.
+> Status: **Part 6 — recurring & installments**. Recurring bills + parcel plans. Limits/month close are Part 7.
 
 ## Quick start
 
