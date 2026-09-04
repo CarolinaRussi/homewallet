@@ -10,7 +10,9 @@ import {
 } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
 import {
+  createLeftoverSeed,
   createReserveMovement,
+  deleteLeftoverSeed,
   deleteReserveMovement,
   fetchMonthSummary,
 } from "./leftover-api";
@@ -51,8 +53,25 @@ export function LeftoverReserveSection({
       onSuccess(
         variables.type === "contribute"
           ? t("me.reserveContributed")
-          : t("me.reserveWithdrawn")
+          : variables.type === "seed"
+            ? t("me.reserveSeeded")
+            : t("me.reserveWithdrawn")
       );
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => onError(error.message),
+  });
+
+  const leftoverSeedMutation = useMutation({
+    mutationFn: (body: {
+      amount: number;
+      occurredOn: string;
+      description: string;
+    }) => createLeftoverSeed(spaceId, body),
+    onSuccess: async () => {
+      onSuccess(t("me.leftoverSeeded"));
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
@@ -64,6 +83,17 @@ export function LeftoverReserveSection({
     mutationFn: deleteReserveMovement,
     onSuccess: async () => {
       onSuccess(t("me.reserveDeleted"));
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => onError(error.message),
+  });
+
+  const deleteLeftoverMutation = useMutation({
+    mutationFn: deleteLeftoverSeed,
+    onSuccess: async () => {
+      onSuccess(t("me.leftoverSeedDeleted"));
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
@@ -90,6 +120,21 @@ export function LeftoverReserveSection({
     form.reset();
   }
 
+  function onLeftoverSeedSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const rawDate = String(data.get("occurredOn") ?? "");
+    const occurredOn =
+      entryDateMode === "month" ? monthToOccurredOn(rawDate) : rawDate;
+    leftoverSeedMutation.mutate({
+      amount: Number(data.get("amount")),
+      occurredOn,
+      description: String(data.get("description") ?? ""),
+    });
+    form.reset();
+  }
+
   const summary = summaryQuery.data;
   const defaultDate =
     entryDateMode === "month"
@@ -97,6 +142,11 @@ export function LeftoverReserveSection({
       : todayIsoDate().startsWith(month)
         ? todayIsoDate()
         : `${month}-01`;
+  const openingBusy = moveMutation.isPending || leftoverSeedMutation.isPending;
+  const seedMovements =
+    summary?.movements.filter((movement) => movement.type === "seed") ?? [];
+  const dayToDayMovements =
+    summary?.movements.filter((movement) => movement.type !== "seed") ?? [];
 
   return (
     <section className="flex flex-col gap-4">
@@ -183,10 +233,104 @@ export function LeftoverReserveSection({
         </form>
       </div>
 
-      {summary?.movements.length ? (
+      <details className="rounded-md border border-dashed border-border px-3 py-2 text-sm">
+        <summary className="cursor-pointer text-muted">
+          {t("me.openingBalances")}
+        </summary>
+        <p className="mt-2 text-xs text-muted">{t("me.openingBalancesHint")}</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <form className="flex flex-col gap-2" onSubmit={onLeftoverSeedSubmit}>
+            <p className="font-medium text-fg">{t("me.leftoverSeed")}</p>
+            <ReserveFields
+              entryDateMode={entryDateMode}
+              defaultDate={defaultDate}
+              amountLabel={t("me.amount")}
+              dateLabel={
+                entryDateMode === "month" ? t("me.month") : t("me.date")
+              }
+              descriptionLabel={t("me.description")}
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-fg disabled:opacity-70"
+              disabled={openingBusy}
+            >
+              {leftoverSeedMutation.isPending ? <Spinner /> : null}
+              {t("me.leftoverSeedSubmit")}
+            </button>
+          </form>
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={(event) => onReserveSubmit(event, "seed")}
+          >
+            <p className="font-medium text-fg">{t("me.reserveSeed")}</p>
+            <ReserveFields
+              entryDateMode={entryDateMode}
+              defaultDate={defaultDate}
+              amountLabel={t("me.amount")}
+              dateLabel={
+                entryDateMode === "month" ? t("me.month") : t("me.date")
+              }
+              descriptionLabel={t("me.description")}
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-fg disabled:opacity-70"
+              disabled={openingBusy}
+            >
+              {moveMutation.isPending ? <Spinner /> : null}
+              {t("me.reserveSeedSubmit")}
+            </button>
+          </form>
+        </div>
+        {summary?.leftoverSeeds.length || seedMovements.length ? (
+          <ul className="mt-3 flex flex-col gap-1 text-xs text-muted">
+            {summary?.leftoverSeeds.map((seed) => (
+              <li
+                key={seed.id}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <span>
+                  {t("me.leftoverSeed")}:{" "}
+                  {formatMoney(seed.amount, currency, locale)}
+                </span>
+                <button
+                  type="button"
+                  className="underline disabled:opacity-70"
+                  disabled={deleteLeftoverMutation.isPending}
+                  onClick={() => deleteLeftoverMutation.mutate(seed.id)}
+                >
+                  {t("me.delete")}
+                </button>
+              </li>
+            ))}
+            {seedMovements.map((movement) => (
+              <li
+                key={movement.id}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <span>
+                  {t("me.reserveSeed")}:{" "}
+                  {formatMoney(movement.amount, currency, locale)}
+                </span>
+                <button
+                  type="button"
+                  className="underline disabled:opacity-70"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate(movement.id)}
+                >
+                  {t("me.delete")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </details>
+
+      {dayToDayMovements.length ? (
         <ul className="flex flex-col gap-2">
           <h3 className="font-medium text-fg">{t("me.reserveMovements")}</h3>
-          {summary.movements.map((movement) => (
+          {dayToDayMovements.map((movement) => (
             <li
               key={movement.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"

@@ -1,5 +1,7 @@
 import type {
+  CreateLeftoverSeedBody,
   CreateReserveMovementBody,
+  LeftoverSeedSummary,
   MonthSummary,
   ReserveMovementSummary,
 } from "@homewallet/shared";
@@ -23,4 +25,18 @@ export function createReserveMovement(
 
 export function deleteReserveMovement(movementId: string) {
   return api<void>(`/reserve-movements/${movementId}`, { method: "DELETE" });
+}
+
+export function createLeftoverSeed(
+  spaceId: string,
+  body: CreateLeftoverSeedBody
+) {
+  return api<LeftoverSeedSummary>(`/spaces/${spaceId}/leftover-seeds`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteLeftoverSeed(seedId: string) {
+  return api<void>(`/leftover-seeds/${seedId}`, { method: "DELETE" });
 }

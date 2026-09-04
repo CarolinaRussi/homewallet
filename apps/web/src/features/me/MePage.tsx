@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type {
   CreateEntryBody,
   EntrySummary,
@@ -13,9 +14,7 @@ import {
   formatEntryDate,
   formatMoney,
   monthToOccurredOn,
-  occurredOnToMonth,
   shiftMonth,
-  todayIsoDate,
 } from "../../shared/lib/money";
 import { useActiveSpace } from "../spaces/use-active-space";
 import {
@@ -27,7 +26,14 @@ import {
   updateEntry,
 } from "../entries/entry-api";
 import { Spinner } from "../../shared/ui/Spinner";
+import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
+import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
+import {
+  createInstallmentPlan,
+  createRecurringRule,
+  deleteRecurringRule,
+} from "./recurring-api";
 
 function readEntryBody(
   form: HTMLFormElement,
@@ -48,8 +54,25 @@ function readEntryBody(
   };
 }
 
+function readSharedFields(form: HTMLFormElement) {
+  const data = new FormData(form);
+  return {
+    type: String(data.get("type")) as EntryType,
+    amount: Number(data.get("amount")),
+    categoryId: String(data.get("categoryId")),
+    description: String(data.get("description") ?? ""),
+    visibility: String(data.get("visibility")) as EntryVisibility,
+    startMonth: String(data.get("startMonth") ?? ""),
+    endMonth: String(data.get("endMonth") ?? "").trim(),
+    installmentCount: Number(data.get("installmentCount") ?? 0),
+    firstInstallmentNumber: Number(data.get("firstInstallmentNumber") ?? 1),
+  };
+}
+
 export function MePage() {
   const { t, locale } = useLocale();
+  const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { spaces, activeSpace, spaceId, selectSpace } = useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
@@ -58,10 +81,33 @@ export function MePage() {
   const [feedbackLeaving, setFeedbackLeaving] = useState(false);
   const [highlightEntryId, setHighlightEntryId] = useState<string | null>(null);
   const [editing, setEditing] = useState<EntrySummary | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [deletePrompt, setDeletePrompt] = useState<EntrySummary | null>(null);
+  const [welcome, setWelcome] = useState<WelcomeSpaceState | null>(null);
   const feedbackClearRef = useRef<number | null>(null);
   const feedbackHideRef = useRef<number | null>(null);
   const highlightClearRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const state = location.state as WelcomeSpaceState | null;
+    if (!state?.welcomeSpace) {
+      return;
+    }
+    const resolvedSpaceId = state.spaceId ?? spaceId;
+    if (!resolvedSpaceId) {
+      return;
+    }
+    if (state.spaceId) {
+      selectSpace(state.spaceId);
+    }
+    setWelcome({
+      welcomeSpace: true,
+      firstSpace: Boolean(state.firstSpace),
+      spaceId: resolvedSpaceId,
+    });
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, selectSpace, spaceId]);
 
   function clearFeedbackTimers() {
     if (feedbackClearRef.current !== null) {
@@ -141,7 +187,7 @@ export function MePage() {
       return createEntry(spaceId, body);
     },
     onSuccess: async (entry, variables) => {
-      setEditing(null);
+      closeEntryForm();
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
@@ -155,19 +201,123 @@ export function MePage() {
     },
   });
 
+  const scheduleMutation = useMutation({
+    mutationFn: async ({
+      kind,
+      fields,
+    }: {
+      kind: "recurring" | "installment";
+      fields: ReturnType<typeof readSharedFields>;
+    }) => {
+      if (!spaceId) {
+        throw new Error("No space");
+      }
+      if (kind === "recurring") {
+        return createRecurringRule(spaceId, {
+          type: fields.type,
+          amount: fields.amount,
+          categoryId: fields.categoryId,
+          description: fields.description,
+          visibility: fields.visibility,
+          startMonth: fields.startMonth,
+          endMonth: fields.endMonth ? fields.endMonth : null,
+        });
+      }
+      return createInstallmentPlan(spaceId, {
+        type: fields.type,
+        amount: fields.amount,
+        categoryId: fields.categoryId,
+        description: fields.description,
+        visibility: fields.visibility,
+        startMonth: fields.startMonth,
+        installmentCount: fields.installmentCount,
+        firstInstallmentNumber: fields.firstInstallmentNumber,
+      });
+    },
+    onSuccess: async (_result, variables) => {
+      closeEntryForm();
+      showSuccess(
+        variables.kind === "recurring"
+          ? t("me.recurringAdded")
+          : t("me.installmentAdded")
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["entries", spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["month-summary", spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["recurring-rules", spaceId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["installment-plans", spaceId],
+        }),
+      ]);
+    },
+    onError: (error: Error) => {
+      setSuccessMessage("");
+      setErrorMessage(error.message);
+    },
+  });
+
   const deleteMutation = useMutation({
-    mutationFn: deleteEntry,
-    onMutate: (entryId) => setDeletingEntryId(entryId),
+    mutationFn: async ({
+      entryId,
+      installmentScope,
+      stopRecurringRuleId,
+    }: {
+      entryId: string;
+      installmentScope?: "one" | "forward";
+      stopRecurringRuleId?: string;
+    }) => {
+      await deleteEntry(entryId, installmentScope ?? "one");
+      if (stopRecurringRuleId) {
+        await deleteRecurringRule(stopRecurringRuleId);
+      }
+    },
+    onMutate: ({ entryId }) => setDeletingEntryId(entryId),
     onSuccess: async () => {
+      setDeletePrompt(null);
       showSuccess(t("me.deleted"));
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["installment-plans", spaceId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["recurring-rules", spaceId],
+      });
     },
     onError: (error: Error) => setErrorMessage(error.message),
     onSettled: () => setDeletingEntryId(null),
   });
+
+  function closeEntryForm() {
+    setFormOpen(false);
+    setEditing(null);
+  }
+
+  function openCreateForm() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+
+  function openEditForm(entry: EntrySummary) {
+    setEditing(entry);
+    setFormOpen(true);
+  }
+
+  function requestDelete(entry: EntrySummary) {
+    if (entry.installmentPlanId && entry.installmentNumber != null) {
+      setDeletePrompt(entry);
+      return;
+    }
+    if (entry.recurringRuleId) {
+      setDeletePrompt(entry);
+      return;
+    }
+    deleteMutation.mutate({ entryId: entry.id });
+  }
 
   const categoryMutation = useMutation({
     mutationFn: (name: string) => createCategory(spaceId!, name),
@@ -180,19 +330,24 @@ export function MePage() {
     onError: (error: Error) => setErrorMessage(error.message),
   });
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function onSubmit(event: FormEvent<HTMLFormElement>, entryKind: EntryKind) {
     event.preventDefault();
     if (!activeSpace) {
       return;
     }
     const form = event.currentTarget;
-    const body = readEntryBody(form, activeSpace.entryDateMode);
-    const mode = editing ? "edit" : "create";
-    saveMutation.mutate({ body, mode });
-    if (!editing) {
-      form.reset();
+    if (editing || entryKind === "once") {
+      const body = readEntryBody(form, activeSpace.entryDateMode);
+      saveMutation.mutate({ body, mode: editing ? "edit" : "create" });
+      return;
     }
+    scheduleMutation.mutate({
+      kind: entryKind,
+      fields: readSharedFields(form),
+    });
   }
+
+  const formPending = saveMutation.isPending || scheduleMutation.isPending;
 
   if (!spaceId || !activeSpace) {
     return (
@@ -272,124 +427,17 @@ export function MePage() {
         </p>
       ) : null}
 
-      <form
-        key={editing?.id ?? "new"}
-        className="grid max-w-xl gap-3 rounded-lg border border-border bg-surface p-4"
+      <EntryFormModal
+        key={editing?.id ?? (formOpen ? "create" : "closed")}
+        open={formOpen}
+        editing={editing}
+        month={month}
+        entryDateMode={activeSpace.entryDateMode}
+        categories={categoriesQuery.data ?? []}
+        pending={formPending}
+        onClose={closeEntryForm}
         onSubmit={onSubmit}
-      >
-        <h2 className="font-medium text-fg">
-          {editing ? t("me.editEntry") : t("me.addEntry")}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.type")}
-            <select
-              name="type"
-              required
-              defaultValue={editing?.type ?? "expense"}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            >
-              <option value="income">{t("me.income")}</option>
-              <option value="expense">{t("me.expense")}</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.amount")}
-            <input
-              name="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              defaultValue={editing?.amount}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg tabular-nums"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.category")}
-            <select
-              name="categoryId"
-              required
-              defaultValue={editing?.categoryId}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            >
-              {categoriesQuery.data?.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {activeSpace.entryDateMode === "month"
-              ? t("me.month")
-              : t("me.date")}
-            {activeSpace.entryDateMode === "month" ? (
-              <input
-                name="occurredOn"
-                type="month"
-                required
-                defaultValue={
-                  editing ? occurredOnToMonth(editing.occurredOn) : month
-                }
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-              />
-            ) : (
-              <input
-                name="occurredOn"
-                type="date"
-                required
-                defaultValue={editing?.occurredOn ?? todayIsoDate()}
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-              />
-            )}
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
-            {t("me.visibility")}
-            <select
-              name="visibility"
-              required
-              defaultValue={editing?.visibility ?? "personal"}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            >
-              <option value="personal">{t("me.personal")}</option>
-              <option value="shared">{t("me.shared")}</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
-            {t("me.description")}
-            <input
-              name="description"
-              defaultValue={editing?.description}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
-            disabled={saveMutation.isPending}
-          >
-            {saveMutation.isPending ? <Spinner /> : null}
-            {saveMutation.isPending
-              ? t("me.saving")
-              : editing
-                ? t("me.save")
-                : t("me.add")}
-          </button>
-          {editing ? (
-            <button
-              type="button"
-              className="rounded-md border border-border px-3 py-2 text-fg disabled:opacity-70"
-              disabled={saveMutation.isPending}
-              onClick={() => setEditing(null)}
-            >
-              {t("me.cancel")}
-            </button>
-          ) : null}
-        </div>
-      </form>
+      />
 
       <form
         className="flex max-w-xl flex-wrap items-end gap-2"
@@ -424,7 +472,16 @@ export function MePage() {
       </form>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium text-fg">{t("me.list")}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-medium text-fg">{t("me.list")}</h2>
+          <button
+            type="button"
+            className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
+            onClick={openCreateForm}
+          >
+            {t("me.addEntry")}
+          </button>
+        </div>
         {entriesQuery.data?.length === 0 ? (
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
@@ -452,6 +509,10 @@ export function MePage() {
                 {entry.visibility === "shared"
                   ? t("me.shared")
                   : t("me.personal")}
+                {entry.recurringRuleId ? ` · ${t("me.recurringBadge")}` : ""}
+                {entry.installmentNumber && entry.installmentCount
+                  ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
+                  : ""}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -466,7 +527,7 @@ export function MePage() {
                 type="button"
                 className="text-sm text-muted underline disabled:opacity-70"
                 disabled={deletingEntryId === entry.id}
-                onClick={() => setEditing(entry)}
+                onClick={() => openEditForm(entry)}
               >
                 {t("me.edit")}
               </button>
@@ -474,7 +535,7 @@ export function MePage() {
                 type="button"
                 className="inline-flex items-center gap-1 text-sm text-expense-fg underline disabled:opacity-70"
                 disabled={deletingEntryId === entry.id}
-                onClick={() => deleteMutation.mutate(entry.id)}
+                onClick={() => requestDelete(entry)}
               >
                 {deletingEntryId === entry.id ? <Spinner /> : null}
                 {deletingEntryId === entry.id
@@ -485,6 +546,103 @@ export function MePage() {
           </article>
         ))}
       </section>
+
+      {welcome && spaceId ? (
+        <WelcomeSpaceModal
+          spaceId={welcome.spaceId || spaceId}
+          firstSpace={Boolean(welcome.firstSpace)}
+          onDone={(destination) => {
+            setWelcome(null);
+            if (destination === "home") {
+              navigate("/overview");
+            }
+          }}
+        />
+      ) : null}
+
+      {deletePrompt ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="entry-delete-title"
+        >
+          <div className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-lg">
+            <h2
+              id="entry-delete-title"
+              className="text-lg font-semibold text-fg"
+            >
+              {deletePrompt.installmentPlanId
+                ? t("me.installmentDeleteTitle")
+                : t("me.recurringDeleteTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              {deletePrompt.installmentPlanId
+                ? t("me.installmentDeleteHint").replace(
+                    "{n}",
+                    String(deletePrompt.installmentNumber ?? "")
+                  )
+                : t("me.recurringDeleteHint")}
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-fg disabled:opacity-70"
+                disabled={deleteMutation.isPending}
+                onClick={() =>
+                  deleteMutation.mutate({
+                    entryId: deletePrompt.id,
+                    installmentScope: "one",
+                  })
+                }
+              >
+                {deleteMutation.isPending &&
+                deletingEntryId === deletePrompt.id ? (
+                  <Spinner />
+                ) : null}
+                {deletePrompt.installmentPlanId
+                  ? t("me.installmentDeleteOne")
+                  : t("me.recurringDeleteOne")}
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2 text-sm font-medium text-expense-fg disabled:opacity-70"
+                disabled={deleteMutation.isPending}
+                onClick={() =>
+                  deleteMutation.mutate(
+                    deletePrompt.installmentPlanId
+                      ? {
+                          entryId: deletePrompt.id,
+                          installmentScope: "forward",
+                        }
+                      : {
+                          entryId: deletePrompt.id,
+                          stopRecurringRuleId:
+                            deletePrompt.recurringRuleId ?? undefined,
+                        }
+                  )
+                }
+              >
+                {deleteMutation.isPending &&
+                deletingEntryId === deletePrompt.id ? (
+                  <Spinner />
+                ) : null}
+                {deletePrompt.installmentPlanId
+                  ? t("me.installmentDeleteForward")
+                  : t("me.recurringDeleteStop")}
+              </button>
+              <button
+                type="button"
+                className="rounded-md px-3 py-2 text-sm text-muted underline disabled:opacity-70"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeletePrompt(null)}
+              >
+                {t("me.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

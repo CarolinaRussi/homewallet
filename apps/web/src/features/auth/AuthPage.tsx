@@ -31,6 +31,12 @@ export function AuthPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
+      if (mode === "register") {
+        navigate("/me", {
+          state: { welcomeSpace: true, firstSpace: true },
+        });
+        return;
+      }
       navigate("/me");
     },
     onError: (error: Error) => setErrorMessage(error.message),
@@ -38,8 +44,14 @@ export function AuthPage() {
 
   const googleMutation = useMutation({
     mutationFn: loginWithGoogle,
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
+      if (result.createdSpace) {
+        navigate("/me", {
+          state: { welcomeSpace: true, firstSpace: true },
+        });
+        return;
+      }
       navigate("/me");
     },
     onError: (error: Error) => setErrorMessage(error.message),

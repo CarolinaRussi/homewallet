@@ -24,7 +24,7 @@ export function loginAccount(body: { email: string; password: string }) {
 }
 
 export function loginWithGoogle(idToken: string) {
-  return api<{ user: SessionUser }>("/auth/google", {
+  return api<{ user: SessionUser; createdSpace: boolean }>("/auth/google", {
     method: "POST",
     body: JSON.stringify({ idToken }),
   });

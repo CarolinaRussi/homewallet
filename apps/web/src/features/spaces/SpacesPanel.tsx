@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import {
   createSpace,
@@ -8,17 +9,26 @@ import {
   joinSpace,
   updateSpaceEntryDateMode,
 } from "./space-api";
+import { useActiveSpace } from "./use-active-space";
 import { Spinner } from "../../shared/ui/Spinner";
 
 export function SpacesPanel() {
   const { t } = useLocale();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { selectSpace } = useActiveSpace();
   const [errorMessage, setErrorMessage] = useState("");
   const spacesQuery = useQuery({ queryKey: ["spaces"], queryFn: fetchSpaces });
 
   const createMutation = useMutation({
     mutationFn: createSpace,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["spaces"] }),
+    onSuccess: async (space) => {
+      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      selectSpace(space.id);
+      navigate("/me", {
+        state: { welcomeSpace: true, firstSpace: false, spaceId: space.id },
+      });
+    },
     onError: (error: Error) => setErrorMessage(error.message),
   });
 

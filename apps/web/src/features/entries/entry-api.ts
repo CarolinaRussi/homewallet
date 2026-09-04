@@ -43,6 +43,11 @@ export function updateEntry(entryId: string, body: UpdateEntryBody) {
   });
 }
 
-export function deleteEntry(entryId: string) {
-  return api<void>(`/entries/${entryId}`, { method: "DELETE" });
+export function deleteEntry(
+  entryId: string,
+  installmentScope: "one" | "forward" = "one"
+) {
+  const query =
+    installmentScope === "forward" ? "?installmentScope=forward" : "";
+  return api<void>(`/entries/${entryId}${query}`, { method: "DELETE" });
 }
