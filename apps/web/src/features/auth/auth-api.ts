@@ -10,7 +10,7 @@ export function registerAccount(body: {
   password: string;
   name: string;
 }) {
-  return api<{ user: SessionUser }>("/auth/register", {
+  return api<{ user: SessionUser; spaceId: string }>("/auth/register", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -24,14 +24,31 @@ export function loginAccount(body: { email: string; password: string }) {
 }
 
 export function loginWithGoogle(idToken: string) {
-  return api<{ user: SessionUser; createdSpace: boolean }>("/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ idToken }),
-  });
+  return api<{ user: SessionUser; createdSpace: boolean; spaceId?: string }>(
+    "/auth/google",
+    {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    }
+  );
 }
 
 export function logoutAccount() {
   return api<void>("/auth/logout", { method: "POST" });
+}
+
+export function forgotPassword(body: { email: string }) {
+  return api<void>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function resetPassword(body: { token: string; password: string }) {
+  return api<void>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function downloadEntriesCsv() {

@@ -1,7 +1,10 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AuthPage } from "./features/auth/AuthPage";
+import { ForgotPasswordPage } from "./features/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
 import { fetchSession } from "./features/auth/auth-api";
+import { LandingPage } from "./features/landing/LandingPage";
 import { MePage } from "./features/me/MePage";
 import { ReservePage } from "./features/me/ReservePage";
 import { OverviewPage } from "./features/overview/OverviewPage";
@@ -10,9 +13,11 @@ import { AccountPanel } from "./features/settings/AccountPanel";
 import { AppShell } from "./features/shell/AppShell";
 import { SpacePage } from "./features/space/SpacePage";
 import { SpacesPanel } from "./features/spaces/SpacesPanel";
+import { useLocale } from "./shared/lib/i18n/locale-context";
 import { RequireSession } from "./shared/ui/RequireSession";
 
 export function App() {
+  const { t } = useLocale();
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: fetchSession,
@@ -24,9 +29,19 @@ export function App() {
       <Route
         path="/"
         element={
-          sessionQuery.isSuccess ? <Navigate to="/me" replace /> : <AuthPage />
+          sessionQuery.isSuccess ? (
+            <Navigate to="/me" replace />
+          ) : sessionQuery.isLoading ? (
+            <p className="p-8 text-muted">{t("app.loading")}</p>
+          ) : (
+            <LandingPage />
+          )
         }
       />
+      <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/register" element={<AuthPage mode="register" />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
           <Route path="/me" element={<MePage />} />

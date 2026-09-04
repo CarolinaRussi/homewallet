@@ -69,6 +69,13 @@ export function regenerateJoinCode(spaceId: string) {
   });
 }
 
+export function inviteSpaceEmail(spaceId: string, email: string) {
+  return api<void>(`/spaces/${spaceId}/invite-email`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
 export function leaveSpace(spaceId: string) {
   return api<{ deleted: boolean }>(`/spaces/${spaceId}/leave`, {
     method: "POST",

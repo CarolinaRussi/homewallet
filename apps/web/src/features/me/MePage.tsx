@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type {
   CreateEntryBody,
   EntrySummary,
@@ -35,6 +35,7 @@ import {
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
+import { clearWelcomeIntent, peekWelcomeIntent } from "./welcome-intent";
 import {
   createInstallmentPlan,
   createRecurringRule,
@@ -90,7 +91,6 @@ function readSharedFields(form: HTMLFormElement) {
 
 export function MePage() {
   const { t, locale } = useLocale();
-  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
@@ -104,30 +104,35 @@ export function MePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [deletePrompt, setDeletePrompt] = useState<EntrySummary | null>(null);
-  const [welcome, setWelcome] = useState<WelcomeSpaceState | null>(null);
+  const [welcome, setWelcome] = useState<WelcomeSpaceState | null>(() => {
+    const intent = peekWelcomeIntent();
+    if (!intent) {
+      return null;
+    }
+    return {
+      welcomeSpace: true,
+      firstSpace: intent.firstSpace,
+      spaceId: intent.spaceId,
+    };
+  });
   const feedbackClearRef = useRef<number | null>(null);
   const feedbackHideRef = useRef<number | null>(null);
   const highlightClearRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    const state = location.state as WelcomeSpaceState | null;
-    if (!state?.welcomeSpace) {
-      return;
-    }
-    const resolvedSpaceId = state.spaceId ?? spaceId;
-    if (!resolvedSpaceId) {
-      return;
-    }
-    if (state.spaceId) {
-      selectSpace(state.spaceId);
-    }
-    setWelcome({
-      welcomeSpace: true,
-      firstSpace: Boolean(state.firstSpace),
-      spaceId: resolvedSpaceId,
-    });
-    navigate(location.pathname, { replace: true, state: null });
-  }, [location.state, location.pathname, navigate, selectSpace, spaceId]);
+  function dismissWelcome(destination: "me" | "home") {
+    clearWelcomeIntent();
+    setWelcome(null);
+    navigate(destination === "home" ? "/overview" : "/me", { replace: true });
+  }
+
+  const welcomeModal =
+    welcome?.spaceId != null ? (
+      <WelcomeSpaceModal
+        spaceId={welcome.spaceId}
+        firstSpace={Boolean(welcome.firstSpace)}
+        onDone={dismissWelcome}
+      />
+    ) : null;
 
   function clearFeedbackTimers() {
     if (feedbackClearRef.current !== null) {
@@ -392,23 +397,29 @@ export function MePage() {
 
   if (spacesQuery.isLoading) {
     return (
-      <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
-        <header>
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="mt-2 h-4 w-40" />
-        </header>
-        <SummaryCardsSkeleton />
-        <ListRowsSkeleton />
-      </main>
+      <>
+        <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
+          <header>
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="mt-2 h-4 w-40" />
+          </header>
+          <SummaryCardsSkeleton />
+          <ListRowsSkeleton />
+        </main>
+        {welcomeModal}
+      </>
     );
   }
 
   if (!spaceId || !activeSpace) {
     return (
-      <main className="px-6 py-8 md:px-10">
-        <h1 className="text-3xl font-semibold text-fg">{t("me.title")}</h1>
-        <p className="mt-3 text-muted">{t("me.noSpace")}</p>
-      </main>
+      <>
+        <main className="px-6 py-8 md:px-10">
+          <h1 className="text-3xl font-semibold text-fg">{t("me.title")}</h1>
+          <p className="mt-3 text-muted">{t("me.noSpace")}</p>
+        </main>
+        {welcomeModal}
+      </>
     );
   }
 
@@ -597,18 +608,7 @@ export function MePage() {
           : null}
       </section>
 
-      {welcome && spaceId ? (
-        <WelcomeSpaceModal
-          spaceId={welcome.spaceId || spaceId}
-          firstSpace={Boolean(welcome.firstSpace)}
-          onDone={(destination) => {
-            setWelcome(null);
-            if (destination === "home") {
-              navigate("/overview");
-            }
-          }}
-        />
-      ) : null}
+      {welcomeModal}
 
       {deletePrompt ? (
         <ConfirmSheet

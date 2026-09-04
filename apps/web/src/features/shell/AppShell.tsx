@@ -2,6 +2,8 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { APP_NAME } from "@homewallet/shared";
 import { logoutAccount } from "../auth/auth-api";
+import { clearWelcomeIntent } from "../me/welcome-intent";
+import { clearStoredActiveSpace } from "../spaces/use-active-space";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { useTheme } from "../../shared/lib/theme/theme-context";
 import { SideNav } from "./SideNav";
@@ -14,6 +16,8 @@ export function AppShell() {
 
   async function onSignOut() {
     await logoutAccount();
+    clearWelcomeIntent();
+    clearStoredActiveSpace();
     await queryClient.clear();
     navigate("/");
   }

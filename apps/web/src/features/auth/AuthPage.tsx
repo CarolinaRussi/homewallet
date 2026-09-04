@@ -1,19 +1,49 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { APP_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
-import { loginAccount, loginWithGoogle, registerAccount } from "./auth-api";
-import { GoogleSignIn } from "./GoogleSignIn";
 import { Spinner } from "../../shared/ui/Spinner";
+import { loginAccount, loginWithGoogle, registerAccount } from "./auth-api";
+import { mapAuthError } from "./auth-errors";
+import { GoogleSignIn } from "./GoogleSignIn";
+import { setWelcomeIntent } from "../me/welcome-intent";
+import {
+  clearStoredActiveSpace,
+  setStoredActiveSpace,
+} from "../spaces/use-active-space";
 
-export function AuthPage() {
+type AuthPageProps = {
+  mode: "login" | "register";
+};
+
+export function AuthPage({ mode }: AuthPageProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { t, locale, setLocale } = useLocale();
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [errorMessage, setErrorMessage] = useState("");
+  const nextPath = searchParams.get("next");
+
+  function goToWelcome(spaceId: string, firstSpace: boolean) {
+    clearStoredActiveSpace();
+    setStoredActiveSpace(spaceId);
+    setWelcomeIntent({ spaceId, firstSpace });
+    navigate("/me");
+  }
+
+  function afterAuth(options?: { welcomeSpace?: boolean; spaceId?: string }) {
+    if (options?.welcomeSpace && options.spaceId) {
+      goToWelcome(options.spaceId, true);
+      return;
+    }
+    if (nextPath?.startsWith("/")) {
+      navigate(nextPath);
+      return;
+    }
+    navigate("/me");
+  }
 
   const mutation = useMutation({
     mutationFn: async (form: HTMLFormElement) => {
@@ -29,32 +59,29 @@ export function AuthPage() {
       }
       return loginAccount({ email, password });
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-      if (mode === "register") {
-        navigate("/me", {
-          state: { welcomeSpace: true, firstSpace: true },
-        });
+      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      if (mode === "register" && "spaceId" in result) {
+        afterAuth({ welcomeSpace: true, spaceId: result.spaceId });
         return;
       }
-      navigate("/me");
+      afterAuth();
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error) => setErrorMessage(mapAuthError(error, t)),
   });
 
   const googleMutation = useMutation({
     mutationFn: loginWithGoogle,
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-      if (result.createdSpace) {
-        navigate("/me", {
-          state: { welcomeSpace: true, firstSpace: true },
-        });
-        return;
-      }
-      navigate("/me");
+      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      afterAuth({
+        welcomeSpace: result.createdSpace,
+        spaceId: result.spaceId,
+      });
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error) => setErrorMessage(mapAuthError(error, t)),
   });
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -63,13 +90,21 @@ export function AuthPage() {
     mutation.mutate(event.currentTarget);
   }
 
+  const switchTo =
+    mode === "login"
+      ? `/register${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`
+      : `/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium tracking-wide text-muted uppercase">
+          <Link
+            to="/"
+            className="text-sm font-medium tracking-wide text-muted uppercase"
+          >
             {APP_NAME}
-          </p>
+          </Link>
           <h1 className="mt-1 text-3xl font-semibold text-fg">
             {mode === "login" ? t("auth.signIn") : t("auth.createAccount")}
           </h1>
@@ -118,7 +153,12 @@ export function AuthPage() {
           />
         </label>
         {errorMessage ? (
-          <p className="text-sm text-expense-fg">{errorMessage}</p>
+          <p
+            role="alert"
+            className="hw-feedback rounded-md border border-expense-fg/30 bg-expense px-3 py-2 text-sm text-expense-fg"
+          >
+            {errorMessage}
+          </p>
         ) : null}
         <button
           type="submit"
@@ -136,20 +176,19 @@ export function AuthPage() {
         </button>
       </form>
 
+      {mode === "login" ? (
+        <Link to="/forgot-password" className="text-sm text-muted underline">
+          {t("auth.forgotPassword")}
+        </Link>
+      ) : null}
+
       <GoogleSignIn
         onCredential={(idToken) => googleMutation.mutate(idToken)}
       />
 
-      <button
-        type="button"
-        className="text-left text-sm text-muted underline"
-        onClick={() => {
-          setMode(mode === "login" ? "register" : "login");
-          setErrorMessage("");
-        }}
-      >
+      <Link to={switchTo} className="text-sm text-muted underline">
         {mode === "login" ? t("auth.needAccount") : t("auth.haveAccount")}
-      </button>
+      </Link>
     </main>
   );
 }

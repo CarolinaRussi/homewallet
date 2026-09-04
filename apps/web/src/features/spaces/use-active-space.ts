@@ -5,6 +5,14 @@ import { fetchSpaces } from "./space-api";
 
 const STORAGE_KEY = "hw_active_space";
 
+export function clearStoredActiveSpace() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+export function setStoredActiveSpace(spaceId: string) {
+  localStorage.setItem(STORAGE_KEY, spaceId);
+}
+
 function readActiveSpaceId(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }

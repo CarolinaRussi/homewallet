@@ -5,6 +5,8 @@ import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { Spinner } from "../../shared/ui/Spinner";
 import { deleteAccount, downloadEntriesCsv } from "../auth/auth-api";
+import { clearWelcomeIntent } from "../me/welcome-intent";
+import { clearStoredActiveSpace } from "../spaces/use-active-space";
 
 export function AccountPanel() {
   const { t } = useLocale();
@@ -18,6 +20,8 @@ export function AccountPanel() {
     mutationFn: deleteAccount,
     onSuccess: async () => {
       setConfirmOpen(false);
+      clearWelcomeIntent();
+      clearStoredActiveSpace();
       await queryClient.clear();
       navigate("/");
     },

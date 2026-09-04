@@ -9,6 +9,7 @@ import {
   createSpace,
   fetchSpaceMembers,
   fetchSpaces,
+  inviteSpaceEmail,
   joinSpace,
   leaveSpace,
   promoteSpaceMember,
@@ -17,7 +18,8 @@ import {
   updateMyLimits,
   updateSpace,
 } from "./space-api";
-import { useActiveSpace } from "./use-active-space";
+import { useActiveSpace, setStoredActiveSpace } from "./use-active-space";
+import { setWelcomeIntent } from "../me/welcome-intent";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { SpaceCardsSkeleton } from "../../shared/ui/Skeleton";
 import { Spinner } from "../../shared/ui/Spinner";
@@ -34,6 +36,7 @@ export function SpacesPanel() {
   const { selectSpace } = useActiveSpace();
   const [errorMessage, setErrorMessage] = useState("");
   const [copyFeedback, setCopyFeedback] = useState("");
+  const [inviteFeedback, setInviteFeedback] = useState("");
   const [leaveSpaceId, setLeaveSpaceId] = useState<string | null>(null);
   const joinPrefill = searchParams.get("join") ?? "";
   const spacesQuery = useQuery({ queryKey: ["spaces"], queryFn: fetchSpaces });
@@ -42,10 +45,10 @@ export function SpacesPanel() {
     mutationFn: createSpace,
     onSuccess: async (space) => {
       await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      setStoredActiveSpace(space.id);
       selectSpace(space.id);
-      navigate("/me", {
-        state: { welcomeSpace: true, firstSpace: false, spaceId: space.id },
-      });
+      setWelcomeIntent({ spaceId: space.id, firstSpace: false });
+      navigate("/me");
     },
     onError: (error: Error) => setErrorMessage(error.message),
   });
@@ -106,6 +109,16 @@ export function SpacesPanel() {
         }
         return current.map((item) => (item.id === space.id ? space : item));
       });
+    },
+    onError: (error: Error) => setErrorMessage(error.message),
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: ({ spaceId, email }: { spaceId: string; email: string }) =>
+      inviteSpaceEmail(spaceId, email),
+    onSuccess: () => {
+      setInviteFeedback(t("spaces.inviteSent"));
+      window.setTimeout(() => setInviteFeedback(""), 2500);
     },
     onError: (error: Error) => setErrorMessage(error.message),
   });
@@ -199,6 +212,9 @@ export function SpacesPanel() {
       ) : null}
       {copyFeedback ? (
         <p className="text-sm text-income-fg">{t("spaces.copied")}</p>
+      ) : null}
+      {inviteFeedback ? (
+        <p className="text-sm text-income-fg">{inviteFeedback}</p>
       ) : null}
 
       <section className="grid gap-4 border-b border-border pb-8 md:grid-cols-2">
@@ -312,6 +328,42 @@ export function SpacesPanel() {
                     </button>
                   ) : null}
                 </div>
+                {space.role === "owner" ? (
+                  <form
+                    className="mt-3 flex flex-wrap items-end gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const data = new FormData(event.currentTarget);
+                      setErrorMessage("");
+                      inviteMutation.mutate({
+                        spaceId: space.id,
+                        email: String(data.get("email") ?? ""),
+                      });
+                      event.currentTarget.reset();
+                    }}
+                  >
+                    <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs text-muted">
+                      {t("spaces.inviteEmail")}
+                      <input
+                        name="email"
+                        type="email"
+                        required
+                        placeholder={t("spaces.invitePlaceholder")}
+                        className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-fg disabled:opacity-70"
+                      disabled={inviteMutation.isPending}
+                    >
+                      {inviteMutation.isPending ? <Spinner /> : null}
+                      {inviteMutation.isPending
+                        ? t("spaces.inviteSending")
+                        : t("spaces.inviteSubmit")}
+                    </button>
+                  </form>
+                ) : null}
               </div>
 
               {space.role === "owner" ? (
