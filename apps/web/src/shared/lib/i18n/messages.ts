@@ -235,6 +235,7 @@ export const messages = {
     "overview.compositionTotal": "Total",
     "overview.compositionOther": "Outros",
     "overview.compositionEmpty": "Sem gastos neste mês para o filtro atual.",
+    "overview.layersTitle": "50 / 40 / 10",
     "settings.title": "Configurações",
     "settings.tabSpaces": "Espaços",
     "settings.tabAccount": "Conta",
@@ -575,6 +576,7 @@ export const messages = {
     "overview.compositionOther": "Other",
     "overview.compositionEmpty":
       "No spending this month for the current filter.",
+    "overview.layersTitle": "50 / 40 / 10",
     "settings.title": "Settings",
     "settings.tabSpaces": "Spaces",
     "settings.tabAccount": "Account",

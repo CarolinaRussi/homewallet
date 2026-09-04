@@ -8,6 +8,7 @@ import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
 import { Skeleton } from "../../shared/ui/Skeleton";
 import { fetchOverviewBreakdown, fetchOverviewSeries } from "./overview-api";
+import { OverviewBudgetLayers } from "./OverviewBudgetLayers";
 import { OverviewCategoryDonut } from "./OverviewCategoryDonut";
 import { OverviewTrendChart } from "./OverviewTrendChart";
 
@@ -237,14 +238,22 @@ export function OverviewPage() {
       {breakdownQuery.isLoading ? (
         <Skeleton className="h-64 w-full rounded-lg" />
       ) : breakdownQuery.data ? (
-        <OverviewCategoryDonut
-          slices={breakdownQuery.data.slices}
-          totalExpense={breakdownQuery.data.totalExpense}
-          currency={activeSpace.currency}
-          month={compositionMonth}
-          onMonthChange={setCompositionMonth}
-          shiftMonth={shiftMonth}
-        />
+        <>
+          <OverviewCategoryDonut
+            slices={breakdownQuery.data.slices}
+            totalExpense={breakdownQuery.data.totalExpense}
+            currency={activeSpace.currency}
+            month={compositionMonth}
+            onMonthChange={setCompositionMonth}
+            shiftMonth={shiftMonth}
+          />
+          {breakdownQuery.data.budgetLayers ? (
+            <OverviewBudgetLayers
+              budgetLayers={breakdownQuery.data.budgetLayers}
+              currency={activeSpace.currency}
+            />
+          ) : null}
+        </>
       ) : null}
     </main>
   );
