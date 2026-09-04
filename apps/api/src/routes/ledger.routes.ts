@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { CategoryController } from "../controllers/category.controller.js";
 import type { EntryController } from "../controllers/entry.controller.js";
 import type { LeftoverController } from "../controllers/leftover.controller.js";
+import type { OverviewController } from "../controllers/overview.controller.js";
 import type { RecurringController } from "../controllers/recurring.controller.js";
 import type { ReservePotController } from "../controllers/reserve-pot.controller.js";
 import { requireUser } from "../plugins/auth.js";
@@ -12,7 +13,8 @@ export async function registerLedgerRoutes(
   entryController: EntryController,
   leftoverController: LeftoverController,
   recurringController: RecurringController,
-  reservePotController: ReservePotController
+  reservePotController: ReservePotController,
+  overviewController: OverviewController
 ) {
   app.addHook("preHandler", requireUser);
 
@@ -62,6 +64,12 @@ export async function registerLedgerRoutes(
   app.get<{ Params: { spaceId: string }; Querystring: { month?: string } }>(
     "/spaces/:spaceId/month-summary",
     (request) => leftoverController.monthSummary(request)
+  );
+  app.get<{
+    Params: { spaceId: string };
+    Querystring: Record<string, string | undefined>;
+  }>("/spaces/:spaceId/overview-series", (request) =>
+    overviewController.series(request)
   );
   app.post<{ Params: { spaceId: string } }>(
     "/spaces/:spaceId/reserve-movements",

@@ -91,6 +91,33 @@ export const entryRepository = {
     });
   },
 
+  /** Lightweight rows for Overview series (no card/category graphs). */
+  listForOverviewRange(
+    spaceId: string,
+    rangeStart: string,
+    rangeEnd: string,
+    manager: EntityManager,
+    filters?: { userId?: string; visibility?: "shared" }
+  ) {
+    return manager.find(Entry, {
+      where: {
+        spaceId,
+        occurredOn: Between(rangeStart, rangeEnd),
+        ...(filters?.userId ? { userId: filters.userId } : {}),
+        ...(filters?.visibility ? { visibility: filters.visibility } : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        occurredOn: true,
+        userId: true,
+        visibility: true,
+      },
+      order: { occurredOn: "ASC" },
+    });
+  },
+
   listAllForUser(userId: string, manager: EntityManager) {
     return manager.find(Entry, {
       where: { userId },

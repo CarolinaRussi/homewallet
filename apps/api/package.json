@@ -14,7 +14,8 @@
     "check:recurring": "tsx src/lib/recurring.check.ts",
     "check:limits": "tsx src/lib/limits.check.ts",
     "check:card-lines": "tsx src/lib/entry.card-lines.check.ts",
-    "check:spend-allocation": "tsx src/lib/spend-allocation.check.ts"
+    "check:spend-allocation": "tsx src/lib/spend-allocation.check.ts",
+    "check:overview-series": "tsx src/lib/overview-series.check.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

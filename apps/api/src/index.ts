@@ -11,6 +11,7 @@ import { createAuthController } from "./controllers/auth.controller.js";
 import { createCategoryController } from "./controllers/category.controller.js";
 import { createEntryController } from "./controllers/entry.controller.js";
 import { createLeftoverController } from "./controllers/leftover.controller.js";
+import { createOverviewController } from "./controllers/overview.controller.js";
 import { createRecurringController } from "./controllers/recurring.controller.js";
 import { createReservePotController } from "./controllers/reserve-pot.controller.js";
 import { createSpaceController } from "./controllers/space.controller.js";
@@ -37,6 +38,7 @@ import { createCategoryService } from "./services/category.service.js";
 import { createEntryService } from "./services/entry.service.js";
 import { createLeftoverService } from "./services/leftover.service.js";
 import { createMailService } from "./services/mail.service.js";
+import { createOverviewService } from "./services/overview.service.js";
 import { createRecurringService } from "./services/recurring.service.js";
 import { createReservePotService } from "./services/reserve-pot.service.js";
 import { createSpaceService } from "./services/space.service.js";
@@ -88,6 +90,7 @@ const leftoverService = createLeftoverService(
   recurringService,
   reservePotService
 );
+const overviewService = createOverviewService(dataSource, recurringService);
 
 const app = Fastify({ logger: true });
 
@@ -160,7 +163,8 @@ await app.register(async (scoped) =>
     createEntryController(entryService),
     createLeftoverController(leftoverService),
     createRecurringController(recurringService),
-    createReservePotController(reservePotService)
+    createReservePotController(reservePotService),
+    createOverviewController(overviewService)
   )
 );
 
