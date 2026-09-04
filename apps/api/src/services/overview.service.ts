@@ -184,6 +184,25 @@ export function createOverviewService(
     return amounts;
   }
 
+  /** Saving entries count toward 50/40/10 (Future) but not the expense donut. */
+  function collectSavingLayerAmounts(
+    entries: Entry[]
+  ): OverviewCategoryAmount[] {
+    const amounts: OverviewCategoryAmount[] = [];
+    for (const entry of entries) {
+      if (entry.type !== "saving" || !entry.categoryId) {
+        continue;
+      }
+      amounts.push({
+        categoryId: entry.categoryId,
+        name: entry.category?.name ?? entry.categoryId,
+        amount: Number(entry.amount),
+        budgetLayer: entry.category?.budgetLayer ?? "future",
+      });
+    }
+    return amounts;
+  }
+
   function scopedMonthIncome(entries: Entry[], scope: OverviewScope) {
     const flowOptions = overviewFlowOptionsForScope(scope);
     let income = 0;
@@ -326,7 +345,7 @@ export function createOverviewService(
       const { totalExpense, slices } = buildCategoryBreakdown(categoryAmounts);
       const budgetLayers = membership.space.budgetLayersEnabled
         ? buildBudgetLayersFromAmounts(
-            categoryAmounts,
+            [...categoryAmounts, ...collectSavingLayerAmounts(entries)],
             scopedMonthIncome(entries, scope)
           )
         : null;

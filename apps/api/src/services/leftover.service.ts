@@ -206,7 +206,11 @@ export function createLeftoverService(
       }
 
       for (const entry of monthEntries) {
-        if (entry.type !== "expense" && entry.type !== "transfer_out") {
+        if (
+          entry.type !== "expense" &&
+          entry.type !== "transfer_out" &&
+          entry.type !== "saving"
+        ) {
           continue;
         }
         if (!entry.categoryId) {

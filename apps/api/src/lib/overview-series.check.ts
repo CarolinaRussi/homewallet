@@ -136,4 +136,18 @@ assertEqual(layers.byLayer.essential.target, 500, "essential 50%");
 assertEqual(layers.byLayer.personal.current, 100, "personal spent");
 assertEqual(layers.unmappedExpense, 50, "unmapped");
 
+const layersWithSaving = buildBudgetLayersFromAmounts(
+  [
+    {
+      categoryId: "poup",
+      name: "Poupancinha",
+      amount: 100,
+      budgetLayer: "future",
+    },
+  ],
+  1000
+);
+assertEqual(layersWithSaving.byLayer.future.current, 100, "saving → future");
+assertEqual(layersWithSaving.byLayer.future.target, 100, "future 10% of 1000");
+
 console.log("overview-series check ok");
