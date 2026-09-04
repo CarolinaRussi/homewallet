@@ -6,6 +6,9 @@ type OverviewTrendChartProps = {
   points: OverviewMonthPoint[];
   includesIncome: boolean;
   currency: string;
+  endMonth: string;
+  onEndMonthChange: (month: string) => void;
+  shiftMonth: (month: string, delta: number) => string;
 };
 
 function formatDelta(delta: number, currency: string, locale: string): string {
@@ -23,6 +26,9 @@ export function OverviewTrendChart({
   points,
   includesIncome,
   currency,
+  endMonth,
+  onEndMonthChange,
+  shiftMonth,
 }: OverviewTrendChartProps) {
   const { t, locale } = useLocale();
   const maxValue = Math.max(
@@ -34,21 +40,45 @@ export function OverviewTrendChart({
 
   return (
     <section className="rounded-lg border border-border bg-surface p-4 md:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-fg">
           {t("overview.trendTitle")}
         </h2>
-        <div className="flex flex-wrap gap-3 text-xs text-muted">
-          {includesIncome ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-3 text-xs text-muted">
+            {includesIncome ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="size-2.5 rounded-sm bg-income-fg"
+                  aria-hidden
+                />
+                {t("overview.legendIncome")}
+              </span>
+            ) : null}
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-sm bg-income-fg" aria-hidden />
-              {t("overview.legendIncome")}
+              <span className="size-2.5 rounded-sm bg-expense-fg" aria-hidden />
+              {t("overview.legendExpense")}
             </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-sm bg-expense-fg" aria-hidden />
-            {t("overview.legendExpense")}
-          </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
+              onClick={() => onEndMonthChange(shiftMonth(endMonth, -1))}
+            >
+              ←
+            </button>
+            <span className="min-w-24 text-center text-sm font-medium text-fg">
+              {endMonth}
+            </span>
+            <button
+              type="button"
+              className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
+              onClick={() => onEndMonthChange(shiftMonth(endMonth, 1))}
+            >
+              →
+            </button>
+          </div>
         </div>
       </div>
 

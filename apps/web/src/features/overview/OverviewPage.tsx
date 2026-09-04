@@ -7,7 +7,8 @@ import { useActiveSpace } from "../spaces/use-active-space";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
 import { Skeleton } from "../../shared/ui/Skeleton";
-import { fetchOverviewSeries } from "./overview-api";
+import { fetchOverviewBreakdown, fetchOverviewSeries } from "./overview-api";
+import { OverviewCategoryDonut } from "./OverviewCategoryDonut";
 import { OverviewTrendChart } from "./OverviewTrendChart";
 
 const RANGE_OPTIONS: OverviewRangePreset[] = ["3", "6", "12", "ytd"];
@@ -20,6 +21,7 @@ export function OverviewPage() {
   const [scope, setScope] = useState<OverviewScope>("me");
   const [memberUserId, setMemberUserId] = useState<string | undefined>();
   const [endMonth, setEndMonth] = useState(currentMonthValue);
+  const [compositionMonth, setCompositionMonth] = useState(currentMonthValue);
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -64,7 +66,7 @@ export function OverviewPage() {
     }
   }, [scope, memberUserId, members, myUserId]);
 
-  const seriesEnabled =
+  const scopeReady =
     Boolean(spaceId) &&
     (scope !== "member" || Boolean(memberUserId)) &&
     (scope === "me" ||
@@ -87,7 +89,24 @@ export function OverviewPage() {
         memberUserId,
         endMonth,
       }),
-    enabled: seriesEnabled,
+    enabled: scopeReady,
+  });
+
+  const breakdownQuery = useQuery({
+    queryKey: [
+      "overview-breakdown",
+      spaceId,
+      compositionMonth,
+      scope,
+      memberUserId,
+    ],
+    queryFn: () =>
+      fetchOverviewBreakdown(spaceId!, {
+        month: compositionMonth,
+        scope,
+        memberUserId,
+      }),
+    enabled: scopeReady,
   });
 
   function onScopeSelectChange(value: string) {
@@ -197,23 +216,6 @@ export function OverviewPage() {
               )}
             </select>
           ) : null}
-          <button
-            type="button"
-            className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
-            onClick={() => setEndMonth(shiftMonth(endMonth, -1))}
-          >
-            ←
-          </button>
-          <span className="min-w-24 text-center text-sm font-medium text-fg">
-            {endMonth}
-          </span>
-          <button
-            type="button"
-            className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
-            onClick={() => setEndMonth(shiftMonth(endMonth, 1))}
-          >
-            →
-          </button>
         </div>
       </header>
 
@@ -224,10 +226,26 @@ export function OverviewPage() {
           points={seriesQuery.data.points}
           includesIncome={seriesQuery.data.includesIncome}
           currency={activeSpace.currency}
+          endMonth={endMonth}
+          onEndMonthChange={setEndMonth}
+          shiftMonth={shiftMonth}
         />
       ) : (
         <p className="text-sm text-muted">{t("overview.hint")}</p>
       )}
+
+      {breakdownQuery.isLoading ? (
+        <Skeleton className="h-64 w-full rounded-lg" />
+      ) : breakdownQuery.data ? (
+        <OverviewCategoryDonut
+          slices={breakdownQuery.data.slices}
+          totalExpense={breakdownQuery.data.totalExpense}
+          currency={activeSpace.currency}
+          month={compositionMonth}
+          onMonthChange={setCompositionMonth}
+          shiftMonth={shiftMonth}
+        />
+      ) : null}
     </main>
   );
 }

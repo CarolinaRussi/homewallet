@@ -1,4 +1,5 @@
 import type {
+  OverviewBreakdownSummary,
   OverviewRangePreset,
   OverviewScope,
   OverviewSeriesSummary,
@@ -24,5 +25,25 @@ export function fetchOverviewSeries(
   }
   return api<OverviewSeriesSummary>(
     `/spaces/${spaceId}/overview-series?${params.toString()}`
+  );
+}
+
+export function fetchOverviewBreakdown(
+  spaceId: string,
+  input: {
+    month: string;
+    scope: OverviewScope;
+    memberUserId?: string;
+  }
+) {
+  const params = new URLSearchParams({
+    month: input.month,
+    scope: input.scope,
+  });
+  if (input.scope === "member" && input.memberUserId) {
+    params.set("memberUserId", input.memberUserId);
+  }
+  return api<OverviewBreakdownSummary>(
+    `/spaces/${spaceId}/overview-breakdown?${params.toString()}`
   );
 }
