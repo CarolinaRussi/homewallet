@@ -88,13 +88,22 @@ export function fetchSpaceMonth(spaceId: string, month: string) {
   );
 }
 
+export function updateCategory(
+  spaceId: string,
+  categoryId: string,
+  body: { budgetLayer?: BudgetLayer | null; lineDetailEnabled?: boolean }
+) {
+  return api(`/spaces/${spaceId}/categories/${categoryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+/** @deprecated prefer updateCategory */
 export function updateCategoryLayer(
   spaceId: string,
   categoryId: string,
   budgetLayer: BudgetLayer | null
 ) {
-  return api(`/spaces/${spaceId}/categories/${categoryId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ budgetLayer }),
-  });
+  return updateCategory(spaceId, categoryId, { budgetLayer });
 }

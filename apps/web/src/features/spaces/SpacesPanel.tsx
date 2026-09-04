@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { BudgetLayer, SpaceSummary } from "@homewallet/shared";
+import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { fetchCategories } from "../entries/entry-api";
 import {
@@ -15,6 +16,7 @@ import {
   promoteSpaceMember,
   regenerateJoinCode,
   updateCategoryLayer,
+  updateCategory,
   updateMyLimits,
   updateSpace,
 } from "./space-api";
@@ -561,6 +563,8 @@ export function SpacesPanel() {
                 </button>
               </form>
 
+              <CategoryLineDetailMapper spaceId={space.id} />
+
               <SpaceMembersSection space={space} onError={setErrorMessage} />
 
               <div className="border-t border-border pt-4">
@@ -658,6 +662,72 @@ function SpaceMembersSection({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function CategoryLineDetailMapper({ spaceId }: { spaceId: string }) {
+  const { t } = useLocale();
+  const queryClient = useQueryClient();
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", spaceId],
+    queryFn: () => fetchCategories(spaceId),
+  });
+
+  const detailMutation = useMutation({
+    mutationFn: ({
+      categoryId,
+      lineDetailEnabled,
+    }: {
+      categoryId: string;
+      lineDetailEnabled: boolean;
+    }) => updateCategory(spaceId, categoryId, { lineDetailEnabled }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["categories", spaceId],
+      });
+    },
+  });
+
+  const ledgerCategories = (categoriesQuery.data ?? []).filter(
+    (category) => category.name !== SAVING_CATEGORY_NAME
+  );
+
+  if (!ledgerCategories.length) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div>
+        <p className="text-sm font-medium text-fg">
+          {t("me.categoryLineDetailTitle")}
+        </p>
+        <p className="mt-1 max-w-3xl text-xs text-muted">
+          {t("me.categoryLineDetailHint")}
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {ledgerCategories.map((category) => (
+          <label
+            key={category.id}
+            className="flex items-center gap-2 text-sm text-muted"
+          >
+            <input
+              type="checkbox"
+              checked={category.lineDetailEnabled}
+              disabled={detailMutation.isPending}
+              onChange={(event) =>
+                detailMutation.mutate({
+                  categoryId: category.id,
+                  lineDetailEnabled: event.target.checked,
+                })
+              }
+            />
+            <span className="text-fg">{category.name}</span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

@@ -27,7 +27,10 @@ type EntryFormModalProps = {
   creatingCategory: boolean;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>, entryKind: EntryKind) => void;
-  onCreateCategory: (name: string) => Promise<CategorySummary>;
+  onCreateCategory: (input: {
+    name: string;
+    lineDetailEnabled: boolean;
+  }) => Promise<CategorySummary>;
 };
 
 export function EntryFormModal({
@@ -55,6 +58,7 @@ export function EntryFormModal({
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? "");
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryLineDetail, setNewCategoryLineDetail] = useState(false);
   const [categoryError, setCategoryError] = useState("");
 
   if (!open) {
@@ -94,9 +98,13 @@ export function EntryFormModal({
     }
     setCategoryError("");
     try {
-      const category = await onCreateCategory(name);
+      const category = await onCreateCategory({
+        name,
+        lineDetailEnabled: newCategoryLineDetail,
+      });
       setCategoryId(category.id);
       setNewCategoryName("");
+      setNewCategoryLineDetail(false);
       setAddingCategory(false);
     } catch (error) {
       setCategoryError(
@@ -297,6 +305,17 @@ export function EntryFormModal({
                       }
                     }}
                   />
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={newCategoryLineDetail}
+                      disabled={creatingCategory}
+                      onChange={(event) =>
+                        setNewCategoryLineDetail(event.target.checked)
+                      }
+                    />
+                    {t("me.categoryLineDetail")}
+                  </label>
                   {categoryError ? (
                     <p className="text-xs text-expense-fg">{categoryError}</p>
                   ) : null}
@@ -319,6 +338,7 @@ export function EntryFormModal({
                       onClick={() => {
                         setAddingCategory(false);
                         setNewCategoryName("");
+                        setNewCategoryLineDetail(false);
                         setCategoryError("");
                       }}
                     >
