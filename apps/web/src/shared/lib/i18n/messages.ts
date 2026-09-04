@@ -138,6 +138,22 @@ export const messages = {
     "overview.placeholder":
       "Resumo e gráficos do espaço entram depois (Parte 7+).",
     "settings.title": "Configurações",
+    "settings.tabSpaces": "Espaços",
+    "settings.tabAccount": "Conta",
+    "account.title": "Conta",
+    "account.hint":
+      "Exporte seus lançamentos ou apague a conta de forma permanente.",
+    "account.exportCsv": "Exportar planilha (CSV)",
+    "account.exporting": "Exportando…",
+    "account.exportFailed": "Não foi possível exportar.",
+    "account.dangerZone": "Zona de perigo",
+    "account.delete": "Apagar conta",
+    "account.deleteHint":
+      "Remove seus dados, sai de todos os espaços e encerra o acesso. Não dá pra desfazer.",
+    "account.deleteTitle": "Apagar sua conta?",
+    "account.deleteConfirm":
+      "Todos os seus lançamentos e dados pessoais serão removidos. Espaços vazios somem; se houver outros membros, outro vira dono.",
+    "account.deleteSubmit": "Apagar conta definitivamente",
     "spaces.title": "Seus espaços",
     "spaces.hint":
       "Ao criar a conta, já abrimos um espaço pra você. Compartilhe o código ou o link pra convidar alguém.",
@@ -358,6 +374,21 @@ export const messages = {
     "overview.title": "Overview",
     "overview.placeholder": "Joined summary and charts come in later parts.",
     "settings.title": "Settings",
+    "settings.tabSpaces": "Spaces",
+    "settings.tabAccount": "Account",
+    "account.title": "Account",
+    "account.hint": "Export your entries or permanently delete your account.",
+    "account.exportCsv": "Export spreadsheet (CSV)",
+    "account.exporting": "Exporting…",
+    "account.exportFailed": "Could not export.",
+    "account.dangerZone": "Danger zone",
+    "account.delete": "Delete account",
+    "account.deleteHint":
+      "Removes your data, leaves every space, and ends access. This cannot be undone.",
+    "account.deleteTitle": "Delete your account?",
+    "account.deleteConfirm":
+      "All your entries and personal data will be removed. Empty spaces are deleted; if others remain, ownership transfers.",
+    "account.deleteSubmit": "Delete account permanently",
     "spaces.title": "Your spaces",
     "spaces.hint":
       "We create a space when you register. Share the join code or link to invite someone.",

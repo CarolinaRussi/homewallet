@@ -6,8 +6,10 @@ import { MePage } from "./features/me/MePage";
 import { ReservePage } from "./features/me/ReservePage";
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { AccountPanel } from "./features/settings/AccountPanel";
 import { AppShell } from "./features/shell/AppShell";
 import { SpacePage } from "./features/space/SpacePage";
+import { SpacesPanel } from "./features/spaces/SpacesPanel";
 import { RequireSession } from "./shared/ui/RequireSession";
 
 export function App() {
@@ -31,7 +33,10 @@ export function App() {
           <Route path="/reserve" element={<ReservePage />} />
           <Route path="/space" element={<SpacePage />} />
           <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<SettingsPage />}>
+            <Route index element={<SpacesPanel />} />
+            <Route path="account" element={<AccountPanel />} />
+          </Route>
           <Route path="/spaces" element={<Navigate to="/settings" replace />} />
         </Route>
       </Route>
