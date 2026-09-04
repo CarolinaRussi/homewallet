@@ -21,6 +21,10 @@ export const joinSpaceBodySchema = z.object({
   joinCode: z.string().trim().min(8).max(16),
 });
 
+export const inviteSpaceEmailBodySchema = z.object({
+  email: z.string().trim().email(),
+});
+
 export const updateSpaceBodySchema = z
   .object({
     entryDateMode: z.enum(ENTRY_DATE_MODES).optional(),
@@ -41,6 +45,7 @@ export const updateSpaceBodySchema = z
 
 export type CreateSpaceBody = z.input<typeof createSpaceBodySchema>;
 export type JoinSpaceBody = z.infer<typeof joinSpaceBodySchema>;
+export type InviteSpaceEmailBody = z.infer<typeof inviteSpaceEmailBodySchema>;
 export type UpdateSpaceBody = z.infer<typeof updateSpaceBodySchema>;
 
 export type SpaceMemberSummary = {
