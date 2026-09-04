@@ -21,6 +21,10 @@ export const installmentPlanRepository = {
     return manager.save(manager.create(InstallmentPlan, fields));
   },
 
+  save(manager: EntityManager, plan: InstallmentPlan) {
+    return manager.save(plan);
+  },
+
   remove(manager: EntityManager, plan: InstallmentPlan) {
     return manager.remove(plan);
   },

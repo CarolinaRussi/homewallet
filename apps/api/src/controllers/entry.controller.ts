@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
+  addEntryCardLineBodySchema,
   createEntryBodySchema,
   monthQuerySchema,
   updateEntryBodySchema,
@@ -8,6 +9,7 @@ import type { EntryService } from "../services/entry.service.js";
 
 type SpaceParams = { spaceId: string };
 type EntryParams = { entryId: string };
+type CardLineParams = { entryId: string; lineId: string };
 type MonthQuery = { month?: string };
 type DeleteQuery = { installmentScope?: string };
 
@@ -62,6 +64,30 @@ export function createEntryController(entryService: EntryService) {
         request.params.entryId,
         body
       );
+    },
+
+    addCardLine(request: FastifyRequest<{ Params: EntryParams }>) {
+      const body = addEntryCardLineBodySchema.parse(request.body);
+      return entryService.addCardLine(
+        request.user.sub,
+        request.params.entryId,
+        body
+      );
+    },
+
+    async removeCardLine(
+      request: FastifyRequest<{ Params: CardLineParams }>,
+      reply: FastifyReply
+    ) {
+      const result = await entryService.removeCardLine(
+        request.user.sub,
+        request.params.entryId,
+        request.params.lineId
+      );
+      if (!result) {
+        return reply.code(204).send();
+      }
+      return result;
     },
 
     async remove(

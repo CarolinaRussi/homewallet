@@ -22,6 +22,7 @@ export const entryRepository = {
         reservePot: true,
         user: true,
         counterparty: true,
+        cardLines: { category: true },
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -61,6 +62,7 @@ export const entryRepository = {
         reservePot: true,
         user: true,
         counterparty: true,
+        cardLines: { category: true },
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -83,6 +85,7 @@ export const entryRepository = {
         reservePot: true,
         user: true,
         counterparty: true,
+        cardLines: { category: true },
       },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
@@ -109,8 +112,14 @@ export const entryRepository = {
         reservePot: true,
         user: true,
         counterparty: true,
+        cardLines: { category: true },
       },
     });
+  },
+
+  /** No relations — use when mutating FKs so loaded relations cannot overwrite columns on save. */
+  findByIdPlain(id: string, manager: EntityManager) {
+    return manager.findOne(Entry, { where: { id } });
   },
 
   findByTransferGroup(transferGroupId: string, manager: EntityManager) {
@@ -121,6 +130,30 @@ export const entryRepository = {
         user: true,
         counterparty: true,
       },
+    });
+  },
+
+  findExpenseForCategoryMonth(
+    spaceId: string,
+    userId: string,
+    categoryId: string,
+    monthStart: string,
+    monthEnd: string,
+    manager: EntityManager
+  ) {
+    return manager.find(Entry, {
+      where: {
+        spaceId,
+        userId,
+        categoryId,
+        type: "expense",
+        occurredOn: Between(monthStart, monthEnd),
+      },
+      relations: {
+        category: true,
+        cardLines: { category: true },
+      },
+      order: { createdAt: "ASC" },
     });
   },
 
@@ -138,12 +171,31 @@ export const entryRepository = {
     return manager.count(Entry, { where: { installmentPlanId } });
   },
 
+  listInstallmentFromNumber(
+    installmentPlanId: string,
+    fromNumber: number,
+    manager: EntityManager
+  ) {
+    return manager.find(Entry, {
+      where: {
+        installmentPlanId,
+        installmentNumber: MoreThanOrEqual(fromNumber),
+      },
+      order: { installmentNumber: "ASC" },
+    });
+  },
+
   create(manager: EntityManager, fields: Partial<Entry>) {
     return manager.save(manager.create(Entry, fields));
   },
 
   save(manager: EntityManager, entry: Entry) {
     return manager.save(entry);
+  },
+
+  /** Scalar update — avoids TypeORM nulling `entry_card_lines.entry_id` when `cardLines` is loaded. */
+  updateAmount(manager: EntityManager, entryId: string, amount: string) {
+    return manager.update(Entry, { id: entryId }, { amount });
   },
 
   remove(manager: EntityManager, entry: Entry) {

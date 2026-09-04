@@ -1,13 +1,22 @@
 import { randomUUID } from "node:crypto";
-import type { DataSource } from "typeorm";
+import type { DataSource, EntityManager } from "typeorm";
 import type {
+  AddEntryCardLineBody,
   CreateEntryBody,
+  EntryCardLineInput,
   EntrySummary,
+  EntryVisibility,
   UpdateEntryBody,
+} from "@homewallet/shared";
+import {
+  cardOthersAmount,
+  monthToOccurredOn,
+  remainingInstallmentSchedule,
 } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds, toEntrySummary } from "../lib/entry-mappers.js";
 import { categoryRepository } from "../repositories/category.repository.js";
+import { entryCardLineRepository } from "../repositories/entry-card-line.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
@@ -48,6 +57,232 @@ export function createEntryService(
 
   async function resolveSavingCategory(spaceId: string) {
     return categoryRepository.ensureSavingCategory(spaceId, dataSource.manager);
+  }
+
+  async function assertCardLineCategories(
+    spaceId: string,
+    lines: EntryCardLineInput[]
+  ) {
+    for (const line of lines) {
+      await requireOwnCategory(spaceId, line.categoryId);
+    }
+  }
+
+  function assertCardLinesFitAmount(
+    amount: number,
+    lines: EntryCardLineInput[]
+  ) {
+    if (lines.length === 0) {
+      return;
+    }
+    const others = cardOthersAmount(
+      amount,
+      lines.map((line) => line.amount)
+    );
+    if (others < 0) {
+      throw new HttpError(400, "cardLines sum cannot exceed amount");
+    }
+  }
+
+  async function replaceCardLines(
+    manager: EntityManager,
+    entryId: string,
+    spaceId: string,
+    amount: number,
+    parentCategoryId: string | null,
+    lines: EntryCardLineInput[] | undefined
+  ) {
+    if (lines === undefined) {
+      return;
+    }
+    if (lines.length > 0) {
+      if (!parentCategoryId) {
+        throw new HttpError(400, "Category required for statement detail");
+      }
+      const parentCategory = await requireOwnCategory(
+        spaceId,
+        parentCategoryId
+      );
+      if (!parentCategory.lineDetailEnabled) {
+        throw new HttpError(
+          400,
+          "This category does not allow statement detail"
+        );
+      }
+    }
+    await assertCardLineCategories(spaceId, lines);
+    assertCardLinesFitAmount(amount, lines);
+    if (lines.length === 0) {
+      const existing = await entryCardLineRepository.listForEntry(
+        entryId,
+        manager
+      );
+      const groupIds = [
+        ...new Set(
+          existing
+            .map((line) => line.installmentGroupId)
+            .filter((groupId): groupId is string => Boolean(groupId))
+        ),
+      ];
+      for (const groupId of groupIds) {
+        const groupLines = await entryCardLineRepository.findByInstallmentGroup(
+          groupId,
+          manager
+        );
+        const affectedEntryIds = [
+          ...new Set(groupLines.map((row) => row.entryId)),
+        ];
+        await entryCardLineRepository.removeByIds(
+          manager,
+          groupLines.map((row) => row.id)
+        );
+        for (const affectedId of affectedEntryIds) {
+          if (affectedId === entryId) {
+            continue;
+          }
+          const affected = await entryRepository.findById(affectedId, manager);
+          if (!affected) {
+            continue;
+          }
+          const remaining = await entryCardLineRepository.listForEntry(
+            affectedId,
+            manager
+          );
+          if (remaining.length === 0 && affected.cardInstallmentSeeded) {
+            await entryRepository.remove(manager, affected);
+            continue;
+          }
+          if (affected.cardInstallmentSeeded && remaining.length > 0) {
+            await entryRepository.updateAmount(
+              manager,
+              affectedId,
+              remaining
+                .reduce((sum, row) => sum + Number(row.amount), 0)
+                .toFixed(2)
+            );
+          }
+        }
+      }
+    }
+    await entryCardLineRepository.replaceForEntry(
+      manager,
+      entryId,
+      lines.map((line, index) => ({
+        categoryId: line.categoryId,
+        description: line.description,
+        amount: line.amount.toFixed(2),
+        sortOrder: index,
+      }))
+    );
+  }
+
+  async function preferCardStatementEntry(
+    spaceId: string,
+    userId: string,
+    categoryId: string,
+    month: string,
+    manager: EntityManager
+  ) {
+    const { start, end } = monthBounds(month);
+    const candidates = await entryRepository.findExpenseForCategoryMonth(
+      spaceId,
+      userId,
+      categoryId,
+      start,
+      end,
+      manager
+    );
+    if (candidates.length === 0) {
+      return null;
+    }
+    const withLines = candidates.find(
+      (candidate) => (candidate.cardLines?.length ?? 0) > 0
+    );
+    return withLines ?? candidates[0]!;
+  }
+
+  async function ensureCardStatementEntry(
+    manager: EntityManager,
+    fields: {
+      spaceId: string;
+      userId: string;
+      categoryId: string;
+      visibility: EntryVisibility;
+      month: string;
+      lineAmount: number;
+    }
+  ) {
+    const existing = await preferCardStatementEntry(
+      fields.spaceId,
+      fields.userId,
+      fields.categoryId,
+      fields.month,
+      manager
+    );
+    if (existing) {
+      return existing;
+    }
+    return entryRepository.create(manager, {
+      spaceId: fields.spaceId,
+      userId: fields.userId,
+      categoryId: fields.categoryId,
+      type: "expense",
+      amount: fields.lineAmount.toFixed(2),
+      description: "",
+      visibility: fields.visibility,
+      occurredOn: monthToOccurredOn(fields.month),
+      recurringRuleId: null,
+      installmentPlanId: null,
+      installmentNumber: null,
+      reservePotId: null,
+      transferGroupId: null,
+      counterpartyUserId: null,
+      cardInstallmentSeeded: true,
+    });
+  }
+
+  async function appendCardLine(
+    manager: EntityManager,
+    entryId: string,
+    fields: {
+      categoryId: string;
+      description: string;
+      amount: number;
+      installmentGroupId: string | null;
+      installmentNumber: number | null;
+      installmentCount: number | null;
+    }
+  ) {
+    const existingLines = await entryCardLineRepository.listForEntry(
+      entryId,
+      manager
+    );
+    return entryCardLineRepository.create(manager, {
+      entryId,
+      categoryId: fields.categoryId,
+      description: fields.description,
+      amount: fields.amount.toFixed(2),
+      sortOrder: existingLines.length,
+      installmentGroupId: fields.installmentGroupId,
+      installmentNumber: fields.installmentNumber,
+      installmentCount: fields.installmentCount,
+    });
+  }
+
+  /** Fresh load — TypeORM identity map keeps stale `cardLines` after append/remove. */
+  async function loadEntrySummary(
+    entryId: string
+  ): Promise<EntrySummary | null> {
+    const lines = await entryCardLineRepository.listForEntry(
+      entryId,
+      dataSource.manager
+    );
+    const loaded = await entryRepository.findById(entryId, dataSource.manager);
+    if (!loaded) {
+      return null;
+    }
+    loaded.cardLines = lines;
+    return toEntrySummary(loaded);
   }
 
   return {
@@ -196,21 +431,35 @@ export function createEntryService(
       }
 
       await requireOwnCategory(spaceId, input.categoryId!);
-      const entry = await entryRepository.create(dataSource.manager, {
-        spaceId,
-        userId,
-        categoryId: input.categoryId!,
-        type: input.type,
-        amount: input.amount.toFixed(2),
-        description: input.description,
-        visibility: input.visibility,
-        occurredOn: input.occurredOn,
-        recurringRuleId: null,
-        installmentPlanId: null,
-        installmentNumber: null,
-        reservePotId: null,
-        transferGroupId: null,
-        counterpartyUserId: null,
+      const ledgerType = input.type as "income" | "expense";
+      const entry = await dataSource.transaction(async (manager) => {
+        const created = await entryRepository.create(manager, {
+          spaceId,
+          userId,
+          categoryId: input.categoryId!,
+          type: ledgerType,
+          amount: input.amount.toFixed(2),
+          description: input.description,
+          visibility: input.visibility,
+          occurredOn: input.occurredOn,
+          recurringRuleId: null,
+          installmentPlanId: null,
+          installmentNumber: null,
+          reservePotId: null,
+          transferGroupId: null,
+          counterpartyUserId: null,
+        });
+        if (ledgerType === "expense") {
+          await replaceCardLines(
+            manager,
+            created.id,
+            spaceId,
+            input.amount,
+            input.categoryId!,
+            input.cardLines ?? []
+          );
+        }
+        return created;
       });
       const loaded = await entryRepository.findById(
         entry.id,
@@ -227,7 +476,10 @@ export function createEntryService(
       entryId: string,
       input: UpdateEntryBody
     ): Promise<EntrySummary> {
-      const entry = await entryRepository.findById(entryId, dataSource.manager);
+      const entry = await entryRepository.findByIdPlain(
+        entryId,
+        dataSource.manager
+      );
       if (!entry) {
         throw new HttpError(404, "Entry not found");
       }
@@ -235,6 +487,23 @@ export function createEntryService(
         throw new HttpError(403, "You can only edit your own entries");
       }
       await requireMember(userId, entry.spaceId);
+
+      const installmentScope = input.installmentScope ?? "one";
+      if (
+        installmentScope === "forward" &&
+        (!entry.installmentPlanId || entry.installmentNumber == null)
+      ) {
+        throw new HttpError(
+          400,
+          "installmentScope forward is only for installment entries"
+        );
+      }
+      if (installmentScope === "forward" && input.cardLines !== undefined) {
+        throw new HttpError(
+          400,
+          "cardLines cannot use installmentScope forward"
+        );
+      }
 
       if (entry.type === "transfer_out" || entry.type === "transfer_in") {
         if (input.type !== undefined) {
@@ -245,6 +514,12 @@ export function createEntryService(
         }
         if (input.reservePotId !== undefined) {
           throw new HttpError(400, "Transfers cannot use a reserve pot");
+        }
+        if (input.cardLines !== undefined) {
+          throw new HttpError(400, "Transfers cannot have card lines");
+        }
+        if (installmentScope === "forward") {
+          throw new HttpError(400, "Transfers have no installment scope");
         }
 
         if (input.categoryId !== undefined) {
@@ -279,17 +554,17 @@ export function createEntryService(
             other.description = entry.description;
           if (input.categoryId !== undefined)
             other.categoryId = entry.categoryId;
+          Reflect.deleteProperty(other, "category");
+          Reflect.deleteProperty(other, "user");
+          Reflect.deleteProperty(other, "counterparty");
           await entryRepository.save(manager, other);
         });
 
-        const loaded = await entryRepository.findById(
-          entry.id,
-          dataSource.manager
-        );
-        if (!loaded) {
+        const summary = await loadEntrySummary(entry.id);
+        if (!summary) {
           throw new HttpError(500, "Failed to load entry");
         }
-        return toEntrySummary(loaded);
+        return summary;
       }
 
       const nextType = input.type ?? entry.type;
@@ -323,20 +598,317 @@ export function createEntryService(
         if (input.visibility) entry.visibility = input.visibility;
       }
 
-      if (input.amount !== undefined) entry.amount = input.amount.toFixed(2);
-      if (input.description !== undefined)
+      if (input.amount !== undefined) {
+        entry.amount = input.amount.toFixed(2);
+        if (entry.cardInstallmentSeeded) {
+          entry.cardInstallmentSeeded = false;
+        }
+      }
+      if (input.description !== undefined) {
         entry.description = input.description;
+        if (entry.cardInstallmentSeeded) {
+          entry.cardInstallmentSeeded = false;
+        }
+      }
       if (input.occurredOn) entry.occurredOn = input.occurredOn;
 
-      await entryRepository.save(dataSource.manager, entry);
-      const loaded = await entryRepository.findById(
-        entry.id,
-        dataSource.manager
-      );
-      if (!loaded) {
+      if (
+        nextType !== "expense" &&
+        input.cardLines !== undefined &&
+        input.cardLines.length > 0
+      ) {
+        throw new HttpError(400, "cardLines are only allowed on expenses");
+      }
+
+      await dataSource.transaction(async (manager) => {
+        await entryRepository.save(manager, entry);
+        if (nextType !== "expense") {
+          await entryCardLineRepository.replaceForEntry(manager, entry.id, []);
+        } else if (input.cardLines !== undefined) {
+          await replaceCardLines(
+            manager,
+            entry.id,
+            entry.spaceId,
+            Number(entry.amount),
+            entry.categoryId,
+            input.cardLines
+          );
+        } else {
+          const existing = await entryCardLineRepository.listForEntry(
+            entry.id,
+            manager
+          );
+          if (existing.length > 0) {
+            assertCardLinesFitAmount(
+              Number(entry.amount),
+              existing.map((line) => ({
+                description: line.description,
+                amount: Number(line.amount),
+                categoryId: line.categoryId,
+              }))
+            );
+          }
+        }
+
+        if (
+          installmentScope !== "forward" ||
+          !entry.installmentPlanId ||
+          entry.installmentNumber == null
+        ) {
+          return;
+        }
+
+        const siblings = await entryRepository.listInstallmentFromNumber(
+          entry.installmentPlanId,
+          entry.installmentNumber,
+          manager
+        );
+        for (const sibling of siblings) {
+          if (sibling.id === entry.id) {
+            continue;
+          }
+          sibling.type = entry.type;
+          sibling.categoryId = entry.categoryId;
+          sibling.reservePotId = entry.reservePotId;
+          sibling.visibility = entry.visibility;
+          sibling.amount = entry.amount;
+          sibling.description = entry.description;
+          await entryRepository.save(manager, sibling);
+        }
+
+        const plan = await installmentPlanRepository.findById(
+          entry.installmentPlanId,
+          manager
+        );
+        if (plan) {
+          if (entry.categoryId) plan.categoryId = entry.categoryId;
+          if (entry.type === "income" || entry.type === "expense") {
+            plan.type = entry.type;
+          }
+          plan.amount = entry.amount;
+          plan.description = entry.description;
+          plan.visibility = entry.visibility;
+          // Avoid stale category relation overwriting categoryId on save.
+          Reflect.deleteProperty(plan, "category");
+          await installmentPlanRepository.save(manager, plan);
+        }
+      });
+
+      const summary = await loadEntrySummary(entry.id);
+      if (!summary) {
         throw new HttpError(500, "Failed to load entry");
       }
-      return toEntrySummary(loaded);
+      return summary;
+    },
+
+    async addCardLine(
+      userId: string,
+      entryId: string,
+      input: AddEntryCardLineBody
+    ): Promise<EntrySummary> {
+      const entry = await entryRepository.findById(entryId, dataSource.manager);
+      if (!entry) {
+        throw new HttpError(404, "Entry not found");
+      }
+      if (entry.userId !== userId) {
+        throw new HttpError(403, "You can only edit your own entries");
+      }
+      await requireMember(userId, entry.spaceId);
+      if (entry.type !== "expense") {
+        throw new HttpError(400, "cardLines are only allowed on expenses");
+      }
+      if (!entry.categoryId) {
+        throw new HttpError(400, "Category required for statement detail");
+      }
+      const parentCategory = await requireOwnCategory(
+        entry.spaceId,
+        entry.categoryId
+      );
+      if (!parentCategory.lineDetailEnabled) {
+        throw new HttpError(
+          400,
+          "This category does not allow statement detail"
+        );
+      }
+      await requireOwnCategory(entry.spaceId, input.categoryId);
+
+      const existingLines = entry.cardLines ?? [];
+      const nextLines = [
+        ...existingLines.map((line) => ({
+          description: line.description,
+          amount: Number(line.amount),
+          categoryId: line.categoryId,
+        })),
+        {
+          description: input.description,
+          amount: input.amount,
+          categoryId: input.categoryId,
+        },
+      ];
+      // Seeded statements sync total to sum(lines); manual totals keep amount (Outros shrinks).
+      if (!entry.cardInstallmentSeeded) {
+        assertCardLinesFitAmount(Number(entry.amount), nextLines);
+      }
+
+      const installmentCount = input.installmentCount;
+      const installmentGroupId = installmentCount != null ? randomUUID() : null;
+      const startMonth = entry.occurredOn.slice(0, 7);
+
+      await dataSource.transaction(async (manager) => {
+        await appendCardLine(manager, entry.id, {
+          categoryId: input.categoryId,
+          description: input.description,
+          amount: input.amount,
+          installmentGroupId,
+          installmentNumber: installmentCount != null ? 1 : null,
+          installmentCount: installmentCount ?? null,
+        });
+
+        if (entry.cardInstallmentSeeded) {
+          const lines = await entryCardLineRepository.listForEntry(
+            entry.id,
+            manager
+          );
+          await entryRepository.updateAmount(
+            manager,
+            entry.id,
+            lines.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2)
+          );
+        }
+
+        if (installmentCount == null) {
+          return;
+        }
+
+        const schedule = remainingInstallmentSchedule(
+          startMonth,
+          1,
+          installmentCount
+        ).filter((item) => item.number > 1);
+
+        for (const item of schedule) {
+          const target = await ensureCardStatementEntry(manager, {
+            spaceId: entry.spaceId,
+            userId,
+            categoryId: entry.categoryId!,
+            visibility: entry.visibility,
+            month: item.month,
+            lineAmount: input.amount,
+          });
+
+          const targetLines = await entryCardLineRepository.listForEntry(
+            target.id,
+            manager
+          );
+          if (!target.cardInstallmentSeeded) {
+            const others = cardOthersAmount(
+              Number(target.amount),
+              targetLines.map((row) => Number(row.amount))
+            );
+            if (input.amount - others > 1e-9) {
+              throw new HttpError(
+                400,
+                "Installment does not fit a future statement total"
+              );
+            }
+          }
+
+          await appendCardLine(manager, target.id, {
+            categoryId: input.categoryId,
+            description: input.description,
+            amount: input.amount,
+            installmentGroupId,
+            installmentNumber: item.number,
+            installmentCount,
+          });
+
+          if (target.cardInstallmentSeeded) {
+            const lines = await entryCardLineRepository.listForEntry(
+              target.id,
+              manager
+            );
+            await entryRepository.updateAmount(
+              manager,
+              target.id,
+              lines.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2)
+            );
+          }
+        }
+      });
+
+      const summary = await loadEntrySummary(entry.id);
+      if (!summary) {
+        throw new HttpError(500, "Failed to load entry");
+      }
+      return summary;
+    },
+
+    async removeCardLine(
+      userId: string,
+      entryId: string,
+      lineId: string
+    ): Promise<EntrySummary | null> {
+      const entry = await entryRepository.findById(entryId, dataSource.manager);
+      if (!entry) {
+        throw new HttpError(404, "Entry not found");
+      }
+      if (entry.userId !== userId) {
+        throw new HttpError(403, "You can only edit your own entries");
+      }
+      await requireMember(userId, entry.spaceId);
+
+      const line = await entryCardLineRepository.findById(
+        lineId,
+        dataSource.manager
+      );
+      if (!line || line.entryId !== entryId) {
+        throw new HttpError(404, "Card line not found");
+      }
+
+      await dataSource.transaction(async (manager) => {
+        const groupId = line.installmentGroupId;
+        const linesToRemove = groupId
+          ? await entryCardLineRepository.findByInstallmentGroup(
+              groupId,
+              manager
+            )
+          : [line];
+
+        const affectedEntryIds = [
+          ...new Set(linesToRemove.map((row) => row.entryId)),
+        ];
+
+        await entryCardLineRepository.removeByIds(
+          manager,
+          linesToRemove.map((row) => row.id)
+        );
+
+        for (const affectedId of affectedEntryIds) {
+          const affected = await entryRepository.findById(affectedId, manager);
+          if (!affected) {
+            continue;
+          }
+          const remaining = await entryCardLineRepository.listForEntry(
+            affectedId,
+            manager
+          );
+          if (remaining.length === 0 && affected.cardInstallmentSeeded) {
+            await entryRepository.remove(manager, affected);
+            continue;
+          }
+          if (affected.cardInstallmentSeeded && remaining.length > 0) {
+            await entryRepository.updateAmount(
+              manager,
+              affectedId,
+              remaining
+                .reduce((sum, row) => sum + Number(row.amount), 0)
+                .toFixed(2)
+            );
+          }
+        }
+      });
+
+      return loadEntrySummary(entryId);
     },
 
     async remove(

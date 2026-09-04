@@ -1,6 +1,12 @@
-import type { CategorySummary, EntrySummary } from "@homewallet/shared";
+import {
+  cardOthersAmount,
+  type CategorySummary,
+  type EntryCardLineSummary,
+  type EntrySummary,
+} from "@homewallet/shared";
 import { Category } from "../db/entities/category.entity.js";
 import { Entry } from "../db/entities/entry.entity.js";
+import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
 
 export function toCategorySummary(category: Category): CategorySummary {
   return {
@@ -8,10 +14,36 @@ export function toCategorySummary(category: Category): CategorySummary {
     name: category.name,
     isDefault: category.isDefault,
     budgetLayer: category.budgetLayer,
+    lineDetailEnabled: category.lineDetailEnabled,
+  };
+}
+
+function toCardLineSummary(line: EntryCardLine): EntryCardLineSummary {
+  return {
+    id: line.id,
+    description: line.description,
+    amount: Number(line.amount),
+    categoryId: line.categoryId,
+    categoryName: line.category?.name ?? "",
+    sortOrder: line.sortOrder,
+    installmentGroupId: line.installmentGroupId,
+    installmentNumber: line.installmentNumber,
+    installmentCount: line.installmentCount,
   };
 }
 
 export function toEntrySummary(entry: Entry): EntrySummary {
+  const cardLines = [...(entry.cardLines ?? [])]
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map(toCardLineSummary);
+  const cardOthersAmountValue =
+    cardLines.length > 0
+      ? cardOthersAmount(
+          Number(entry.amount),
+          cardLines.map((line) => line.amount)
+        )
+      : null;
+
   return {
     id: entry.id,
     type: entry.type,
@@ -32,6 +64,8 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     transferGroupId: entry.transferGroupId,
     counterpartyUserId: entry.counterpartyUserId,
     counterpartyName: entry.counterparty?.name ?? null,
+    cardLines,
+    cardOthersAmount: cardOthersAmountValue,
   };
 }
 
