@@ -1,5 +1,9 @@
 import type { DataSource } from "typeorm";
-import type { CategorySummary, CreateCategoryBody } from "@homewallet/shared";
+import type {
+  CategorySummary,
+  CreateCategoryBody,
+  UpdateCategoryBody,
+} from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { toCategorySummary } from "../lib/entry-mappers.js";
 import { categoryRepository } from "../repositories/category.repository.js";
@@ -53,7 +57,31 @@ export function createCategoryService(dataSource: DataSource) {
         spaceId,
         name: input.name,
         isDefault: false,
+        budgetLayer: null,
       });
+      return toCategorySummary(category);
+    },
+
+    async update(
+      userId: string,
+      spaceId: string,
+      categoryId: string,
+      input: UpdateCategoryBody
+    ): Promise<CategorySummary> {
+      const membership = await requireMember(userId, spaceId);
+      if (membership.role !== "owner") {
+        throw new HttpError(403, "Only owners can map category layers");
+      }
+      const category = await categoryRepository.findById(
+        categoryId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!category) {
+        throw new HttpError(404, "Category not found");
+      }
+      category.budgetLayer = input.budgetLayer;
+      await categoryRepository.save(dataSource.manager, category);
       return toCategorySummary(category);
     },
 

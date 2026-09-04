@@ -6,6 +6,7 @@ export const membershipRepository = {
     return manager.find(Membership, {
       where: { userId },
       relations: { space: true },
+      order: { space: { createdAt: "ASC" } },
     });
   },
 
@@ -18,5 +19,9 @@ export const membershipRepository = {
 
   create(manager: EntityManager, fields: Partial<Membership>) {
     return manager.save(manager.create(Membership, fields));
+  },
+
+  save(manager: EntityManager, membership: Membership) {
+    return manager.save(membership);
   },
 };

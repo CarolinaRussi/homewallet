@@ -1,6 +1,9 @@
 import type { EntityManager } from "typeorm";
 import { Category } from "../db/entities/category.entity.js";
-import { DEFAULT_CATEGORY_NAMES } from "../lib/default-categories.js";
+import {
+  DEFAULT_CATEGORY_LAYERS,
+  DEFAULT_CATEGORY_NAMES,
+} from "../lib/default-categories.js";
 
 export const categoryRepository = {
   listForSpace(spaceId: string, manager: EntityManager) {
@@ -22,6 +25,10 @@ export const categoryRepository = {
     return manager.save(manager.create(Category, fields));
   },
 
+  save(manager: EntityManager, category: Category) {
+    return manager.save(category);
+  },
+
   async seedDefaults(spaceId: string, manager: EntityManager) {
     for (const name of DEFAULT_CATEGORY_NAMES) {
       await manager.save(
@@ -29,6 +36,7 @@ export const categoryRepository = {
           spaceId,
           name,
           isDefault: true,
+          budgetLayer: DEFAULT_CATEGORY_LAYERS[name],
         })
       );
     }

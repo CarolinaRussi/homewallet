@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
+import type { BudgetLayer } from "@homewallet/shared";
 import { Space } from "./space.entity.js";
 
 @Entity({ name: "categories" })
@@ -23,6 +24,9 @@ export class Category extends BaseEntity {
 
   @Column({ name: "is_default", type: "boolean", default: false })
   isDefault!: boolean;
+
+  @Column({ name: "budget_layer", type: "text", nullable: true })
+  budgetLayer!: BudgetLayer | null;
 
   @ManyToOne(() => Space, { onDelete: "CASCADE" })
   @JoinColumn({ name: "space_id" })

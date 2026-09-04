@@ -22,6 +22,10 @@ export async function registerLedgerRoutes(
     "/spaces/:spaceId/categories",
     (request) => categoryController.create(request)
   );
+  app.patch<{ Params: { spaceId: string; categoryId: string } }>(
+    "/spaces/:spaceId/categories/:categoryId",
+    (request) => categoryController.update(request)
+  );
 
   app.get<{ Params: { spaceId: string }; Querystring: { month?: string } }>(
     "/spaces/:spaceId/entries",

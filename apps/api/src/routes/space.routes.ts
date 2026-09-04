@@ -16,4 +16,11 @@ export async function registerSpaceRoutes(
   app.get<{ Params: { id: string } }>("/:id", (request) =>
     controller.get(request)
   );
+  app.patch<{ Params: { id: string } }>("/:id/my-limits", (request) =>
+    controller.updateMyLimits(request)
+  );
+  app.get<{ Params: { id: string }; Querystring: { month?: string } }>(
+    "/:id/space-month",
+    (request) => controller.spaceMonth(request)
+  );
 }

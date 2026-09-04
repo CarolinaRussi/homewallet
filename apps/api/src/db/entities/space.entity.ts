@@ -28,6 +28,21 @@ export class Space extends BaseEntity {
   @Column({ name: "entry_date_mode", type: "text", default: "month" })
   entryDateMode!: EntryDateMode;
 
+  @Column({ name: "space_limit_enabled", type: "boolean", default: false })
+  spaceLimitEnabled!: boolean;
+
+  @Column({
+    name: "space_limit_amount",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  spaceLimitAmount!: string | null;
+
+  @Column({ name: "budget_layers_enabled", type: "boolean", default: false })
+  budgetLayersEnabled!: boolean;
+
   @Column({ name: "join_code", type: "text", unique: true })
   joinCode!: string;
 

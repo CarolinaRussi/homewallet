@@ -15,6 +15,7 @@ import { SpaceEntryDateMode20260903210000 } from "./migrations/20260903210000-sp
 import { ReserveMovements20260903220000 } from "./migrations/20260903220000-reserve-movements.js";
 import { RecurringAndInstallments20260903230000 } from "./migrations/20260903230000-recurring-installments.js";
 import { LeftoverSeeds20260903240000 } from "./migrations/20260903240000-leftover-seeds.js";
+import { LimitsAndBudgetLayers20260903250000 } from "./migrations/20260903250000-limits-budget-layers.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -39,6 +40,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       ReserveMovements20260903220000,
       RecurringAndInstallments20260903230000,
       LeftoverSeeds20260903240000,
+      LimitsAndBudgetLayers20260903250000,
     ],
   });
 }

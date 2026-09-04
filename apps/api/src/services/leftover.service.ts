@@ -7,7 +7,12 @@ import type {
   MonthSummary,
   ReserveMovementSummary,
 } from "@homewallet/shared";
-import { computeMonthSummary, reserveBalanceDelta } from "@homewallet/shared";
+import {
+  computeMonthSummary,
+  layerTargets,
+  progressToward,
+  reserveBalanceDelta,
+} from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds } from "../lib/entry-mappers.js";
 import { LeftoverSeed } from "../db/entities/leftover-seed.entity.js";
@@ -39,6 +44,13 @@ function toSeedSummary(seed: LeftoverSeed): LeftoverSeedSummary {
 
 function monthKey(occurredOn: string) {
   return occurredOn.slice(0, 7);
+}
+
+function amountOrNull(value: string | null | undefined) {
+  if (value == null || value === "") {
+    return null;
+  }
+  return Number(value);
 }
 
 function buildBuckets(
@@ -112,8 +124,9 @@ export function createLeftoverService(
     spaceId: string,
     month: string
   ): Promise<MonthSummary> {
-    const { end } = monthBounds(month);
-    const [entries, movements, seeds] = await Promise.all([
+    const membership = await requireMember(userId, spaceId);
+    const { start, end } = monthBounds(month);
+    const [entries, movements, seeds, monthEntries] = await Promise.all([
       entryRepository.listMineThrough(spaceId, userId, end, dataSource.manager),
       reserveMovementRepository.listForUserThrough(
         spaceId,
@@ -127,14 +140,82 @@ export function createLeftoverService(
         end,
         dataSource.manager
       ),
+      entryRepository.listMineForMonth(
+        spaceId,
+        userId,
+        start,
+        end,
+        dataSource.manager
+      ),
     ]);
 
-    return computeMonthSummary(
+    const summary = computeMonthSummary(
       month,
       buildBuckets(entries, movements, seeds),
       movements.map(toMovementSummary),
       seeds.map(toSeedSummary)
     );
+
+    const personalAmount = amountOrNull(membership.personalLimitAmount);
+    const leftoverAmount = amountOrNull(membership.leftoverTargetAmount);
+
+    const myLimits = {
+      personalLimitEnabled: membership.personalLimitEnabled,
+      personalLimitAmount: personalAmount,
+      leftoverTargetEnabled: membership.leftoverTargetEnabled,
+      leftoverTargetAmount: leftoverAmount,
+    };
+
+    let budgetLayers = null;
+    if (membership.space.budgetLayersEnabled) {
+      const spent = {
+        essential: 0,
+        personal: 0,
+        future: 0,
+      };
+      let unmappedExpense = 0;
+      for (const entry of monthEntries) {
+        if (entry.type !== "expense") {
+          continue;
+        }
+        const amount = Number(entry.amount);
+        const layer = entry.category?.budgetLayer;
+        if (
+          layer === "essential" ||
+          layer === "personal" ||
+          layer === "future"
+        ) {
+          spent[layer] += amount;
+        } else {
+          unmappedExpense += amount;
+        }
+      }
+      const targets = layerTargets(summary.income);
+      budgetLayers = {
+        enabled: true as const,
+        income: summary.income,
+        byLayer: {
+          essential: progressToward(spent.essential, targets.essential),
+          personal: progressToward(spent.personal, targets.personal),
+          future: progressToward(spent.future, targets.future),
+        },
+        unmappedExpense,
+      };
+    }
+
+    return {
+      ...summary,
+      myLimits,
+      personalLimit:
+        myLimits.personalLimitEnabled && personalAmount != null
+          ? progressToward(summary.expense, personalAmount)
+          : null,
+      leftoverTarget:
+        myLimits.leftoverTargetEnabled && leftoverAmount != null
+          ? progressToward(summary.leftover, leftoverAmount)
+          : null,
+      budgetLayers,
+    };
   }
 
   return {

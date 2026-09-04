@@ -26,6 +26,30 @@ export class Membership extends BaseEntity {
   @Column({ type: "text" })
   role!: MembershipRole;
 
+  @Column({ name: "personal_limit_enabled", type: "boolean", default: false })
+  personalLimitEnabled!: boolean;
+
+  @Column({
+    name: "personal_limit_amount",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  personalLimitAmount!: string | null;
+
+  @Column({ name: "leftover_target_enabled", type: "boolean", default: false })
+  leftoverTargetEnabled!: boolean;
+
+  @Column({
+    name: "leftover_target_amount",
+    type: "numeric",
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  leftoverTargetAmount!: string | null;
+
   @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "user_id" })
   user!: User;

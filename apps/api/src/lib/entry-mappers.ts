@@ -7,6 +7,7 @@ export function toCategorySummary(category: Category): CategorySummary {
     id: category.id,
     name: category.name,
     isDefault: category.isDefault,
+    budgetLayer: category.budgetLayer,
   };
 }
 
