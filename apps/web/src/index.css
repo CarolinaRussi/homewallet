@@ -132,3 +132,58 @@
 .hw-entry-flash {
   animation: hw-entry-flash 1.4s ease-out;
 }
+
+/* Overlay / confirm sheet — soft enter & exit */
+.hw-overlay {
+  background: color-mix(in srgb, var(--hw-fg) 40%, transparent);
+  transition: opacity 0.22s ease;
+}
+
+.hw-overlay-in {
+  opacity: 1;
+}
+
+.hw-overlay-out {
+  opacity: 0;
+}
+
+.hw-sheet {
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+
+.hw-sheet-out {
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
+.hw-sheet-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (min-width: 640px) {
+  .hw-sheet-out {
+    transform: translateY(0.5rem) scale(0.98);
+  }
+
+  .hw-sheet-in {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hw-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.hw-skeleton {
+  background: color-mix(in srgb, var(--hw-border) 85%, var(--hw-muted));
+  animation: hw-skeleton-pulse 1.2s ease-in-out infinite;
+}

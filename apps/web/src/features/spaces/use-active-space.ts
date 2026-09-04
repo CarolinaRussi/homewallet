@@ -19,7 +19,14 @@ export function useActiveSpace() {
 
   useEffect(() => {
     const spaces = spacesQuery.data;
-    if (!spaces || spaces.length === 0) {
+    if (!spaces) {
+      return;
+    }
+    if (spaces.length === 0) {
+      if (spaceId) {
+        setSpaceId(null);
+        localStorage.removeItem(STORAGE_KEY);
+      }
       return;
     }
     const stillValid = spaceId && spaces.some((space) => space.id === spaceId);

@@ -26,6 +26,12 @@ import {
   updateEntry,
 } from "../entries/entry-api";
 import { Spinner } from "../../shared/ui/Spinner";
+import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
+import {
+  ListRowsSkeleton,
+  Skeleton,
+  SummaryCardsSkeleton,
+} from "../../shared/ui/Skeleton";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
@@ -87,7 +93,8 @@ export function MePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { spaces, activeSpace, spaceId, selectSpace } = useActiveSpace();
+  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
+    useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -383,6 +390,19 @@ export function MePage() {
 
   const formPending = saveMutation.isPending || scheduleMutation.isPending;
 
+  if (spacesQuery.isLoading) {
+    return (
+      <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
+        <header>
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="mt-2 h-4 w-40" />
+        </header>
+        <SummaryCardsSkeleton />
+        <ListRowsSkeleton />
+      </main>
+    );
+  }
+
   if (!spaceId || !activeSpace) {
     return (
       <main className="px-6 py-8 md:px-10">
@@ -487,84 +507,94 @@ export function MePage() {
             {t("me.addEntry")}
           </button>
         </div>
-        {entriesQuery.data?.length === 0 ? (
+        {entriesQuery.isLoading ? (
+          <ListRowsSkeleton />
+        ) : entriesQuery.data?.length === 0 ? (
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
-        {entriesQuery.data?.map((entry) => (
-          <article
-            key={entry.id}
-            className={[
-              "flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between",
-              highlightEntryId === entry.id ? "hw-entry-flash" : "",
-            ].join(" ")}
-          >
-            <div>
-              <p className="font-medium text-fg">
-                {entry.categoryName}
-                {entry.description ? (
-                  <span className="font-normal text-muted">
-                    {" "}
-                    · {entry.description}
-                  </span>
-                ) : null}
-              </p>
-              <p className="text-sm text-muted">
-                {formatEntryDate(entry.occurredOn, activeSpace.entryDateMode)} ·{" "}
-                {entry.type === "income"
-                  ? t("me.income")
-                  : entry.type === "saving"
-                    ? t("me.kindSaving")
-                    : t("me.expense")}
-                {entry.type === "saving" && entry.reservePotName
-                  ? ` · ${entry.reservePotName}`
-                  : ""}
-                {entry.type !== "saving"
-                  ? ` · ${
-                      entry.visibility === "shared"
-                        ? t("me.shared")
-                        : t("me.personal")
-                    }`
-                  : ""}
-                {entry.recurringRuleId ? ` · ${t("me.recurringBadge")}` : ""}
-                {entry.installmentNumber && entry.installmentCount
-                  ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
-                  : ""}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <p
-                className={`tabular-nums font-semibold ${
-                  entry.type === "income"
-                    ? "text-income-fg"
-                    : entry.type === "saving"
-                      ? "text-accent"
-                      : "text-expense-fg"
-                }`}
+        {!entriesQuery.isLoading
+          ? entriesQuery.data?.map((entry) => (
+              <article
+                key={entry.id}
+                className={[
+                  "flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between",
+                  highlightEntryId === entry.id ? "hw-entry-flash" : "",
+                ].join(" ")}
               >
-                {formatMoney(entry.amount, activeSpace.currency, locale)}
-              </p>
-              <button
-                type="button"
-                className="text-sm text-muted underline disabled:opacity-70"
-                disabled={deletingEntryId === entry.id}
-                onClick={() => openEditForm(entry)}
-              >
-                {t("me.edit")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-sm text-expense-fg underline disabled:opacity-70"
-                disabled={deletingEntryId === entry.id}
-                onClick={() => requestDelete(entry)}
-              >
-                {deletingEntryId === entry.id ? <Spinner /> : null}
-                {deletingEntryId === entry.id
-                  ? t("me.deleting")
-                  : t("me.delete")}
-              </button>
-            </div>
-          </article>
-        ))}
+                <div>
+                  <p className="font-medium text-fg">
+                    {entry.categoryName}
+                    {entry.description ? (
+                      <span className="font-normal text-muted">
+                        {" "}
+                        · {entry.description}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {formatEntryDate(
+                      entry.occurredOn,
+                      activeSpace.entryDateMode
+                    )}{" "}
+                    ·{" "}
+                    {entry.type === "income"
+                      ? t("me.income")
+                      : entry.type === "saving"
+                        ? t("me.kindSaving")
+                        : t("me.expense")}
+                    {entry.type === "saving" && entry.reservePotName
+                      ? ` · ${entry.reservePotName}`
+                      : ""}
+                    {entry.type !== "saving"
+                      ? ` · ${
+                          entry.visibility === "shared"
+                            ? t("me.shared")
+                            : t("me.personal")
+                        }`
+                      : ""}
+                    {entry.recurringRuleId
+                      ? ` · ${t("me.recurringBadge")}`
+                      : ""}
+                    {entry.installmentNumber && entry.installmentCount
+                      ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <p
+                    className={`tabular-nums font-semibold ${
+                      entry.type === "income"
+                        ? "text-income-fg"
+                        : entry.type === "saving"
+                          ? "text-accent"
+                          : "text-expense-fg"
+                    }`}
+                  >
+                    {formatMoney(entry.amount, activeSpace.currency, locale)}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-sm text-muted underline disabled:opacity-70"
+                    disabled={deletingEntryId === entry.id}
+                    onClick={() => openEditForm(entry)}
+                  >
+                    {t("me.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-sm text-expense-fg underline disabled:opacity-70"
+                    disabled={deletingEntryId === entry.id}
+                    onClick={() => requestDelete(entry)}
+                  >
+                    {deletingEntryId === entry.id ? <Spinner /> : null}
+                    {deletingEntryId === entry.id
+                      ? t("me.deleting")
+                      : t("me.delete")}
+                  </button>
+                </div>
+              </article>
+            ))
+          : null}
       </section>
 
       {welcome && spaceId ? (
@@ -581,87 +611,81 @@ export function MePage() {
       ) : null}
 
       {deletePrompt ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="entry-delete-title"
+        <ConfirmSheet
+          open
+          title={
+            deletePrompt.installmentPlanId
+              ? t("me.installmentDeleteTitle")
+              : t("me.recurringDeleteTitle")
+          }
+          description={
+            deletePrompt.installmentPlanId
+              ? t("me.installmentDeleteHint").replace(
+                  "{n}",
+                  String(deletePrompt.installmentNumber ?? "")
+                )
+              : t("me.recurringDeleteHint")
+          }
+          pending={deleteMutation.isPending}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              setDeletePrompt(null);
+            }
+          }}
         >
-          <div className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-lg">
-            <h2
-              id="entry-delete-title"
-              className="text-lg font-semibold text-fg"
-            >
-              {deletePrompt.installmentPlanId
-                ? t("me.installmentDeleteTitle")
-                : t("me.recurringDeleteTitle")}
-            </h2>
-            <p className="mt-2 text-sm text-muted">
-              {deletePrompt.installmentPlanId
-                ? t("me.installmentDeleteHint").replace(
-                    "{n}",
-                    String(deletePrompt.installmentNumber ?? "")
-                  )
-                : t("me.recurringDeleteHint")}
-            </p>
-            <div className="mt-4 flex flex-col gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-fg disabled:opacity-70"
-                disabled={deleteMutation.isPending}
-                onClick={() =>
-                  deleteMutation.mutate({
-                    entryId: deletePrompt.id,
-                    installmentScope: "one",
-                  })
-                }
-              >
-                {deleteMutation.isPending &&
-                deletingEntryId === deletePrompt.id ? (
-                  <Spinner />
-                ) : null}
-                {deletePrompt.installmentPlanId
-                  ? t("me.installmentDeleteOne")
-                  : t("me.recurringDeleteOne")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2 text-sm font-medium text-expense-fg disabled:opacity-70"
-                disabled={deleteMutation.isPending}
-                onClick={() =>
-                  deleteMutation.mutate(
-                    deletePrompt.installmentPlanId
-                      ? {
-                          entryId: deletePrompt.id,
-                          installmentScope: "forward",
-                        }
-                      : {
-                          entryId: deletePrompt.id,
-                          stopRecurringRuleId:
-                            deletePrompt.recurringRuleId ?? undefined,
-                        }
-                  )
-                }
-              >
-                {deleteMutation.isPending &&
-                deletingEntryId === deletePrompt.id ? (
-                  <Spinner />
-                ) : null}
-                {deletePrompt.installmentPlanId
-                  ? t("me.installmentDeleteForward")
-                  : t("me.recurringDeleteStop")}
-              </button>
-              <button
-                type="button"
-                className="rounded-md px-3 py-2 text-sm text-muted underline disabled:opacity-70"
-                disabled={deleteMutation.isPending}
-                onClick={() => setDeletePrompt(null)}
-              >
-                {t("me.cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+            disabled={deleteMutation.isPending}
+            onClick={() =>
+              deleteMutation.mutate({
+                entryId: deletePrompt.id,
+                installmentScope: "one",
+              })
+            }
+          >
+            {deleteMutation.isPending && deletingEntryId === deletePrompt.id ? (
+              <Spinner />
+            ) : null}
+            {deletePrompt.installmentPlanId
+              ? t("me.installmentDeleteOne")
+              : t("me.recurringDeleteOne")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2.5 text-sm font-medium text-expense-fg disabled:opacity-70 sm:py-2"
+            disabled={deleteMutation.isPending}
+            onClick={() =>
+              deleteMutation.mutate(
+                deletePrompt.installmentPlanId
+                  ? {
+                      entryId: deletePrompt.id,
+                      installmentScope: "forward",
+                    }
+                  : {
+                      entryId: deletePrompt.id,
+                      stopRecurringRuleId:
+                        deletePrompt.recurringRuleId ?? undefined,
+                    }
+              )
+            }
+          >
+            {deleteMutation.isPending && deletingEntryId === deletePrompt.id ? (
+              <Spinner />
+            ) : null}
+            {deletePrompt.installmentPlanId
+              ? t("me.installmentDeleteForward")
+              : t("me.recurringDeleteStop")}
+          </button>
+          <button
+            type="button"
+            className="rounded-md px-3 py-2.5 text-sm text-muted underline disabled:opacity-70 sm:py-2"
+            disabled={deleteMutation.isPending}
+            onClick={() => setDeletePrompt(null)}
+          >
+            {t("me.cancel")}
+          </button>
+        </ConfirmSheet>
       ) : null}
     </main>
   );

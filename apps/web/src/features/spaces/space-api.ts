@@ -1,6 +1,7 @@
 import type {
   BudgetLayer,
   EntryDateMode,
+  SpaceMemberSummary,
   SpaceMonthSummary,
   SpaceSummary,
   UpdateMyLimitsBody,
@@ -48,6 +49,29 @@ export function updateMyLimits(spaceId: string, body: UpdateMyLimitsBody) {
   return api<SpaceSummary>(`/spaces/${spaceId}/my-limits`, {
     method: "PATCH",
     body: JSON.stringify(body),
+  });
+}
+
+export function fetchSpaceMembers(spaceId: string) {
+  return api<SpaceMemberSummary[]>(`/spaces/${spaceId}/members`);
+}
+
+export function promoteSpaceMember(spaceId: string, userId: string) {
+  return api<SpaceMemberSummary[]>(
+    `/spaces/${spaceId}/members/${userId}/promote`,
+    { method: "POST" }
+  );
+}
+
+export function regenerateJoinCode(spaceId: string) {
+  return api<SpaceSummary>(`/spaces/${spaceId}/regenerate-join-code`, {
+    method: "POST",
+  });
+}
+
+export function leaveSpace(spaceId: string) {
+  return api<{ deleted: boolean }>(`/spaces/${spaceId}/leave`, {
+    method: "POST",
   });
 }
 

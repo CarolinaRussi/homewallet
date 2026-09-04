@@ -10,6 +10,12 @@ import {
   monthToOccurredOn,
   todayIsoDate,
 } from "../../shared/lib/money";
+import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
+import {
+  ListRowsSkeleton,
+  PotGridSkeleton,
+  Skeleton,
+} from "../../shared/ui/Skeleton";
 import { Spinner } from "../../shared/ui/Spinner";
 import { useActiveSpace } from "../spaces/use-active-space";
 import {
@@ -27,9 +33,11 @@ import {
 export function ReservePage() {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
-  const { spaces, activeSpace, spaceId, selectSpace } = useActiveSpace();
+  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
+    useActiveSpace();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [deletePotId, setDeletePotId] = useState<string | null>(null);
   const month = currentMonthValue();
 
   const potsQuery = useQuery({
@@ -66,6 +74,7 @@ export function ReservePage() {
       return deleteReservePot(potId!);
     },
     onSuccess: async () => {
+      setDeletePotId(null);
       setSuccessMessage(t("reserve.potsSaved"));
       setErrorMessage("");
       await queryClient.invalidateQueries({
@@ -199,6 +208,22 @@ export function ReservePage() {
     event.currentTarget.reset();
   }
 
+  if (spacesQuery.isLoading) {
+    return (
+      <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
+        <header>
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="mt-3 h-4 w-full max-w-xl" />
+        </header>
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-3 h-9 w-36" />
+        </div>
+        <PotGridSkeleton />
+      </main>
+    );
+  }
+
   if (!spaceId || !activeSpace) {
     return (
       <main className="px-6 py-8 md:px-10">
@@ -208,6 +233,7 @@ export function ReservePage() {
     );
   }
 
+  const pageLoading = potsQuery.isLoading || summaryQuery.isLoading;
   const pots = potsQuery.data ?? [];
   const defaultDate =
     activeSpace.entryDateMode === "month" ? month : todayIsoDate();
@@ -249,238 +275,283 @@ export function ReservePage() {
         <p className="text-sm text-income-fg">{successMessage}</p>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <p className="text-sm text-muted">{t("reserve.total")}</p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-accent">
-          {formatMoney(
-            summaryQuery.data?.reserveBalance ?? 0,
-            activeSpace.currency,
-            locale
-          )}
-        </p>
-        <p className="mt-2 text-sm text-muted">
-          {t("reserve.saveViaEntry")}{" "}
-          <Link to="/me" className="text-accent underline">
-            {t("nav.me")}
-          </Link>
-          .
-        </p>
-      </section>
+      {pageLoading ? (
+        <>
+          <div className="rounded-lg border border-border bg-surface p-5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-3 h-9 w-36" />
+            <Skeleton className="mt-3 h-4 w-64" />
+          </div>
+          <section className="flex flex-col gap-3">
+            <Skeleton className="h-6 w-40" />
+            <PotGridSkeleton />
+          </section>
+          <ListRowsSkeleton count={2} />
+        </>
+      ) : (
+        <>
+          <section className="rounded-lg border border-border bg-surface p-5">
+            <p className="text-sm text-muted">{t("reserve.total")}</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-accent">
+              {formatMoney(
+                summaryQuery.data?.reserveBalance ?? 0,
+                activeSpace.currency,
+                locale
+              )}
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              {t("reserve.saveViaEntry")}{" "}
+              <Link to="/me" className="text-accent underline">
+                {t("nav.me")}
+              </Link>
+              .
+            </p>
+          </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-fg">{t("reserve.pots")}</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {pots.map((pot) => (
-            <PotCard
-              key={pot.id}
-              pot={pot}
-              currency={activeSpace.currency}
-              locale={locale}
-              busy={potMutation.isPending}
-              onRename={(name) =>
-                potMutation.mutate({ mode: "rename", potId: pot.id, name })
-              }
-              onDelete={() =>
-                potMutation.mutate({ mode: "delete", potId: pot.id })
-              }
-            />
-          ))}
-        </div>
-        <form
-          className="mt-2 flex flex-wrap items-end gap-2"
-          onSubmit={onCreatePot}
-        >
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("reserve.newPot")}
-            <input
-              name="name"
-              required
-              maxLength={60}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-fg disabled:opacity-70"
-            disabled={potMutation.isPending}
-          >
-            {potMutation.isPending ? <Spinner /> : null}
-            {t("reserve.createPot")}
-          </button>
-        </form>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <form
-          className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4"
-          onSubmit={onWithdraw}
-        >
-          <h3 className="font-medium text-fg">{t("me.reserveWithdraw")}</h3>
-          <p className="text-xs text-muted">{t("reserve.withdrawHint")}</p>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("reserve.pot")}
-            <select
-              name="reservePotId"
-              required
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-              defaultValue={pots[0]?.id ?? ""}
-            >
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-fg">
+              {t("reserve.pots")}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {pots.map((pot) => (
-                <option key={pot.id} value={pot.id}>
-                  {pot.name}
-                </option>
+                <PotCard
+                  key={pot.id}
+                  pot={pot}
+                  currency={activeSpace.currency}
+                  locale={locale}
+                  busy={potMutation.isPending}
+                  onRename={(name) =>
+                    potMutation.mutate({ mode: "rename", potId: pot.id, name })
+                  }
+                  onDelete={() => setDeletePotId(pot.id)}
+                />
               ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.amount")}
-            <input
-              name="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              required
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {activeSpace.entryDateMode === "month"
-              ? t("me.month")
-              : t("me.date")}
-            <input
-              name="occurredOn"
-              type={activeSpace.entryDateMode === "month" ? "month" : "date"}
-              required
-              defaultValue={defaultDate}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.description")}
-            <input
-              name="description"
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 font-medium text-fg disabled:opacity-70"
-            disabled={withdrawMutation.isPending || pots.length === 0}
-          >
-            {withdrawMutation.isPending ? <Spinner /> : null}
-            {t("me.reserveWithdrawSubmit")}
-          </button>
-        </form>
-
-        <form
-          className="flex flex-col gap-2 rounded-lg border border-dashed border-border bg-surface p-4"
-          onSubmit={onSeed}
-        >
-          <h3 className="font-medium text-fg">{t("me.reserveSeed")}</h3>
-          <p className="text-xs text-muted">{t("me.reserveSeedHint")}</p>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("reserve.pot")}
-            <select
-              name="reservePotId"
-              required
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-              defaultValue={pots[0]?.id ?? ""}
+            </div>
+            <form
+              className="mt-2 flex flex-wrap items-end gap-2"
+              onSubmit={onCreatePot}
             >
-              {pots.map((pot) => (
-                <option key={pot.id} value={pot.id}>
-                  {pot.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.amount")}
-            <input
-              name="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              required
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {activeSpace.entryDateMode === "month"
-              ? t("me.month")
-              : t("me.date")}
-            <input
-              name="occurredOn"
-              type={activeSpace.entryDateMode === "month" ? "month" : "date"}
-              required
-              defaultValue={defaultDate}
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("me.description")}
-            <input
-              name="description"
-              className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
-            />
-          </label>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-fg disabled:opacity-70"
-            disabled={seedMutation.isPending || pots.length === 0}
-          >
-            {seedMutation.isPending ? <Spinner /> : null}
-            {t("me.reserveSeedSubmit")}
-          </button>
-        </form>
-      </section>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("reserve.newPot")}
+                <input
+                  name="name"
+                  required
+                  maxLength={60}
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-fg disabled:opacity-70"
+                disabled={potMutation.isPending}
+              >
+                {potMutation.isPending ? <Spinner /> : null}
+                {t("reserve.createPot")}
+              </button>
+            </form>
+          </section>
 
-      {tabMovements.length ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-medium text-fg">{t("reserve.movements")}</h2>
-          {tabMovements.map((movement) => (
-            <article
-              key={movement.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+          <section className="grid gap-4 lg:grid-cols-2">
+            <form
+              className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4"
+              onSubmit={onWithdraw}
             >
-              <div>
-                <p className="text-sm font-medium text-fg">
-                  {movement.type === "withdraw"
-                    ? t("me.reserveWithdraw")
-                    : t("me.reserveSeed")}
-                  {movement.reservePotName
-                    ? ` · ${movement.reservePotName}`
-                    : ""}
-                  {movement.description ? (
-                    <span className="font-normal text-muted">
-                      {" "}
-                      · {movement.description}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="text-xs text-muted">
-                  {formatEntryDate(
-                    movement.occurredOn,
-                    activeSpace.entryDateMode
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="tabular-nums font-semibold text-fg">
-                  {formatMoney(movement.amount, activeSpace.currency, locale)}
-                </p>
-                <button
-                  type="button"
-                  className="text-sm text-expense-fg underline disabled:opacity-70"
-                  disabled={deleteMovementMutation.isPending}
-                  onClick={() => deleteMovementMutation.mutate(movement.id)}
+              <h3 className="font-medium text-fg">{t("me.reserveWithdraw")}</h3>
+              <p className="text-xs text-muted">{t("reserve.withdrawHint")}</p>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("reserve.pot")}
+                <select
+                  name="reservePotId"
+                  required
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                  defaultValue={pots[0]?.id ?? ""}
                 >
-                  {t("me.delete")}
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      ) : null}
+                  {pots.map((pot) => (
+                    <option key={pot.id} value={pot.id}>
+                      {pot.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("me.amount")}
+                <input
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {activeSpace.entryDateMode === "month"
+                  ? t("me.month")
+                  : t("me.date")}
+                <input
+                  name="occurredOn"
+                  type={
+                    activeSpace.entryDateMode === "month" ? "month" : "date"
+                  }
+                  required
+                  defaultValue={defaultDate}
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("me.description")}
+                <input
+                  name="description"
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 font-medium text-fg disabled:opacity-70"
+                disabled={withdrawMutation.isPending || pots.length === 0}
+              >
+                {withdrawMutation.isPending ? <Spinner /> : null}
+                {t("me.reserveWithdrawSubmit")}
+              </button>
+            </form>
+
+            <form
+              className="flex flex-col gap-2 rounded-lg border border-dashed border-border bg-surface p-4"
+              onSubmit={onSeed}
+            >
+              <h3 className="font-medium text-fg">{t("me.reserveSeed")}</h3>
+              <p className="text-xs text-muted">{t("me.reserveSeedHint")}</p>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("reserve.pot")}
+                <select
+                  name="reservePotId"
+                  required
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                  defaultValue={pots[0]?.id ?? ""}
+                >
+                  {pots.map((pot) => (
+                    <option key={pot.id} value={pot.id}>
+                      {pot.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("me.amount")}
+                <input
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {activeSpace.entryDateMode === "month"
+                  ? t("me.month")
+                  : t("me.date")}
+                <input
+                  name="occurredOn"
+                  type={
+                    activeSpace.entryDateMode === "month" ? "month" : "date"
+                  }
+                  required
+                  defaultValue={defaultDate}
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-muted">
+                {t("me.description")}
+                <input
+                  name="description"
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                />
+              </label>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-fg disabled:opacity-70"
+                disabled={seedMutation.isPending || pots.length === 0}
+              >
+                {seedMutation.isPending ? <Spinner /> : null}
+                {t("me.reserveSeedSubmit")}
+              </button>
+            </form>
+          </section>
+
+          {tabMovements.length ? (
+            <section className="flex flex-col gap-2">
+              <h2 className="font-medium text-fg">{t("reserve.movements")}</h2>
+              {tabMovements.map((movement) => (
+                <article
+                  key={movement.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-fg">
+                      {movement.type === "withdraw"
+                        ? t("me.reserveWithdraw")
+                        : t("me.reserveSeed")}
+                      {movement.reservePotName
+                        ? ` · ${movement.reservePotName}`
+                        : ""}
+                      {movement.description ? (
+                        <span className="font-normal text-muted">
+                          {" "}
+                          · {movement.description}
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {formatEntryDate(
+                        movement.occurredOn,
+                        activeSpace.entryDateMode
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="tabular-nums font-semibold text-fg">
+                      {formatMoney(
+                        movement.amount,
+                        activeSpace.currency,
+                        locale
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-sm text-expense-fg underline disabled:opacity-70"
+                      disabled={deleteMovementMutation.isPending}
+                      onClick={() => deleteMovementMutation.mutate(movement.id)}
+                    >
+                      {t("me.delete")}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : null}
+        </>
+      )}
+
+      <ConfirmSheet
+        open={Boolean(deletePotId)}
+        title={t("reserve.deleteTitle")}
+        description={t("reserve.deleteConfirm")}
+        confirmLabel={t("reserve.deleteSubmit")}
+        cancelLabel={t("me.cancel")}
+        danger
+        pending={potMutation.isPending}
+        onClose={() => {
+          if (!potMutation.isPending) {
+            setDeletePotId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (deletePotId) {
+            potMutation.mutate({ mode: "delete", potId: deletePotId });
+          }
+        }}
+      />
     </main>
   );
 }

@@ -9,6 +9,7 @@ import {
   todayIsoDate,
 } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
+import { SummaryCardsSkeleton } from "../../shared/ui/Skeleton";
 import {
   createLeftoverSeed,
   deleteLeftoverSeed,
@@ -88,6 +89,14 @@ export function LeftoverReserveSection({
       : todayIsoDate().startsWith(month)
         ? todayIsoDate()
         : `${month}-01`;
+
+  if (summaryQuery.isLoading) {
+    return (
+      <section className="flex flex-col gap-4">
+        <SummaryCardsSkeleton />
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4">
