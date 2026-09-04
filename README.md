@@ -3,7 +3,9 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 9 — Invites & privacy**. Join link/code polish, members, leave/ownership, transparent mode. Import/LGPD is Part 10.
+> Status: **Part 10 — Export & account**. CSV export + delete account (Settings → Conta). CSV import deferred. Landing/email is Part 11.
+
+**Later (export):** filters by space/date, Excel-friendly PT (BOM + `;` + localized headers), optional reserve movements + recurring/installment files — today is a flat entries dump.
 
 ## Quick start
 
