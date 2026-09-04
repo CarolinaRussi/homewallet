@@ -4,8 +4,10 @@ import type {
   MyLimitSettings,
   ProgressSnapshot,
 } from "./limits.js";
+import type { ReservePotSummary } from "./reserve.js";
 import { monthQuerySchema } from "./entry.js";
 
+/** Legacy contribute still counted in balance math for old rows. */
 export const RESERVE_MOVEMENT_TYPES = [
   "contribute",
   "withdraw",
@@ -13,16 +15,20 @@ export const RESERVE_MOVEMENT_TYPES = [
 ] as const;
 export type ReserveMovementType = (typeof RESERVE_MOVEMENT_TYPES)[number];
 
+/** New writes: only withdraw (use) and seed (opening). Contribute → saving entry. */
+export const CREATE_RESERVE_MOVEMENT_TYPES = ["withdraw", "seed"] as const;
+
 /** How a movement changes reserve cash; seed/contribute grow it, withdraw shrinks it. */
 export function reserveBalanceDelta(type: ReserveMovementType, amount: number) {
   return type === "withdraw" ? -amount : amount;
 }
 
 export const createReserveMovementBodySchema = z.object({
-  type: z.enum(RESERVE_MOVEMENT_TYPES),
+  type: z.enum(CREATE_RESERVE_MOVEMENT_TYPES),
   amount: z.coerce.number().positive().finite(),
   description: z.string().trim().max(200).optional().default(""),
   occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+  reservePotId: z.string().uuid(),
 });
 
 export type CreateReserveMovementBody = z.infer<
@@ -35,6 +41,8 @@ export type ReserveMovementSummary = {
   amount: number;
   description: string;
   occurredOn: string;
+  reservePotId: string | null;
+  reservePotName: string | null;
 };
 
 export const createLeftoverSeedBodySchema = z.object({
@@ -63,6 +71,7 @@ export type MonthSummary = {
   carriedIn: number;
   leftover: number;
   reserveBalance: number;
+  pots: ReservePotSummary[];
   movements: ReserveMovementSummary[];
   leftoverSeeds: LeftoverSeedSummary[];
   myLimits: MyLimitSettings;
@@ -86,7 +95,9 @@ export function computeMonthSummary(
   targetMonth: string,
   buckets: MonthFlowBucket[],
   movements: ReserveMovementSummary[],
-  leftoverSeeds: LeftoverSeedSummary[] = []
+  leftoverSeeds: LeftoverSeedSummary[] = [],
+  savingThroughTarget = 0,
+  pots: ReservePotSummary[] = []
 ): MonthSummary {
   monthQuerySchema.parse(targetMonth);
 
@@ -147,7 +158,7 @@ export function computeMonthSummary(
     .filter((movement) => movement.occurredOn.slice(0, 7) === targetMonth)
     .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn));
 
-  const reserveBalance = movements
+  const movementsBalance = movements
     .filter((movement) => movement.occurredOn.slice(0, 7) <= targetMonth)
     .reduce(
       (sum, movement) =>
@@ -163,7 +174,8 @@ export function computeMonthSummary(
     withdrawn,
     carriedIn,
     leftover,
-    reserveBalance,
+    reserveBalance: movementsBalance + savingThroughTarget,
+    pots,
     movements: monthMovements,
     leftoverSeeds: leftoverSeeds
       .filter((seed) => seed.occurredOn.slice(0, 7) === targetMonth)
@@ -186,4 +198,14 @@ export function shiftMonthKey(month: string, delta: number) {
     Date.UTC(Number(yearText), Number(monthText) - 1 + delta, 1)
   );
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Pot balance from saving entries + seed/contribute − withdraw. */
+export function potBalanceFromFlows(input: {
+  saved: number;
+  seeded: number;
+  contributed: number;
+  withdrawn: number;
+}) {
+  return input.saved + input.seeded + input.contributed - input.withdrawn;
 }

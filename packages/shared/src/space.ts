@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MyLimitSettings } from "./limits.js";
 
 export const SPACE_CURRENCIES = ["BRL", "USD", "EUR"] as const;
 export const SPACE_PRIVACY_MODES = ["private", "transparent"] as const;
@@ -52,4 +53,5 @@ export type SpaceSummary = {
   spaceLimitEnabled: boolean;
   spaceLimitAmount: number | null;
   budgetLayersEnabled: boolean;
+  myLimits: MyLimitSettings;
 };

@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { ENTRY_TYPES, ENTRY_VISIBILITIES, monthQuerySchema } from "./entry.js";
+import { ENTRY_VISIBILITIES, monthQuerySchema } from "./entry.js";
 import { shiftMonthKey } from "./leftover.js";
 
+const SCHEDULE_ENTRY_TYPES = ["income", "expense"] as const;
+export type ScheduleEntryType = (typeof SCHEDULE_ENTRY_TYPES)[number];
+
 export const createRecurringRuleBodySchema = z.object({
-  type: z.enum(ENTRY_TYPES),
+  type: z.enum(SCHEDULE_ENTRY_TYPES),
   amount: z.coerce.number().positive().finite(),
   categoryId: z.string().uuid(),
   description: z.string().trim().max(200).optional().default(""),
@@ -14,7 +17,7 @@ export const createRecurringRuleBodySchema = z.object({
 
 export const createInstallmentPlanBodySchema = z
   .object({
-    type: z.enum(ENTRY_TYPES),
+    type: z.enum(SCHEDULE_ENTRY_TYPES),
     amount: z.coerce.number().positive().finite(),
     installmentCount: z.coerce.number().int().min(2).max(120),
     /** First parcel number still to pay (e.g. 12 of 18). Default 1 = full plan. */
@@ -39,7 +42,7 @@ export type CreateInstallmentPlanBody = z.infer<
 
 export type RecurringRuleSummary = {
   id: string;
-  type: (typeof ENTRY_TYPES)[number];
+  type: (typeof SCHEDULE_ENTRY_TYPES)[number];
   amount: number;
   categoryId: string;
   categoryName: string;
@@ -51,7 +54,7 @@ export type RecurringRuleSummary = {
 
 export type InstallmentPlanSummary = {
   id: string;
-  type: (typeof ENTRY_TYPES)[number];
+  type: (typeof SCHEDULE_ENTRY_TYPES)[number];
   amount: number;
   installmentCount: number;
   categoryId: string;
