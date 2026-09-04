@@ -44,6 +44,23 @@ export function createAuthController(authService: AuthService) {
       const user = await authService.getById(request.user.sub);
       return { user };
     },
+
+    async exportCsv(request: FastifyRequest, reply: FastifyReply) {
+      const csv = await authService.exportEntriesCsv(request.user.sub);
+      reply
+        .header("Content-Type", "text/csv; charset=utf-8")
+        .header(
+          "Content-Disposition",
+          'attachment; filename="homewallet-entries.csv"'
+        );
+      return reply.send(csv);
+    },
+
+    async deleteAccount(request: FastifyRequest, reply: FastifyReply) {
+      await authService.deleteAccount(request.user.sub);
+      reply.clearCookie(SESSION_COOKIE, { path: "/" });
+      return reply.code(204).send();
+    },
   };
 }
 

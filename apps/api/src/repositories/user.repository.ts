@@ -21,4 +21,8 @@ export const userRepository = {
   save(manager: EntityManager, user: User) {
     return manager.save(user);
   },
+
+  remove(manager: EntityManager, user: User) {
+    return manager.remove(user);
+  },
 };

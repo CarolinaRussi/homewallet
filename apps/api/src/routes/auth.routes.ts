@@ -15,4 +15,10 @@ export async function registerAuthRoutes(
   app.get("/me", { preHandler: requireUser }, (request) =>
     controller.me(request)
   );
+  app.get("/me/export.csv", { preHandler: requireUser }, (request, reply) =>
+    controller.exportCsv(request, reply)
+  );
+  app.delete("/me", { preHandler: requireUser }, (request, reply) =>
+    controller.deleteAccount(request, reply)
+  );
 }

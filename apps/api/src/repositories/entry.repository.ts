@@ -85,6 +85,18 @@ export const entryRepository = {
     });
   },
 
+  listAllForUser(userId: string, manager: EntityManager) {
+    return manager.find(Entry, {
+      where: { userId },
+      relations: {
+        category: true,
+        space: true,
+        reservePot: true,
+      },
+      order: { occurredOn: "DESC", createdAt: "DESC" },
+    });
+  },
+
   findById(id: string, manager: EntityManager) {
     return manager.findOne(Entry, {
       where: { id },
