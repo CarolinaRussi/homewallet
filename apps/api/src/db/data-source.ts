@@ -18,6 +18,7 @@ import { RecurringAndInstallments20260903230000 } from "./migrations/20260903230
 import { LeftoverSeeds20260903240000 } from "./migrations/20260903240000-leftover-seeds.js";
 import { LimitsAndBudgetLayers20260903250000 } from "./migrations/20260903250000-limits-budget-layers.js";
 import { ReservePots20260904010000 } from "./migrations/20260904010000-reserve-pots.js";
+import { MembershipCreatedAt20260904020000 } from "./migrations/20260904020000-membership-created-at.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -45,6 +46,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       LeftoverSeeds20260903240000,
       LimitsAndBudgetLayers20260903250000,
       ReservePots20260904010000,
+      MembershipCreatedAt20260904020000,
     ],
   });
 }

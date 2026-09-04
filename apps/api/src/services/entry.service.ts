@@ -73,14 +73,22 @@ export function createEntryService(
       spaceId: string,
       month: string
     ): Promise<EntrySummary[]> {
-      await requireMember(userId, spaceId);
+      const membership = await requireMember(userId, spaceId);
       const { start, end } = monthBounds(month);
-      const entries = await entryRepository.listSharedForMonth(
-        spaceId,
-        start,
-        end,
-        dataSource.manager
-      );
+      const entries =
+        membership.space.privacyMode === "transparent"
+          ? await entryRepository.listAllForMonth(
+              spaceId,
+              start,
+              end,
+              dataSource.manager
+            )
+          : await entryRepository.listSharedForMonth(
+              spaceId,
+              start,
+              end,
+              dataSource.manager
+            );
       return entries.map(toEntrySummary);
     },
 

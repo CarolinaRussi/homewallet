@@ -17,11 +17,29 @@ export const membershipRepository = {
     });
   },
 
+  listForSpace(spaceId: string, manager: EntityManager) {
+    return manager.find(Membership, {
+      where: { spaceId },
+      relations: { user: true },
+      order: { createdAt: "ASC" },
+    });
+  },
+
+  countOwners(spaceId: string, manager: EntityManager) {
+    return manager.count(Membership, {
+      where: { spaceId, role: "owner" },
+    });
+  },
+
   create(manager: EntityManager, fields: Partial<Membership>) {
     return manager.save(manager.create(Membership, fields));
   },
 
   save(manager: EntityManager, membership: Membership) {
     return manager.save(membership);
+  },
+
+  remove(manager: EntityManager, membership: Membership) {
+    return manager.remove(membership);
   },
 };

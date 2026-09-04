@@ -16,6 +16,19 @@ export async function registerSpaceRoutes(
   app.get<{ Params: { id: string } }>("/:id", (request) =>
     controller.get(request)
   );
+  app.get<{ Params: { id: string } }>("/:id/members", (request) =>
+    controller.listMembers(request)
+  );
+  app.post<{ Params: { id: string; userId: string } }>(
+    "/:id/members/:userId/promote",
+    (request) => controller.promoteMember(request)
+  );
+  app.post<{ Params: { id: string } }>("/:id/regenerate-join-code", (request) =>
+    controller.regenerateJoinCode(request)
+  );
+  app.post<{ Params: { id: string } }>("/:id/leave", (request) =>
+    controller.leave(request)
+  );
   app.patch<{ Params: { id: string } }>("/:id/my-limits", (request) =>
     controller.updateMyLimits(request)
   );

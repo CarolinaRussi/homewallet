@@ -22,6 +22,7 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     categoryId: entry.categoryId,
     categoryName: entry.category.name,
     userId: entry.userId,
+    userName: entry.user?.name ?? "",
     recurringRuleId: entry.recurringRuleId,
     installmentPlanId: entry.installmentPlanId,
     installmentNumber: entry.installmentNumber,

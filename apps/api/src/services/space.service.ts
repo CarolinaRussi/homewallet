@@ -2,6 +2,7 @@ import type { DataSource } from "typeorm";
 import type {
   CreateSpaceBody,
   MyLimitSettings,
+  SpaceMemberSummary,
   SpaceMonthSummary,
   SpaceSummary,
   UpdateMyLimitsBody,
@@ -58,6 +59,16 @@ function toSummary(
     spaceLimitAmount: amountOrNull(space.spaceLimitAmount),
     budgetLayersEnabled: space.budgetLayersEnabled,
     myLimits,
+  };
+}
+
+function toMemberSummary(membership: Membership): SpaceMemberSummary {
+  return {
+    userId: membership.userId,
+    name: membership.user.name,
+    email: membership.user.email,
+    role: membership.role,
+    joinedAt: membership.createdAt.toISOString(),
   };
 }
 
@@ -219,6 +230,9 @@ export function createSpaceService(dataSource: DataSource) {
       if (input.budgetLayersEnabled !== undefined) {
         membership.space.budgetLayersEnabled = input.budgetLayersEnabled;
       }
+      if (input.privacyMode !== undefined) {
+        membership.space.privacyMode = input.privacyMode;
+      }
       if (!membership.space.spaceLimitEnabled) {
         membership.space.spaceLimitAmount = null;
       }
@@ -229,6 +243,134 @@ export function createSpaceService(dataSource: DataSource) {
         membership.role,
         myLimitsFrom(membership)
       );
+    },
+
+    async listMembers(
+      userId: string,
+      spaceId: string
+    ): Promise<SpaceMemberSummary[]> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      const members = await membershipRepository.listForSpace(
+        spaceId,
+        dataSource.manager
+      );
+      return members.map(toMemberSummary);
+    },
+
+    async promoteMember(
+      userId: string,
+      spaceId: string,
+      targetUserId: string
+    ): Promise<SpaceMemberSummary[]> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      if (membership.role !== "owner") {
+        throw new HttpError(403, "Only owners can promote members");
+      }
+
+      const target = await membershipRepository.findMembership(
+        targetUserId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!target) {
+        throw new HttpError(404, "Member not found");
+      }
+      if (target.role === "owner") {
+        throw new HttpError(400, "Member is already an owner");
+      }
+
+      target.role = "owner";
+      await membershipRepository.save(dataSource.manager, target);
+      const members = await membershipRepository.listForSpace(
+        spaceId,
+        dataSource.manager
+      );
+      return members.map(toMemberSummary);
+    },
+
+    async regenerateJoinCode(
+      userId: string,
+      spaceId: string
+    ): Promise<SpaceSummary> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      if (membership.role !== "owner") {
+        throw new HttpError(403, "Only owners can regenerate the join code");
+      }
+
+      // ponytail: one retry on collision; unique index is the ceiling.
+      try {
+        membership.space.joinCode = createJoinCode();
+        await spaceRepository.save(dataSource.manager, membership.space);
+      } catch {
+        membership.space.joinCode = createJoinCode();
+        await spaceRepository.save(dataSource.manager, membership.space);
+      }
+
+      return toSummary(
+        membership.space,
+        membership.role,
+        myLimitsFrom(membership)
+      );
+    },
+
+    async leave(
+      userId: string,
+      spaceId: string
+    ): Promise<{ deleted: boolean }> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+
+      const members = await membershipRepository.listForSpace(
+        spaceId,
+        dataSource.manager
+      );
+      const remaining = members.filter((member) => member.userId !== userId);
+
+      if (remaining.length === 0) {
+        await spaceRepository.remove(dataSource.manager, membership.space);
+        return { deleted: true };
+      }
+
+      if (membership.role === "owner") {
+        const otherOwners = remaining.filter(
+          (member) => member.role === "owner"
+        );
+        if (otherOwners.length === 0) {
+          const earliest = remaining[0]!;
+          earliest.role = "owner";
+          await membershipRepository.save(dataSource.manager, earliest);
+        }
+      }
+
+      await membershipRepository.remove(dataSource.manager, membership);
+      return { deleted: false };
     },
 
     async updateMyLimits(

@@ -17,4 +17,8 @@ export const spaceRepository = {
   save(manager: EntityManager, space: Space) {
     return manager.save(space);
   },
+
+  remove(manager: EntityManager, space: Space) {
+    return manager.remove(space);
+  },
 };

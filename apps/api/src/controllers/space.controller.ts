@@ -49,6 +49,33 @@ export function createSpaceController(spaceService: SpaceService) {
       );
     },
 
+    listMembers(request: FastifyRequest<{ Params: SpaceParams }>) {
+      return spaceService.listMembers(request.user.sub, request.params.id);
+    },
+
+    promoteMember(
+      request: FastifyRequest<{
+        Params: SpaceParams & { userId: string };
+      }>
+    ) {
+      return spaceService.promoteMember(
+        request.user.sub,
+        request.params.id,
+        request.params.userId
+      );
+    },
+
+    regenerateJoinCode(request: FastifyRequest<{ Params: SpaceParams }>) {
+      return spaceService.regenerateJoinCode(
+        request.user.sub,
+        request.params.id
+      );
+    },
+
+    leave(request: FastifyRequest<{ Params: SpaceParams }>) {
+      return spaceService.leave(request.user.sub, request.params.id);
+    },
+
     updateMyLimits(request: FastifyRequest<{ Params: SpaceParams }>) {
       const body = updateMyLimitsBodySchema.parse(request.body);
       return spaceService.updateMyLimits(

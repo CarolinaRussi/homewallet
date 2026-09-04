@@ -16,7 +16,12 @@ export const entryRepository = {
         userId,
         occurredOn: Between(monthStart, monthEnd),
       },
-      relations: { category: true, installmentPlan: true, reservePot: true },
+      relations: {
+        category: true,
+        installmentPlan: true,
+        reservePot: true,
+        user: true,
+      },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
   },
@@ -49,7 +54,33 @@ export const entryRepository = {
         visibility: "shared",
         occurredOn: Between(monthStart, monthEnd),
       },
-      relations: { category: true, installmentPlan: true, reservePot: true },
+      relations: {
+        category: true,
+        installmentPlan: true,
+        reservePot: true,
+        user: true,
+      },
+      order: { occurredOn: "DESC", createdAt: "DESC" },
+    });
+  },
+
+  listAllForMonth(
+    spaceId: string,
+    monthStart: string,
+    monthEnd: string,
+    manager: EntityManager
+  ) {
+    return manager.find(Entry, {
+      where: {
+        spaceId,
+        occurredOn: Between(monthStart, monthEnd),
+      },
+      relations: {
+        category: true,
+        installmentPlan: true,
+        reservePot: true,
+        user: true,
+      },
       order: { occurredOn: "DESC", createdAt: "DESC" },
     });
   },
@@ -57,7 +88,12 @@ export const entryRepository = {
   findById(id: string, manager: EntityManager) {
     return manager.findOne(Entry, {
       where: { id },
-      relations: { category: true, installmentPlan: true, reservePot: true },
+      relations: {
+        category: true,
+        installmentPlan: true,
+        reservePot: true,
+        user: true,
+      },
     });
   },
 
