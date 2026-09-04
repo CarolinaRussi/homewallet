@@ -10,6 +10,7 @@ import {
 import type { EntryType, EntryVisibility } from "@homewallet/shared";
 import { Category } from "./category.entity.js";
 import { InstallmentPlan } from "./installment-plan.entity.js";
+import { ReservePot } from "./reserve-pot.entity.js";
 import { Space } from "./space.entity.js";
 import { User } from "./user.entity.js";
 
@@ -52,6 +53,9 @@ export class Entry extends BaseEntity {
   @Column({ name: "installment_number", type: "int", nullable: true })
   installmentNumber!: number | null;
 
+  @Column({ name: "reserve_pot_id", type: "uuid", nullable: true })
+  reservePotId!: string | null;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 
@@ -70,4 +74,8 @@ export class Entry extends BaseEntity {
   @ManyToOne(() => InstallmentPlan, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "installment_plan_id" })
   installmentPlan!: InstallmentPlan | null;
+
+  @ManyToOne(() => ReservePot, { onDelete: "RESTRICT", nullable: true })
+  @JoinColumn({ name: "reserve_pot_id" })
+  reservePot!: ReservePot | null;
 }

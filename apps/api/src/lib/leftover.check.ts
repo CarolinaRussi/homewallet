@@ -36,6 +36,8 @@ const movements: ReserveMovementSummary[] = [
     amount: 2000,
     description: "",
     occurredOn: "2026-01-01",
+    reservePotId: null,
+    reservePotName: null,
   },
   {
     id: "1",
@@ -43,6 +45,8 @@ const movements: ReserveMovementSummary[] = [
     amount: 100,
     description: "",
     occurredOn: "2026-01-01",
+    reservePotId: null,
+    reservePotName: null,
   },
   {
     id: "2",
@@ -50,15 +54,17 @@ const movements: ReserveMovementSummary[] = [
     amount: 50,
     description: "",
     occurredOn: "2026-02-01",
+    reservePotId: null,
+    reservePotName: null,
   },
 ];
 
-const january = computeMonthSummary("2026-01", buckets, movements);
+const january = computeMonthSummary("2026-01", buckets, movements, [], 0, []);
 assertEqual(january.carriedIn, 0, "jan carriedIn");
 assertEqual(january.leftover, 800, "jan leftover with opening"); // 0+1000-400-100+0+300
 assertEqual(january.reserveBalance, 2100, "jan reserve with seed");
 
-const february = computeMonthSummary("2026-02", buckets, movements);
+const february = computeMonthSummary("2026-02", buckets, movements, [], 0, []);
 assertEqual(february.carriedIn, 800, "feb carriedIn");
 assertEqual(february.leftover, 1150, "feb leftover");
 assertEqual(february.reserveBalance, 2050, "feb reserve");

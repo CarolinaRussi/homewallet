@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import type { EntryType, EntryVisibility } from "@homewallet/shared";
+import type { EntryVisibility, ScheduleEntryType } from "@homewallet/shared";
 import { Category } from "./category.entity.js";
 import { Space } from "./space.entity.js";
 import { User } from "./user.entity.js";
@@ -27,7 +27,7 @@ export class InstallmentPlan extends BaseEntity {
   categoryId!: string;
 
   @Column({ type: "text" })
-  type!: EntryType;
+  type!: ScheduleEntryType;
 
   @Column({ type: "numeric", precision: 14, scale: 2 })
   amount!: string;

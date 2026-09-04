@@ -4,6 +4,7 @@ import type {
   CreateCategoryBody,
   UpdateCategoryBody,
 } from "@homewallet/shared";
+import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { toCategorySummary } from "../lib/entry-mappers.js";
 import { categoryRepository } from "../repositories/category.repository.js";
@@ -31,6 +32,17 @@ export function createCategoryService(dataSource: DataSource) {
       );
       if (categories.length === 0) {
         await categoryRepository.seedDefaults(spaceId, dataSource.manager);
+        categories = await categoryRepository.listForSpace(
+          spaceId,
+          dataSource.manager
+        );
+      } else if (
+        !categories.some((category) => category.name === SAVING_CATEGORY_NAME)
+      ) {
+        await categoryRepository.ensureSavingCategory(
+          spaceId,
+          dataSource.manager
+        );
         categories = await categoryRepository.listForSpace(
           spaceId,
           dataSource.manager

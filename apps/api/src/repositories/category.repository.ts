@@ -1,5 +1,6 @@
 import type { EntityManager } from "typeorm";
 import { Category } from "../db/entities/category.entity.js";
+import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import {
   DEFAULT_CATEGORY_LAYERS,
   DEFAULT_CATEGORY_NAMES,
@@ -40,5 +41,22 @@ export const categoryRepository = {
         })
       );
     }
+  },
+
+  async ensureSavingCategory(spaceId: string, manager: EntityManager) {
+    const existing = await this.findByName(
+      spaceId,
+      SAVING_CATEGORY_NAME,
+      manager
+    );
+    if (existing) {
+      return existing;
+    }
+    return this.create(manager, {
+      spaceId,
+      name: SAVING_CATEGORY_NAME,
+      isDefault: true,
+      budgetLayer: "future",
+    });
   },
 };

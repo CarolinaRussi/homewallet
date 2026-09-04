@@ -15,12 +15,16 @@ export const reserveMovementRepository = {
         userId,
         occurredOn: LessThanOrEqual(throughDate),
       },
+      relations: { reservePot: true },
       order: { occurredOn: "ASC", createdAt: "ASC" },
     });
   },
 
   findById(id: string, manager: EntityManager) {
-    return manager.findOne(ReserveMovement, { where: { id } });
+    return manager.findOne(ReserveMovement, {
+      where: { id },
+      relations: { reservePot: true },
+    });
   },
 
   create(manager: EntityManager, fields: Partial<ReserveMovement>) {

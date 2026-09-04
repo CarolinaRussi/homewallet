@@ -26,6 +26,8 @@ export function toEntrySummary(entry: Entry): EntrySummary {
     installmentPlanId: entry.installmentPlanId,
     installmentNumber: entry.installmentNumber,
     installmentCount: entry.installmentPlan?.installmentCount ?? null,
+    reservePotId: entry.reservePotId,
+    reservePotName: entry.reservePot?.name ?? null,
   };
 }
 

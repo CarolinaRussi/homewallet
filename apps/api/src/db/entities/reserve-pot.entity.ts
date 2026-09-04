@@ -6,14 +6,14 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
 } from "typeorm";
-import type { ReserveMovementType } from "@homewallet/shared";
-import { ReservePot } from "./reserve-pot.entity.js";
 import { Space } from "./space.entity.js";
 import { User } from "./user.entity.js";
 
-@Entity({ name: "reserve_movements" })
-export class ReserveMovement extends BaseEntity {
+@Entity({ name: "reserve_pots" })
+@Unique(["spaceId", "userId", "name"])
+export class ReservePot extends BaseEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -23,21 +23,8 @@ export class ReserveMovement extends BaseEntity {
   @Column({ name: "user_id", type: "uuid" })
   userId!: string;
 
-  @Column({ name: "reserve_pot_id", type: "uuid" })
-  reservePotId!: string;
-
   @Column({ type: "text" })
-  type!: ReserveMovementType;
-
-  /** Stored as numeric; read/write as string from pg driver. */
-  @Column({ type: "numeric", precision: 14, scale: 2 })
-  amount!: string;
-
-  @Column({ type: "text", default: "" })
-  description!: string;
-
-  @Column({ name: "occurred_on", type: "date" })
-  occurredOn!: string;
+  name!: string;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
@@ -49,8 +36,4 @@ export class ReserveMovement extends BaseEntity {
   @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "user_id" })
   user!: User;
-
-  @ManyToOne(() => ReservePot, { onDelete: "RESTRICT" })
-  @JoinColumn({ name: "reserve_pot_id" })
-  reservePot!: ReservePot;
 }

@@ -11,7 +11,6 @@ import {
   computeMonthSummary,
   layerTargets,
   progressToward,
-  reserveBalanceDelta,
 } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds } from "../lib/entry-mappers.js";
@@ -21,7 +20,10 @@ import { entryRepository } from "../repositories/entry.repository.js";
 import { leftoverSeedRepository } from "../repositories/leftover-seed.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { reserveMovementRepository } from "../repositories/reserve-movement.repository.js";
+import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
 import type { RecurringService } from "./recurring.service.js";
+import { buildPotSummaries } from "./reserve-pot.service.js";
+import type { ReservePotService } from "./reserve-pot.service.js";
 
 function toMovementSummary(movement: ReserveMovement): ReserveMovementSummary {
   return {
@@ -30,6 +32,8 @@ function toMovementSummary(movement: ReserveMovement): ReserveMovementSummary {
     amount: Number(movement.amount),
     description: movement.description,
     occurredOn: movement.occurredOn,
+    reservePotId: movement.reservePotId,
+    reservePotName: movement.reservePot?.name ?? null,
   };
 }
 
@@ -83,6 +87,8 @@ function buildBuckets(
       bucket.income += amount;
     } else if (entry.type === "expense") {
       bucket.expense += amount;
+    } else if (entry.type === "saving") {
+      bucket.contributed += amount;
     }
   }
 
@@ -105,7 +111,8 @@ function buildBuckets(
 
 export function createLeftoverService(
   dataSource: DataSource,
-  recurringService: RecurringService
+  recurringService: RecurringService,
+  reservePotService: ReservePotService
 ) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
@@ -126,7 +133,9 @@ export function createLeftoverService(
   ): Promise<MonthSummary> {
     const membership = await requireMember(userId, spaceId);
     const { start, end } = monthBounds(month);
-    const [entries, movements, seeds, monthEntries] = await Promise.all([
+    await reservePotService.ensureDefaults(userId, spaceId);
+
+    const [entries, movements, seeds, monthEntries, pots] = await Promise.all([
       entryRepository.listMineThrough(spaceId, userId, end, dataSource.manager),
       reserveMovementRepository.listForUserThrough(
         spaceId,
@@ -147,13 +156,21 @@ export function createLeftoverService(
         end,
         dataSource.manager
       ),
+      reservePotRepository.listForUser(spaceId, userId, dataSource.manager),
     ]);
+
+    const savingThroughTarget = entries.reduce((sum, entry) => {
+      return entry.type === "saving" ? sum + Number(entry.amount) : sum;
+    }, 0);
+    const potSummaries = buildPotSummaries(pots, entries, movements, end);
 
     const summary = computeMonthSummary(
       month,
       buildBuckets(entries, movements, seeds),
       movements.map(toMovementSummary),
-      seeds.map(toSeedSummary)
+      seeds.map(toSeedSummary),
+      savingThroughTarget,
+      potSummaries
     );
 
     const personalAmount = amountOrNull(membership.personalLimitAmount);
@@ -235,22 +252,37 @@ export function createLeftoverService(
       input: CreateReserveMovementBody
     ): Promise<ReserveMovementSummary> {
       await requireMember(userId, spaceId);
+      await reservePotService.requireOwnPot(
+        userId,
+        spaceId,
+        input.reservePotId
+      );
 
       if (input.type === "withdraw") {
-        const priorMovements =
-          await reserveMovementRepository.listForUserThrough(
+        const [entries, movements, pots] = await Promise.all([
+          entryRepository.listMineThrough(
             spaceId,
             userId,
             input.occurredOn,
             dataSource.manager
-          );
-        const available = priorMovements.reduce((sum, movement) => {
-          return (
-            sum + reserveBalanceDelta(movement.type, Number(movement.amount))
-          );
-        }, 0);
-        if (input.amount > available + 1e-9) {
-          throw new HttpError(400, "Not enough reserve balance");
+          ),
+          reserveMovementRepository.listForUserThrough(
+            spaceId,
+            userId,
+            input.occurredOn,
+            dataSource.manager
+          ),
+          reservePotRepository.listForUser(spaceId, userId, dataSource.manager),
+        ]);
+        const potSummaries = buildPotSummaries(
+          pots,
+          entries,
+          movements,
+          input.occurredOn
+        );
+        const pot = potSummaries.find((item) => item.id === input.reservePotId);
+        if (!pot || input.amount > pot.balance + 1e-9) {
+          throw new HttpError(400, "Not enough balance in this pot");
         }
       }
 
@@ -263,9 +295,17 @@ export function createLeftoverService(
           amount: input.amount.toFixed(2),
           description: input.description,
           occurredOn: input.occurredOn,
+          reservePotId: input.reservePotId,
         }
       );
-      return toMovementSummary(movement);
+      const loaded = await reserveMovementRepository.findById(
+        movement.id,
+        dataSource.manager
+      );
+      if (!loaded) {
+        throw new HttpError(500, "Failed to load reserve movement");
+      }
+      return toMovementSummary(loaded);
     },
 
     async removeMovement(userId: string, movementId: string) {

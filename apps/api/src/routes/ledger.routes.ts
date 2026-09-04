@@ -3,6 +3,7 @@ import type { CategoryController } from "../controllers/category.controller.js";
 import type { EntryController } from "../controllers/entry.controller.js";
 import type { LeftoverController } from "../controllers/leftover.controller.js";
 import type { RecurringController } from "../controllers/recurring.controller.js";
+import type { ReservePotController } from "../controllers/reserve-pot.controller.js";
 import { requireUser } from "../plugins/auth.js";
 
 export async function registerLedgerRoutes(
@@ -10,7 +11,8 @@ export async function registerLedgerRoutes(
   categoryController: CategoryController,
   entryController: EntryController,
   leftoverController: LeftoverController,
-  recurringController: RecurringController
+  recurringController: RecurringController,
+  reservePotController: ReservePotController
 ) {
   app.addHook("preHandler", requireUser);
 
@@ -60,6 +62,22 @@ export async function registerLedgerRoutes(
   app.delete<{ Params: { movementId: string } }>(
     "/reserve-movements/:movementId",
     (request, reply) => leftoverController.removeMovement(request, reply)
+  );
+
+  app.get<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/reserve-pots",
+    (request) => reservePotController.list(request)
+  );
+  app.post<{ Params: { spaceId: string } }>(
+    "/spaces/:spaceId/reserve-pots",
+    (request) => reservePotController.create(request)
+  );
+  app.patch<{ Params: { potId: string } }>("/reserve-pots/:potId", (request) =>
+    reservePotController.update(request)
+  );
+  app.delete<{ Params: { potId: string } }>(
+    "/reserve-pots/:potId",
+    (request, reply) => reservePotController.remove(request, reply)
   );
 
   app.post<{ Params: { spaceId: string } }>(

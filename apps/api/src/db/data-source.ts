@@ -7,6 +7,7 @@ import { Membership } from "./entities/membership.entity.js";
 import { RecurrenceSkip } from "./entities/recurrence-skip.entity.js";
 import { RecurringRule } from "./entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./entities/reserve-movement.entity.js";
+import { ReservePot } from "./entities/reserve-pot.entity.js";
 import { Space } from "./entities/space.entity.js";
 import { User } from "./entities/user.entity.js";
 import { InitialIdentity20260903180000 } from "./migrations/20260903180000-initial-identity.js";
@@ -16,6 +17,7 @@ import { ReserveMovements20260903220000 } from "./migrations/20260903220000-rese
 import { RecurringAndInstallments20260903230000 } from "./migrations/20260903230000-recurring-installments.js";
 import { LeftoverSeeds20260903240000 } from "./migrations/20260903240000-leftover-seeds.js";
 import { LimitsAndBudgetLayers20260903250000 } from "./migrations/20260903250000-limits-budget-layers.js";
+import { ReservePots20260904010000 } from "./migrations/20260904010000-reserve-pots.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -28,6 +30,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       Category,
       Entry,
       ReserveMovement,
+      ReservePot,
       RecurringRule,
       InstallmentPlan,
       RecurrenceSkip,
@@ -41,6 +44,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       RecurringAndInstallments20260903230000,
       LeftoverSeeds20260903240000,
       LimitsAndBudgetLayers20260903250000,
+      ReservePots20260904010000,
     ],
   });
 }

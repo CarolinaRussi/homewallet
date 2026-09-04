@@ -12,12 +12,14 @@ import { installmentPlanRepository } from "../repositories/installment-plan.repo
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurrenceSkipRepository } from "../repositories/recurrence-skip.repository.js";
 import type { RecurringService } from "./recurring.service.js";
+import type { ReservePotService } from "./reserve-pot.service.js";
 
 export type InstallmentDeleteScope = "one" | "forward";
 
 export function createEntryService(
   dataSource: DataSource,
-  recurringService: RecurringService
+  recurringService: RecurringService,
+  reservePotService: ReservePotService
 ) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
@@ -41,6 +43,10 @@ export function createEntryService(
       throw new HttpError(400, "Category not found in this space");
     }
     return category;
+  }
+
+  async function resolveSavingCategory(spaceId: string) {
+    return categoryRepository.ensureSavingCategory(spaceId, dataSource.manager);
   }
 
   return {
@@ -84,11 +90,43 @@ export function createEntryService(
       input: CreateEntryBody
     ): Promise<EntrySummary> {
       await requireMember(userId, spaceId);
-      await requireOwnCategory(spaceId, input.categoryId);
+
+      if (input.type === "saving") {
+        await reservePotService.requireOwnPot(
+          userId,
+          spaceId,
+          input.reservePotId!
+        );
+        const category = await resolveSavingCategory(spaceId);
+        const entry = await entryRepository.create(dataSource.manager, {
+          spaceId,
+          userId,
+          categoryId: category.id,
+          type: "saving",
+          amount: input.amount.toFixed(2),
+          description: input.description,
+          visibility: "personal",
+          occurredOn: input.occurredOn,
+          recurringRuleId: null,
+          installmentPlanId: null,
+          installmentNumber: null,
+          reservePotId: input.reservePotId!,
+        });
+        const loaded = await entryRepository.findById(
+          entry.id,
+          dataSource.manager
+        );
+        if (!loaded) {
+          throw new HttpError(500, "Failed to load entry");
+        }
+        return toEntrySummary(loaded);
+      }
+
+      await requireOwnCategory(spaceId, input.categoryId!);
       const entry = await entryRepository.create(dataSource.manager, {
         spaceId,
         userId,
-        categoryId: input.categoryId,
+        categoryId: input.categoryId!,
         type: input.type,
         amount: input.amount.toFixed(2),
         description: input.description,
@@ -97,6 +135,7 @@ export function createEntryService(
         recurringRuleId: null,
         installmentPlanId: null,
         installmentNumber: null,
+        reservePotId: null,
       });
       const loaded = await entryRepository.findById(
         entry.id,
@@ -122,15 +161,40 @@ export function createEntryService(
       }
       await requireMember(userId, entry.spaceId);
 
-      if (input.categoryId) {
-        await requireOwnCategory(entry.spaceId, input.categoryId);
-        entry.categoryId = input.categoryId;
+      const nextType = input.type ?? entry.type;
+
+      if (nextType === "saving") {
+        const potId = input.reservePotId ?? entry.reservePotId;
+        if (!potId) {
+          throw new HttpError(
+            400,
+            "reservePotId is required for saving entries"
+          );
+        }
+        await reservePotService.requireOwnPot(userId, entry.spaceId, potId);
+        const category = await resolveSavingCategory(entry.spaceId);
+        entry.type = "saving";
+        entry.categoryId = category.id;
+        entry.visibility = "personal";
+        entry.reservePotId = potId;
+      } else {
+        if (input.categoryId) {
+          await requireOwnCategory(entry.spaceId, input.categoryId);
+          entry.categoryId = input.categoryId;
+        } else if (entry.type === "saving") {
+          throw new HttpError(
+            400,
+            "categoryId is required when changing from saving"
+          );
+        }
+        entry.type = nextType;
+        entry.reservePotId = null;
+        if (input.visibility) entry.visibility = input.visibility;
       }
-      if (input.type) entry.type = input.type;
+
       if (input.amount !== undefined) entry.amount = input.amount.toFixed(2);
       if (input.description !== undefined)
         entry.description = input.description;
-      if (input.visibility) entry.visibility = input.visibility;
       if (input.occurredOn) entry.occurredOn = input.occurredOn;
 
       await entryRepository.save(dataSource.manager, entry);

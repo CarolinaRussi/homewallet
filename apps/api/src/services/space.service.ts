@@ -1,6 +1,7 @@
 import type { DataSource } from "typeorm";
 import type {
   CreateSpaceBody,
+  MyLimitSettings,
   SpaceMonthSummary,
   SpaceSummary,
   UpdateMyLimitsBody,
@@ -15,6 +16,7 @@ import { entryRepository } from "../repositories/entry.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { spaceRepository } from "../repositories/space.repository.js";
 import { categoryRepository } from "../repositories/category.repository.js";
+import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
 
 function amountOrNull(value: string | null | undefined) {
   if (value == null || value === "") {
@@ -23,9 +25,26 @@ function amountOrNull(value: string | null | undefined) {
   return Number(value);
 }
 
+const EMPTY_MY_LIMITS: MyLimitSettings = {
+  personalLimitEnabled: false,
+  personalLimitAmount: null,
+  leftoverTargetEnabled: false,
+  leftoverTargetAmount: null,
+};
+
+function myLimitsFrom(membership: Membership): MyLimitSettings {
+  return {
+    personalLimitEnabled: membership.personalLimitEnabled,
+    personalLimitAmount: amountOrNull(membership.personalLimitAmount),
+    leftoverTargetEnabled: membership.leftoverTargetEnabled,
+    leftoverTargetAmount: amountOrNull(membership.leftoverTargetAmount),
+  };
+}
+
 function toSummary(
   space: Membership["space"],
-  role: Membership["role"]
+  role: Membership["role"],
+  myLimits: MyLimitSettings = EMPTY_MY_LIMITS
 ): SpaceSummary {
   return {
     id: space.id,
@@ -38,6 +57,7 @@ function toSummary(
     spaceLimitEnabled: space.spaceLimitEnabled,
     spaceLimitAmount: amountOrNull(space.spaceLimitAmount),
     budgetLayersEnabled: space.budgetLayersEnabled,
+    myLimits,
   };
 }
 
@@ -59,7 +79,7 @@ export function createSpaceService(dataSource: DataSource) {
         dataSource.manager
       );
       return memberships.map((membership) =>
-        toSummary(membership.space, membership.role)
+        toSummary(membership.space, membership.role, myLimitsFrom(membership))
       );
     },
 
@@ -72,7 +92,11 @@ export function createSpaceService(dataSource: DataSource) {
       if (!membership) {
         throw new HttpError(404, "Space not found");
       }
-      return toSummary(membership.space, membership.role);
+      return toSummary(
+        membership.space,
+        membership.role,
+        myLimitsFrom(membership)
+      );
     },
 
     async createForOwner(
@@ -116,6 +140,7 @@ export function createSpaceService(dataSource: DataSource) {
         leftoverTargetAmount: null,
       });
       await categoryRepository.seedDefaults(space.id, manager);
+      await reservePotRepository.ensureDefault(space.id, userId, manager);
       return toSummary(space, "owner");
     },
 
@@ -146,6 +171,11 @@ export function createSpaceService(dataSource: DataSource) {
         leftoverTargetEnabled: false,
         leftoverTargetAmount: null,
       });
+      await reservePotRepository.ensureDefault(
+        space.id,
+        userId,
+        dataSource.manager
+      );
       return toSummary(space, "member");
     },
 
@@ -194,7 +224,11 @@ export function createSpaceService(dataSource: DataSource) {
       }
 
       await spaceRepository.save(dataSource.manager, membership.space);
-      return toSummary(membership.space, membership.role);
+      return toSummary(
+        membership.space,
+        membership.role,
+        myLimitsFrom(membership)
+      );
     },
 
     async updateMyLimits(
@@ -261,7 +295,11 @@ export function createSpaceService(dataSource: DataSource) {
       }
 
       await membershipRepository.save(dataSource.manager, membership);
-      return toSummary(membership.space, membership.role);
+      return toSummary(
+        membership.space,
+        membership.role,
+        myLimitsFrom(membership)
+      );
     },
 
     async getSpaceMonth(
