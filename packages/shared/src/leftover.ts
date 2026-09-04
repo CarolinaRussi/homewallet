@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  BudgetLayersSummary,
+  MyLimitSettings,
+  ProgressSnapshot,
+} from "./limits.js";
 import { monthQuerySchema } from "./entry.js";
 
 export const RESERVE_MOVEMENT_TYPES = [
@@ -60,6 +65,10 @@ export type MonthSummary = {
   reserveBalance: number;
   movements: ReserveMovementSummary[];
   leftoverSeeds: LeftoverSeedSummary[];
+  myLimits: MyLimitSettings;
+  personalLimit: ProgressSnapshot | null;
+  leftoverTarget: ProgressSnapshot | null;
+  budgetLayers: BudgetLayersSummary | null;
 };
 
 export type MonthFlowBucket = {
@@ -159,6 +168,15 @@ export function computeMonthSummary(
     leftoverSeeds: leftoverSeeds
       .filter((seed) => seed.occurredOn.slice(0, 7) === targetMonth)
       .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn)),
+    myLimits: {
+      personalLimitEnabled: false,
+      personalLimitAmount: null,
+      leftoverTargetEnabled: false,
+      leftoverTargetAmount: null,
+    },
+    personalLimit: null,
+    leftoverTarget: null,
+    budgetLayers: null,
   };
 }
 

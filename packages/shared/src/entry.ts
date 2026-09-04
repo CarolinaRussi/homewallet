@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BudgetLayer } from "./limits.js";
 
 export const ENTRY_TYPES = ["income", "expense"] as const;
 export const ENTRY_VISIBILITIES = ["personal", "shared"] as const;
@@ -33,6 +34,7 @@ export type CategorySummary = {
   id: string;
   name: string;
   isDefault: boolean;
+  budgetLayer: BudgetLayer | null;
 };
 
 export type EntrySummary = {

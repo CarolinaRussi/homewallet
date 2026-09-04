@@ -20,9 +20,22 @@ export const joinSpaceBodySchema = z.object({
   joinCode: z.string().trim().min(8).max(16),
 });
 
-export const updateSpaceBodySchema = z.object({
-  entryDateMode: z.enum(ENTRY_DATE_MODES),
-});
+export const updateSpaceBodySchema = z
+  .object({
+    entryDateMode: z.enum(ENTRY_DATE_MODES).optional(),
+    spaceLimitEnabled: z.boolean().optional(),
+    spaceLimitAmount: z.coerce
+      .number()
+      .positive()
+      .finite()
+      .nullable()
+      .optional(),
+    budgetLayersEnabled: z.boolean().optional(),
+  })
+  .refine(
+    (body) => Object.keys(body).length > 0,
+    "Provide at least one setting"
+  );
 
 export type CreateSpaceBody = z.input<typeof createSpaceBodySchema>;
 export type JoinSpaceBody = z.infer<typeof joinSpaceBodySchema>;
@@ -36,4 +49,7 @@ export type SpaceSummary = {
   entryDateMode: EntryDateMode;
   role: MembershipRole;
   joinCode: string;
+  spaceLimitEnabled: boolean;
+  spaceLimitAmount: number | null;
+  budgetLayersEnabled: boolean;
 };
