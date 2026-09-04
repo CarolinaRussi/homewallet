@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AuthPage } from "./features/auth/AuthPage";
 import { fetchSession } from "./features/auth/auth-api";
 import { MePage } from "./features/me/MePage";
+import { ReservePage } from "./features/me/ReservePage";
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AppShell } from "./features/shell/AppShell";
@@ -27,6 +28,7 @@ export function App() {
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
           <Route path="/me" element={<MePage />} />
+          <Route path="/reserve" element={<ReservePage />} />
           <Route path="/space" element={<SpacePage />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/settings" element={<SettingsPage />} />

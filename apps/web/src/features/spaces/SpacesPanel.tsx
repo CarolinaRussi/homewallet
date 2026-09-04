@@ -10,6 +10,7 @@ import {
   fetchSpaces,
   joinSpace,
   updateCategoryLayer,
+  updateMyLimits,
   updateSpace,
 } from "./space-api";
 import { useActiveSpace } from "./use-active-space";
@@ -61,6 +62,26 @@ export function SpacesPanel() {
     onError: (error: Error) => setErrorMessage(error.message),
   });
 
+  const myLimitsMutation = useMutation({
+    mutationFn: ({
+      spaceId,
+      body,
+    }: {
+      spaceId: string;
+      body: Parameters<typeof updateMyLimits>[1];
+    }) => updateMyLimits(spaceId, body),
+    onSuccess: async (space) => {
+      queryClient.setQueryData<SpaceSummary[]>(["spaces"], (current) => {
+        if (!current) {
+          return current;
+        }
+        return current.map((item) => (item.id === space.id ? space : item));
+      });
+      await queryClient.invalidateQueries({ queryKey: ["month-summary"] });
+    },
+    onError: (error: Error) => setErrorMessage(error.message),
+  });
+
   function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -91,6 +112,28 @@ export function SpacesPanel() {
       body: {
         spaceLimitEnabled: enabled,
         spaceLimitAmount: enabled ? Number(raw) : null,
+      },
+    });
+  }
+
+  function onMyLimitsSubmit(
+    event: FormEvent<HTMLFormElement>,
+    space: SpaceSummary
+  ) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const personalEnabled = data.get("personalLimitEnabled") === "on";
+    const leftoverEnabled = data.get("leftoverTargetEnabled") === "on";
+    const personalRaw = String(data.get("personalLimitAmount") ?? "").trim();
+    const leftoverRaw = String(data.get("leftoverTargetAmount") ?? "").trim();
+    setErrorMessage("");
+    myLimitsMutation.mutate({
+      spaceId: space.id,
+      body: {
+        personalLimitEnabled: personalEnabled,
+        personalLimitAmount: personalEnabled ? Number(personalRaw) : null,
+        leftoverTargetEnabled: leftoverEnabled,
+        leftoverTargetAmount: leftoverEnabled ? Number(leftoverRaw) : null,
       },
     });
   }
@@ -228,6 +271,69 @@ export function SpacesPanel() {
                   : t("spaces.dateModeDay")}
               </p>
             )}
+
+            <form
+              key={`my-limits-${space.id}-${space.myLimits.personalLimitEnabled}-${space.myLimits.leftoverTargetEnabled}-${space.myLimits.personalLimitAmount}-${space.myLimits.leftoverTargetAmount}`}
+              className="flex flex-col gap-3 border-t border-border pt-4"
+              onSubmit={(event) => onMyLimitsSubmit(event, space)}
+            >
+              <div>
+                <p className="text-sm font-medium text-fg">
+                  {t("limits.myLimits")}
+                </p>
+                <p className="mt-1 max-w-3xl text-xs text-muted">
+                  {t("limits.myLimitsHint")}
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm text-muted">
+                  <span className="flex items-center gap-2 text-fg">
+                    <input
+                      name="personalLimitEnabled"
+                      type="checkbox"
+                      defaultChecked={space.myLimits.personalLimitEnabled}
+                    />
+                    {t("limits.personal")}
+                  </span>
+                  <input
+                    name="personalLimitAmount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    defaultValue={space.myLimits.personalLimitAmount ?? ""}
+                    placeholder={t("limits.amount")}
+                    className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-muted">
+                  <span className="flex items-center gap-2 text-fg">
+                    <input
+                      name="leftoverTargetEnabled"
+                      type="checkbox"
+                      defaultChecked={space.myLimits.leftoverTargetEnabled}
+                    />
+                    {t("limits.leftoverTarget")}
+                  </span>
+                  <input
+                    name="leftoverTargetAmount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    defaultValue={space.myLimits.leftoverTargetAmount ?? ""}
+                    placeholder={t("limits.amount")}
+                    className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-border px-3 py-1.5 text-sm text-fg disabled:opacity-70"
+                disabled={myLimitsMutation.isPending}
+              >
+                {myLimitsMutation.isPending ? <Spinner /> : null}
+                {t("limits.save")}
+              </button>
+            </form>
           </article>
         ))}
       </section>

@@ -34,6 +34,7 @@ import {
   createRecurringRule,
   deleteRecurringRule,
 } from "./recurring-api";
+import { fetchReservePots } from "./reserve-api";
 
 function readEntryBody(
   form: HTMLFormElement,
@@ -43,9 +44,21 @@ function readEntryBody(
   const rawDate = String(data.get("occurredOn") ?? "");
   const occurredOn =
     entryDateMode === "month" ? monthToOccurredOn(rawDate) : rawDate;
+  const type = String(data.get("type")) as EntryType;
+
+  if (type === "saving") {
+    return {
+      type: "saving",
+      amount: Number(data.get("amount")),
+      reservePotId: String(data.get("reservePotId")),
+      description: String(data.get("description") ?? ""),
+      visibility: "personal",
+      occurredOn,
+    };
+  }
 
   return {
-    type: String(data.get("type")) as EntryType,
+    type,
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
@@ -164,6 +177,12 @@ export function MePage() {
     enabled: Boolean(spaceId),
   });
 
+  const potsQuery = useQuery({
+    queryKey: ["reserve-pots", spaceId],
+    queryFn: () => fetchReservePots(spaceId!),
+    enabled: Boolean(spaceId),
+  });
+
   const entriesQuery = useQuery({
     queryKey: ["entries", spaceId, month],
     queryFn: () => fetchMyEntries(spaceId!, month),
@@ -193,6 +212,9 @@ export function MePage() {
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["reserve-pots", spaceId],
       });
     },
     onError: (error: Error) => {
@@ -321,8 +343,20 @@ export function MePage() {
 
   const categoryMutation = useMutation({
     mutationFn: (name: string) => createCategory(spaceId!, name),
-    onSuccess: async () => {
+    onSuccess: async (category) => {
       showSuccess(t("me.categoryAdded"));
+      queryClient.setQueryData<Awaited<ReturnType<typeof fetchCategories>>>(
+        ["categories", spaceId],
+        (current) => {
+          if (!current) {
+            return [category];
+          }
+          if (current.some((item) => item.id === category.id)) {
+            return current;
+          }
+          return [...current, category];
+        }
+      );
       await queryClient.invalidateQueries({
         queryKey: ["categories", spaceId],
       });
@@ -336,7 +370,7 @@ export function MePage() {
       return;
     }
     const form = event.currentTarget;
-    if (editing || entryKind === "once") {
+    if (editing || entryKind === "once" || entryKind === "saving") {
       const body = readEntryBody(form, activeSpace.entryDateMode);
       saveMutation.mutate({ body, mode: editing ? "edit" : "create" });
       return;
@@ -434,42 +468,13 @@ export function MePage() {
         month={month}
         entryDateMode={activeSpace.entryDateMode}
         categories={categoriesQuery.data ?? []}
+        pots={potsQuery.data ?? []}
         pending={formPending}
+        creatingCategory={categoryMutation.isPending}
         onClose={closeEntryForm}
         onSubmit={onSubmit}
+        onCreateCategory={(name) => categoryMutation.mutateAsync(name)}
       />
-
-      <form
-        className="flex max-w-xl flex-wrap items-end gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const name = String(data.get("name") ?? "").trim();
-          if (name) {
-            categoryMutation.mutate(name);
-            event.currentTarget.reset();
-          }
-        }}
-      >
-        <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm text-muted">
-          {t("me.newCategory")}
-          <input
-            name="name"
-            required
-            className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
-          />
-        </label>
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-fg disabled:opacity-70"
-          disabled={categoryMutation.isPending}
-        >
-          {categoryMutation.isPending ? <Spinner /> : null}
-          {categoryMutation.isPending
-            ? t("me.addingCategory")
-            : t("me.addCategory")}
-        </button>
-      </form>
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -505,10 +510,21 @@ export function MePage() {
               </p>
               <p className="text-sm text-muted">
                 {formatEntryDate(entry.occurredOn, activeSpace.entryDateMode)} ·{" "}
-                {entry.type === "income" ? t("me.income") : t("me.expense")} ·{" "}
-                {entry.visibility === "shared"
-                  ? t("me.shared")
-                  : t("me.personal")}
+                {entry.type === "income"
+                  ? t("me.income")
+                  : entry.type === "saving"
+                    ? t("me.kindSaving")
+                    : t("me.expense")}
+                {entry.type === "saving" && entry.reservePotName
+                  ? ` · ${entry.reservePotName}`
+                  : ""}
+                {entry.type !== "saving"
+                  ? ` · ${
+                      entry.visibility === "shared"
+                        ? t("me.shared")
+                        : t("me.personal")
+                    }`
+                  : ""}
                 {entry.recurringRuleId ? ` · ${t("me.recurringBadge")}` : ""}
                 {entry.installmentNumber && entry.installmentCount
                   ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
@@ -518,7 +534,11 @@ export function MePage() {
             <div className="flex items-center gap-3">
               <p
                 className={`tabular-nums font-semibold ${
-                  entry.type === "income" ? "text-income-fg" : "text-expense-fg"
+                  entry.type === "income"
+                    ? "text-income-fg"
+                    : entry.type === "saving"
+                      ? "text-accent"
+                      : "text-expense-fg"
                 }`}
               >
                 {formatMoney(entry.amount, activeSpace.currency, locale)}

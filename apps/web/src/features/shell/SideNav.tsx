@@ -7,6 +7,7 @@ import type { MessageKey } from "../../shared/lib/i18n/messages";
 const navItems: { to: string; labelKey: MessageKey; end?: boolean }[] = [
   { to: "/overview", labelKey: "nav.overview" },
   { to: "/me", labelKey: "nav.me" },
+  { to: "/reserve", labelKey: "nav.reserve" },
   { to: "/space", labelKey: "nav.space" },
   { to: "/settings", labelKey: "nav.settings" },
 ];

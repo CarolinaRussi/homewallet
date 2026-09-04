@@ -1,10 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, monthToOccurredOn } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
 import { createLeftoverSeed, createReserveMovement } from "./leftover-api";
+import { fetchReservePots } from "./reserve-api";
 
 export type WelcomeSpaceState = {
   welcomeSpace: true;
@@ -30,6 +31,11 @@ export function WelcomeSpaceModal({
   const [errorMessage, setErrorMessage] = useState("");
   const month = currentMonthValue();
 
+  const potsQuery = useQuery({
+    queryKey: ["reserve-pots", spaceId],
+    queryFn: () => fetchReservePots(spaceId),
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (form: HTMLFormElement) => {
       const data = new FormData(form);
@@ -38,6 +44,7 @@ export function WelcomeSpaceModal({
       const leftoverAmount = leftoverRaw ? Number(leftoverRaw) : 0;
       const reserveAmount = reserveRaw ? Number(reserveRaw) : 0;
       const occurredOn = monthToOccurredOn(month);
+      const defaultPot = potsQuery.data?.[0];
 
       if (leftoverAmount > 0) {
         await createLeftoverSeed(spaceId, {
@@ -47,17 +54,24 @@ export function WelcomeSpaceModal({
         });
       }
       if (reserveAmount > 0) {
+        if (!defaultPot) {
+          throw new Error("No reserve pot");
+        }
         await createReserveMovement(spaceId, {
           type: "seed",
           amount: reserveAmount,
           occurredOn,
           description: "",
+          reservePotId: defaultPot.id,
         });
       }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["reserve-pots", spaceId],
       });
       onDone("me");
     },
@@ -121,7 +135,7 @@ export function WelcomeSpaceModal({
           <button
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || potsQuery.isLoading}
           >
             {saveMutation.isPending ? <Spinner /> : null}
             {saveMutation.isPending
