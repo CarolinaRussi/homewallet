@@ -153,49 +153,109 @@ export function SpacePage() {
             {sharedQuery.data?.map((entry) => (
               <article
                 key={entry.id}
-                className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4"
               >
-                <div>
-                  <p className="font-medium text-fg">
-                    {entry.categoryName ?? t("me.kindTransfer")}
-                    {entry.description ? (
-                      <span className="font-normal text-muted">
-                        {" "}
-                        · {entry.description}
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {formatEntryDate(
-                      entry.occurredOn,
-                      activeSpace.entryDateMode
-                    )}{" "}
-                    ·{" "}
-                    {entry.type === "income"
-                      ? t("me.income")
-                      : entry.type === "saving"
-                        ? t("me.kindSaving")
-                        : t("me.expense")}{" "}
-                    ·{" "}
-                    {entry.visibility === "shared"
-                      ? t("me.shared")
-                      : t("me.personal")}
-                    {transparent && entry.userName
-                      ? ` · ${entry.userName}`
-                      : null}
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium text-fg">
+                      {entry.categoryName ?? t("me.kindTransfer")}
+                      {entry.description ? (
+                        <span className="font-normal text-muted">
+                          {" "}
+                          · {entry.description}
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {formatEntryDate(
+                        entry.occurredOn,
+                        activeSpace.entryDateMode
+                      )}{" "}
+                      ·{" "}
+                      {entry.type === "income"
+                        ? t("me.income")
+                        : entry.type === "saving"
+                          ? t("me.kindSaving")
+                          : t("me.expense")}{" "}
+                      ·{" "}
+                      {entry.visibility === "shared"
+                        ? t("me.shared")
+                        : t("me.personal")}
+                      {transparent && entry.userName
+                        ? ` · ${entry.userName}`
+                        : null}
+                    </p>
+                  </div>
+                  <p
+                    className={`tabular-nums font-semibold ${
+                      entry.type === "income"
+                        ? "text-income-fg"
+                        : entry.type === "saving"
+                          ? "text-accent"
+                          : "text-expense-fg"
+                    }`}
+                  >
+                    {formatMoney(entry.amount, activeSpace.currency, locale)}
                   </p>
                 </div>
-                <p
-                  className={`tabular-nums font-semibold ${
-                    entry.type === "income"
-                      ? "text-income-fg"
-                      : entry.type === "saving"
-                        ? "text-accent"
-                        : "text-expense-fg"
-                  }`}
-                >
-                  {formatMoney(entry.amount, activeSpace.currency, locale)}
-                </p>
+                {entry.cardLines.length > 0 ? (
+                  <details className="rounded-md border border-dashed border-border px-3 py-2 text-sm">
+                    <summary className="cursor-pointer text-muted">
+                      {t("me.cardCollapseOpen").replace(
+                        "{n}",
+                        String(entry.cardLines.length)
+                      )}
+                    </summary>
+                    <ul className="mt-2 flex flex-col gap-1.5 border-t border-border/60 pt-2">
+                      {entry.cardLines.map((line) => (
+                        <li
+                          key={line.id}
+                          className="flex flex-wrap items-baseline justify-between gap-2 text-sm"
+                        >
+                          <span className="text-fg">
+                            <span className="text-muted">
+                              {line.categoryName}
+                            </span>
+                            {line.description ? (
+                              <span className="text-muted">
+                                {" "}
+                                · {line.description}
+                              </span>
+                            ) : null}
+                            {line.installmentNumber != null &&
+                            line.installmentCount != null ? (
+                              <span className="text-muted">
+                                {" "}
+                                · {line.installmentNumber}/
+                                {line.installmentCount}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="tabular-nums text-expense-fg">
+                            {formatMoney(
+                              line.amount,
+                              activeSpace.currency,
+                              locale
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                      {entry.cardOthersAmount != null &&
+                      entry.cardOthersAmount > 0 ? (
+                        <li className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-muted">
+                          <span>{t("me.cardOthers")}</span>
+                          <span className="tabular-nums">
+                            {formatMoney(
+                              entry.cardOthersAmount,
+                              activeSpace.currency,
+                              locale
+                            )}
+                          </span>
+                        </li>
+                      ) : null}
+                    </ul>
+                  </details>
+                ) : null}
               </article>
             ))}
           </section>

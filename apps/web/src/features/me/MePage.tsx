@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
+  AddEntryCardLineBody,
   CreateEntryBody,
   EntrySummary,
-  EntryType,
   EntryVisibility,
   UpdateEntryBody,
 } from "@homewallet/shared";
@@ -20,13 +20,16 @@ import {
 import { useActiveSpace } from "../spaces/use-active-space";
 import { fetchSession } from "../auth/auth-api";
 import {
+  addEntryCardLine,
   createCategory,
   createEntry,
   deleteEntry,
   fetchCategories,
   fetchMyEntries,
+  removeEntryCardLine,
   updateEntry,
 } from "../entries/entry-api";
+import { mapEntryError } from "../entries/entry-errors";
 import { fetchSpaceMembers } from "../spaces/space-api";
 import { Spinner } from "../../shared/ui/Spinner";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
@@ -35,6 +38,7 @@ import {
   Skeleton,
   SummaryCardsSkeleton,
 } from "../../shared/ui/Skeleton";
+import { EntryCardLinesCollapse } from "./EntryCardLinesCollapse";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
@@ -81,7 +85,7 @@ function readEntryBody(
   }
 
   return {
-    type: type as EntryType,
+    type: type as "income" | "expense",
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
@@ -107,10 +111,28 @@ function readTransferUpdateBody(
   };
 }
 
+function readEntryUpdateBody(
+  form: HTMLFormElement,
+  entryDateMode: "month" | "day"
+): UpdateEntryBody {
+  const body = readEntryBody(form, entryDateMode);
+  if (body.type === "transfer") {
+    throw new Error("Unexpected transfer body on entry update");
+  }
+  return {
+    type: body.type,
+    amount: body.amount,
+    categoryId: body.categoryId ?? null,
+    description: body.description,
+    visibility: body.visibility,
+    occurredOn: body.occurredOn,
+  };
+}
+
 function readSharedFields(form: HTMLFormElement) {
   const data = new FormData(form);
   return {
-    type: String(data.get("type")) as EntryType,
+    type: String(data.get("type")) as "income" | "expense",
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
@@ -137,6 +159,10 @@ export function MePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [deletePrompt, setDeletePrompt] = useState<EntrySummary | null>(null);
+  const [editInstallmentPrompt, setEditInstallmentPrompt] = useState<{
+    entry: EntrySummary;
+    body: UpdateEntryBody;
+  } | null>(null);
   const [welcome, setWelcome] = useState<WelcomeSpaceState | null>(() => {
     const intent = peekWelcomeIntent();
     if (!intent) {
@@ -262,8 +288,14 @@ export function MePage() {
     },
     onSuccess: async (entry, variables) => {
       closeEntryForm();
+      setEditInstallmentPrompt(null);
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
+      queryClient.setQueryData<EntrySummary[]>(
+        ["entries", spaceId, month],
+        (current) =>
+          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
+      );
       await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       await queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
@@ -271,10 +303,94 @@ export function MePage() {
       await queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["installment-plans", spaceId],
+      });
     },
     onError: (error: Error) => {
       setSuccessMessage("");
       setErrorMessage(error.message);
+    },
+  });
+
+  const cardLineAddMutation = useMutation({
+    mutationFn: async ({
+      entryId,
+      body,
+    }: {
+      entryId: string;
+      body: AddEntryCardLineBody;
+    }) => addEntryCardLine(entryId, body),
+    onSuccess: async (entry) => {
+      showSuccess(t("me.cardStatementSaved"));
+      flashEntry(entry.id);
+      queryClient.setQueryData<EntrySummary[]>(
+        ["entries", spaceId, month],
+        (current) =>
+          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
+      );
+      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => {
+      setSuccessMessage("");
+      setErrorMessage(mapEntryError(error, t));
+    },
+  });
+
+  const cardLineRemoveMutation = useMutation({
+    mutationFn: async ({
+      entryId,
+      lineId,
+    }: {
+      entryId: string;
+      lineId: string;
+    }) => removeEntryCardLine(entryId, lineId),
+    onSuccess: async (result, variables) => {
+      showSuccess(t("me.cardStatementSaved"));
+      if (result && typeof result === "object" && "id" in result) {
+        flashEntry(result.id);
+        queryClient.setQueryData<EntrySummary[]>(
+          ["entries", spaceId, month],
+          (current) =>
+            current?.map((row) => (row.id === result.id ? result : row)) ??
+            current
+        );
+      } else {
+        flashEntry(variables.entryId);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => {
+      setSuccessMessage("");
+      setErrorMessage(mapEntryError(error, t));
+    },
+  });
+
+  const cardLineClearMutation = useMutation({
+    mutationFn: async (entryId: string) =>
+      updateEntry(entryId, { cardLines: [] }),
+    onSuccess: async (entry) => {
+      showSuccess(t("me.cardStatementSaved"));
+      flashEntry(entry.id);
+      queryClient.setQueryData<EntrySummary[]>(
+        ["entries", spaceId, month],
+        (current) =>
+          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
+      );
+      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => {
+      setSuccessMessage("");
+      setErrorMessage(mapEntryError(error, t));
     },
   });
 
@@ -401,7 +517,8 @@ export function MePage() {
   }
 
   const categoryMutation = useMutation({
-    mutationFn: (name: string) => createCategory(spaceId!, name),
+    mutationFn: (input: { name: string; lineDetailEnabled: boolean }) =>
+      createCategory(spaceId!, input),
     onSuccess: async (category) => {
       showSuccess(t("me.categoryAdded"));
       queryClient.setQueryData<Awaited<ReturnType<typeof fetchCategories>>>(
@@ -437,10 +554,13 @@ export function MePage() {
         });
         return;
       }
-      saveMutation.mutate({
-        body: readEntryBody(form, activeSpace.entryDateMode),
-        mode: "edit",
-      });
+      const body = readEntryUpdateBody(form, activeSpace.entryDateMode);
+      if (editing.installmentPlanId && editing.installmentNumber != null) {
+        setEditInstallmentPrompt({ entry: editing, body });
+        setFormOpen(false);
+        return;
+      }
+      saveMutation.mutate({ body, mode: "edit" });
       return;
     }
     if (
@@ -572,7 +692,7 @@ export function MePage() {
         creatingCategory={categoryMutation.isPending}
         onClose={closeEntryForm}
         onSubmit={onSubmit}
-        onCreateCategory={(name) => categoryMutation.mutateAsync(name)}
+        onCreateCategory={(input) => categoryMutation.mutateAsync(input)}
       />
 
       <section className="flex flex-col gap-2">
@@ -592,111 +712,224 @@ export function MePage() {
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
         {!entriesQuery.isLoading
-          ? entriesQuery.data?.map((entry) => (
-              <article
-                key={entry.id}
-                className={[
-                  "flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between",
-                  highlightEntryId === entry.id ? "hw-entry-flash" : "",
-                ].join(" ")}
-              >
-                <div>
-                  <p className="font-medium text-fg">
-                    {entry.type === "transfer_out" ||
-                    entry.type === "transfer_in"
-                      ? entry.counterpartyName
-                        ? `${
-                            entry.type === "transfer_out"
-                              ? t("me.transferTo")
-                              : t("me.transferFrom")
-                          } ${entry.counterpartyName}`
-                        : t("me.kindTransfer")
-                      : entry.categoryName}
-                    {entry.description ? (
-                      <span className="font-normal text-muted">
-                        {" "}
-                        · {entry.description}
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {formatEntryDate(
-                      entry.occurredOn,
-                      activeSpace.entryDateMode
-                    )}{" "}
-                    ·{" "}
-                    {entry.type === "income"
-                      ? t("me.income")
-                      : entry.type === "saving"
-                        ? t("me.kindSaving")
-                        : entry.type === "transfer_out"
-                          ? t("me.transferOut")
-                          : entry.type === "transfer_in"
-                            ? t("me.transferIn")
-                            : t("me.expense")}
-                    {entry.type === "saving" && entry.reservePotName
-                      ? ` · ${entry.reservePotName}`
-                      : ""}
-                    {entry.type !== "saving" &&
-                    entry.type !== "transfer_out" &&
-                    entry.type !== "transfer_in"
-                      ? ` · ${
-                          entry.visibility === "shared"
-                            ? t("me.shared")
-                            : t("me.personal")
-                        }`
-                      : ""}
-                    {entry.categoryName &&
-                    (entry.type === "transfer_out" ||
-                      entry.type === "transfer_in")
-                      ? ` · ${entry.categoryName}`
-                      : ""}
-                    {entry.recurringRuleId
-                      ? ` · ${t("me.recurringBadge")}`
-                      : ""}
-                    {entry.installmentNumber && entry.installmentCount
-                      ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
-                      : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <p
-                    className={`tabular-nums font-semibold ${
-                      entry.type === "income" || entry.type === "transfer_in"
-                        ? "text-income-fg"
-                        : entry.type === "saving"
-                          ? "text-accent"
-                          : "text-expense-fg"
-                    }`}
-                  >
-                    {formatMoney(entry.amount, activeSpace.currency, locale)}
-                  </p>
-                  <button
-                    type="button"
-                    className="text-sm text-muted underline disabled:opacity-70"
-                    disabled={deletingEntryId === entry.id}
-                    onClick={() => openEditForm(entry)}
-                  >
-                    {t("me.edit")}
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 text-sm text-expense-fg underline disabled:opacity-70"
-                    disabled={deletingEntryId === entry.id}
-                    onClick={() => requestDelete(entry)}
-                  >
-                    {deletingEntryId === entry.id ? <Spinner /> : null}
-                    {deletingEntryId === entry.id
-                      ? t("me.deleting")
-                      : t("me.delete")}
-                  </button>
-                </div>
-              </article>
-            ))
+          ? entriesQuery.data?.map((entry) => {
+              const canDetail =
+                entry.type === "expense" &&
+                (((categoriesQuery.data ?? []).find(
+                  (category) => category.id === entry.categoryId
+                )?.lineDetailEnabled ??
+                  false) ||
+                  entry.cardLines.length > 0);
+
+              return (
+                <article
+                  key={entry.id}
+                  className={[
+                    "flex flex-col gap-2 rounded-lg border border-border bg-surface p-4",
+                    highlightEntryId === entry.id ? "hw-entry-flash" : "",
+                  ].join(" ")}
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-fg">
+                        {entry.type === "transfer_out" ||
+                        entry.type === "transfer_in"
+                          ? entry.counterpartyName
+                            ? `${
+                                entry.type === "transfer_out"
+                                  ? t("me.transferTo")
+                                  : t("me.transferFrom")
+                              } ${entry.counterpartyName}`
+                            : t("me.kindTransfer")
+                          : entry.categoryName}
+                        {entry.description ? (
+                          <span className="font-normal text-muted">
+                            {" "}
+                            · {entry.description}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-sm text-muted">
+                        {formatEntryDate(
+                          entry.occurredOn,
+                          activeSpace.entryDateMode
+                        )}{" "}
+                        ·{" "}
+                        {entry.type === "income"
+                          ? t("me.income")
+                          : entry.type === "saving"
+                            ? t("me.kindSaving")
+                            : entry.type === "transfer_out"
+                              ? t("me.transferOut")
+                              : entry.type === "transfer_in"
+                                ? t("me.transferIn")
+                                : t("me.expense")}
+                        {entry.type === "saving" && entry.reservePotName
+                          ? ` · ${entry.reservePotName}`
+                          : ""}
+                        {entry.type !== "saving" &&
+                        entry.type !== "transfer_out" &&
+                        entry.type !== "transfer_in"
+                          ? ` · ${
+                              entry.visibility === "shared"
+                                ? t("me.shared")
+                                : t("me.personal")
+                            }`
+                          : ""}
+                        {entry.categoryName &&
+                        (entry.type === "transfer_out" ||
+                          entry.type === "transfer_in")
+                          ? ` · ${entry.categoryName}`
+                          : ""}
+                        {entry.recurringRuleId
+                          ? ` · ${t("me.recurringBadge")}`
+                          : ""}
+                        {entry.installmentNumber && entry.installmentCount
+                          ? ` · ${entry.installmentNumber}/${entry.installmentCount}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p
+                        className={`tabular-nums font-semibold ${
+                          entry.type === "income" ||
+                          entry.type === "transfer_in"
+                            ? "text-income-fg"
+                            : entry.type === "saving"
+                              ? "text-accent"
+                              : "text-expense-fg"
+                        }`}
+                      >
+                        {formatMoney(
+                          entry.amount,
+                          activeSpace.currency,
+                          locale
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        className="text-sm text-muted underline disabled:opacity-70"
+                        disabled={deletingEntryId === entry.id}
+                        onClick={() => openEditForm(entry)}
+                      >
+                        {t("me.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-sm text-expense-fg underline disabled:opacity-70"
+                        disabled={deletingEntryId === entry.id}
+                        onClick={() => requestDelete(entry)}
+                      >
+                        {deletingEntryId === entry.id ? <Spinner /> : null}
+                        {deletingEntryId === entry.id
+                          ? t("me.deleting")
+                          : t("me.delete")}
+                      </button>
+                    </div>
+                  </div>
+                  {canDetail ? (
+                    <EntryCardLinesCollapse
+                      entry={entry}
+                      categories={categoriesQuery.data ?? []}
+                      currency={activeSpace.currency}
+                      pending={
+                        (cardLineAddMutation.isPending &&
+                          cardLineAddMutation.variables?.entryId ===
+                            entry.id) ||
+                        (cardLineRemoveMutation.isPending &&
+                          cardLineRemoveMutation.variables?.entryId ===
+                            entry.id) ||
+                        (cardLineClearMutation.isPending &&
+                          cardLineClearMutation.variables === entry.id)
+                      }
+                      onAdd={(body) =>
+                        cardLineAddMutation.mutateAsync({
+                          entryId: entry.id,
+                          body,
+                        })
+                      }
+                      onRemoveLine={(lineId) =>
+                        cardLineRemoveMutation.mutate({
+                          entryId: entry.id,
+                          lineId,
+                        })
+                      }
+                      onClear={() => cardLineClearMutation.mutate(entry.id)}
+                    />
+                  ) : null}
+                </article>
+              );
+            })
           : null}
       </section>
 
       {welcomeModal}
+
+      {editInstallmentPrompt ? (
+        <ConfirmSheet
+          open
+          title={t("me.installmentEditTitle")}
+          description={t("me.installmentEditHint").replace(
+            "{n}",
+            String(editInstallmentPrompt.entry.installmentNumber ?? "")
+          )}
+          pending={saveMutation.isPending}
+          onClose={() => {
+            if (!saveMutation.isPending) {
+              setEditing(editInstallmentPrompt.entry);
+              setFormOpen(true);
+              setEditInstallmentPrompt(null);
+            }
+          }}
+        >
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+            disabled={saveMutation.isPending}
+            onClick={() =>
+              saveMutation.mutate({
+                body: {
+                  ...editInstallmentPrompt.body,
+                  installmentScope: "one",
+                },
+                mode: "edit",
+              })
+            }
+          >
+            {saveMutation.isPending ? <Spinner /> : null}
+            {t("me.installmentEditOne")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+            disabled={saveMutation.isPending}
+            onClick={() =>
+              saveMutation.mutate({
+                body: {
+                  ...editInstallmentPrompt.body,
+                  installmentScope: "forward",
+                },
+                mode: "edit",
+              })
+            }
+          >
+            {saveMutation.isPending ? <Spinner /> : null}
+            {t("me.installmentEditForward")}
+          </button>
+          <button
+            type="button"
+            className="rounded-md px-3 py-2.5 text-sm text-muted underline disabled:opacity-70 sm:py-2"
+            disabled={saveMutation.isPending}
+            onClick={() => {
+              setEditing(editInstallmentPrompt.entry);
+              setFormOpen(true);
+              setEditInstallmentPrompt(null);
+            }}
+          >
+            {t("me.cancel")}
+          </button>
+        </ConfirmSheet>
+      ) : null}
 
       {deletePrompt ? (
         <ConfirmSheet

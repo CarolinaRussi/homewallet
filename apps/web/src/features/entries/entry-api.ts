@@ -1,4 +1,5 @@
 import type {
+  AddEntryCardLineBody,
   CategorySummary,
   CreateEntryBody,
   EntrySummary,
@@ -10,10 +11,13 @@ export function fetchCategories(spaceId: string) {
   return api<CategorySummary[]>(`/spaces/${spaceId}/categories`);
 }
 
-export function createCategory(spaceId: string, name: string) {
+export function createCategory(
+  spaceId: string,
+  body: { name: string; lineDetailEnabled?: boolean }
+) {
   return api<CategorySummary>(`/spaces/${spaceId}/categories`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -40,6 +44,19 @@ export function updateEntry(entryId: string, body: UpdateEntryBody) {
   return api<EntrySummary>(`/entries/${entryId}`, {
     method: "PATCH",
     body: JSON.stringify(body),
+  });
+}
+
+export function addEntryCardLine(entryId: string, body: AddEntryCardLineBody) {
+  return api<EntrySummary>(`/entries/${entryId}/card-lines`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function removeEntryCardLine(entryId: string, lineId: string) {
+  return api<EntrySummary | void>(`/entries/${entryId}/card-lines/${lineId}`, {
+    method: "DELETE",
   });
 }
 
