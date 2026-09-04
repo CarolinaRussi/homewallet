@@ -2,7 +2,9 @@ import type { EntityManager } from "typeorm";
 import { Category } from "../db/entities/category.entity.js";
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import {
+  CREDIT_CARD_CATEGORY_NAME,
   DEFAULT_CATEGORY_LAYERS,
+  DEFAULT_CATEGORY_LINE_DETAIL,
   DEFAULT_CATEGORY_NAMES,
 } from "../lib/default-categories.js";
 
@@ -38,6 +40,7 @@ export const categoryRepository = {
           name,
           isDefault: true,
           budgetLayer: DEFAULT_CATEGORY_LAYERS[name],
+          lineDetailEnabled: DEFAULT_CATEGORY_LINE_DETAIL[name],
         })
       );
     }
@@ -57,6 +60,29 @@ export const categoryRepository = {
       name: SAVING_CATEGORY_NAME,
       isDefault: true,
       budgetLayer: "future",
+      lineDetailEnabled: false,
+    });
+  },
+
+  async ensureCreditCardCategory(spaceId: string, manager: EntityManager) {
+    const existing = await this.findByName(
+      spaceId,
+      CREDIT_CARD_CATEGORY_NAME,
+      manager
+    );
+    if (existing) {
+      if (!existing.lineDetailEnabled) {
+        existing.lineDetailEnabled = true;
+        return this.save(manager, existing);
+      }
+      return existing;
+    }
+    return this.create(manager, {
+      spaceId,
+      name: CREDIT_CARD_CATEGORY_NAME,
+      isDefault: true,
+      budgetLayer: "personal",
+      lineDetailEnabled: true,
     });
   },
 };

@@ -7,6 +7,7 @@ import type {
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { toCategorySummary } from "../lib/entry-mappers.js";
+import { CREDIT_CARD_CATEGORY_NAME } from "../lib/default-categories.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 
@@ -36,13 +37,25 @@ export function createCategoryService(dataSource: DataSource) {
           spaceId,
           dataSource.manager
         );
-      } else if (
-        !categories.some((category) => category.name === SAVING_CATEGORY_NAME)
-      ) {
-        await categoryRepository.ensureSavingCategory(
-          spaceId,
-          dataSource.manager
-        );
+      } else {
+        if (
+          !categories.some((category) => category.name === SAVING_CATEGORY_NAME)
+        ) {
+          await categoryRepository.ensureSavingCategory(
+            spaceId,
+            dataSource.manager
+          );
+        }
+        if (
+          !categories.some(
+            (category) => category.name === CREDIT_CARD_CATEGORY_NAME
+          )
+        ) {
+          await categoryRepository.ensureCreditCardCategory(
+            spaceId,
+            dataSource.manager
+          );
+        }
         categories = await categoryRepository.listForSpace(
           spaceId,
           dataSource.manager
@@ -70,6 +83,7 @@ export function createCategoryService(dataSource: DataSource) {
         name: input.name,
         isDefault: false,
         budgetLayer: null,
+        lineDetailEnabled: input.lineDetailEnabled,
       });
       return toCategorySummary(category);
     },
@@ -81,9 +95,6 @@ export function createCategoryService(dataSource: DataSource) {
       input: UpdateCategoryBody
     ): Promise<CategorySummary> {
       const membership = await requireMember(userId, spaceId);
-      if (membership.role !== "owner") {
-        throw new HttpError(403, "Only owners can map category layers");
-      }
       const category = await categoryRepository.findById(
         categoryId,
         spaceId,
@@ -92,7 +103,17 @@ export function createCategoryService(dataSource: DataSource) {
       if (!category) {
         throw new HttpError(404, "Category not found");
       }
-      category.budgetLayer = input.budgetLayer;
+
+      if (input.budgetLayer !== undefined) {
+        if (membership.role !== "owner") {
+          throw new HttpError(403, "Only owners can map category layers");
+        }
+        category.budgetLayer = input.budgetLayer;
+      }
+      if (input.lineDetailEnabled !== undefined) {
+        category.lineDetailEnabled = input.lineDetailEnabled;
+      }
+
       await categoryRepository.save(dataSource.manager, category);
       return toCategorySummary(category);
     },
