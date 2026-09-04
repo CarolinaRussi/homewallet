@@ -7,6 +7,7 @@ import type {
   EntrySummary,
   EntryType,
   EntryVisibility,
+  UpdateEntryBody,
 } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import {
@@ -17,6 +18,7 @@ import {
   shiftMonth,
 } from "../../shared/lib/money";
 import { useActiveSpace } from "../spaces/use-active-space";
+import { fetchSession } from "../auth/auth-api";
 import {
   createCategory,
   createEntry,
@@ -25,6 +27,7 @@ import {
   fetchMyEntries,
   updateEntry,
 } from "../entries/entry-api";
+import { fetchSpaceMembers } from "../spaces/space-api";
 import { Spinner } from "../../shared/ui/Spinner";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import {
@@ -51,7 +54,7 @@ function readEntryBody(
   const rawDate = String(data.get("occurredOn") ?? "");
   const occurredOn =
     entryDateMode === "month" ? monthToOccurredOn(rawDate) : rawDate;
-  const type = String(data.get("type")) as EntryType;
+  const type = String(data.get("type"));
 
   if (type === "saving") {
     return {
@@ -64,13 +67,43 @@ function readEntryBody(
     };
   }
 
+  if (type === "transfer") {
+    const categoryId = String(data.get("categoryId") ?? "").trim();
+    return {
+      type: "transfer",
+      amount: Number(data.get("amount")),
+      peerUserId: String(data.get("peerUserId")),
+      description: String(data.get("description") ?? ""),
+      visibility: "personal",
+      occurredOn,
+      ...(categoryId ? { categoryId } : {}),
+    };
+  }
+
   return {
-    type,
+    type: type as EntryType,
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
     visibility: String(data.get("visibility")) as EntryVisibility,
     occurredOn,
+  };
+}
+
+function readTransferUpdateBody(
+  form: HTMLFormElement,
+  entryDateMode: "month" | "day"
+): UpdateEntryBody {
+  const data = new FormData(form);
+  const rawDate = String(data.get("occurredOn") ?? "");
+  const occurredOn =
+    entryDateMode === "month" ? monthToOccurredOn(rawDate) : rawDate;
+  const categoryRaw = String(data.get("categoryId") ?? "").trim();
+  return {
+    amount: Number(data.get("amount")),
+    description: String(data.get("description") ?? ""),
+    occurredOn,
+    categoryId: categoryRaw ? categoryRaw : null,
   };
 }
 
@@ -183,6 +216,16 @@ export function MePage() {
     };
   }, []);
 
+  const sessionQuery = useQuery({
+    queryKey: ["session"],
+    queryFn: fetchSession,
+  });
+  const membersQuery = useQuery({
+    queryKey: ["space-members", spaceId],
+    queryFn: () => fetchSpaceMembers(spaceId!),
+    enabled: Boolean(spaceId),
+  });
+
   const categoriesQuery = useQuery({
     queryKey: ["categories", spaceId],
     queryFn: () => fetchCategories(spaceId!),
@@ -206,16 +249,16 @@ export function MePage() {
       body,
       mode,
     }: {
-      body: CreateEntryBody;
+      body: CreateEntryBody | UpdateEntryBody;
       mode: "create" | "edit";
     }) => {
       if (!spaceId) {
         throw new Error("No space");
       }
       if (mode === "edit" && editing) {
-        return updateEntry(editing.id, body);
+        return updateEntry(editing.id, body as UpdateEntryBody);
       }
-      return createEntry(spaceId, body);
+      return createEntry(spaceId, body as CreateEntryBody);
     },
     onSuccess: async (entry, variables) => {
       closeEntryForm();
@@ -350,6 +393,10 @@ export function MePage() {
       setDeletePrompt(entry);
       return;
     }
+    if (entry.type === "transfer_out" || entry.type === "transfer_in") {
+      setDeletePrompt(entry);
+      return;
+    }
     deleteMutation.mutate({ entryId: entry.id });
   }
 
@@ -382,9 +429,27 @@ export function MePage() {
       return;
     }
     const form = event.currentTarget;
-    if (editing || entryKind === "once" || entryKind === "saving") {
+    if (editing) {
+      if (editing.type === "transfer_out" || editing.type === "transfer_in") {
+        saveMutation.mutate({
+          body: readTransferUpdateBody(form, activeSpace.entryDateMode),
+          mode: "edit",
+        });
+        return;
+      }
+      saveMutation.mutate({
+        body: readEntryBody(form, activeSpace.entryDateMode),
+        mode: "edit",
+      });
+      return;
+    }
+    if (
+      entryKind === "once" ||
+      entryKind === "saving" ||
+      entryKind === "transfer"
+    ) {
       const body = readEntryBody(form, activeSpace.entryDateMode);
-      saveMutation.mutate({ body, mode: editing ? "edit" : "create" });
+      saveMutation.mutate({ body, mode: "create" });
       return;
     }
     scheduleMutation.mutate({
@@ -500,6 +565,9 @@ export function MePage() {
         entryDateMode={activeSpace.entryDateMode}
         categories={categoriesQuery.data ?? []}
         pots={potsQuery.data ?? []}
+        peers={(membersQuery.data ?? []).filter(
+          (member) => member.userId !== sessionQuery.data?.user.id
+        )}
         pending={formPending}
         creatingCategory={categoryMutation.isPending}
         onClose={closeEntryForm}
@@ -534,7 +602,16 @@ export function MePage() {
               >
                 <div>
                   <p className="font-medium text-fg">
-                    {entry.categoryName}
+                    {entry.type === "transfer_out" ||
+                    entry.type === "transfer_in"
+                      ? entry.counterpartyName
+                        ? `${
+                            entry.type === "transfer_out"
+                              ? t("me.transferTo")
+                              : t("me.transferFrom")
+                          } ${entry.counterpartyName}`
+                        : t("me.kindTransfer")
+                      : entry.categoryName}
                     {entry.description ? (
                       <span className="font-normal text-muted">
                         {" "}
@@ -552,16 +629,27 @@ export function MePage() {
                       ? t("me.income")
                       : entry.type === "saving"
                         ? t("me.kindSaving")
-                        : t("me.expense")}
+                        : entry.type === "transfer_out"
+                          ? t("me.transferOut")
+                          : entry.type === "transfer_in"
+                            ? t("me.transferIn")
+                            : t("me.expense")}
                     {entry.type === "saving" && entry.reservePotName
                       ? ` · ${entry.reservePotName}`
                       : ""}
-                    {entry.type !== "saving"
+                    {entry.type !== "saving" &&
+                    entry.type !== "transfer_out" &&
+                    entry.type !== "transfer_in"
                       ? ` · ${
                           entry.visibility === "shared"
                             ? t("me.shared")
                             : t("me.personal")
                         }`
+                      : ""}
+                    {entry.categoryName &&
+                    (entry.type === "transfer_out" ||
+                      entry.type === "transfer_in")
+                      ? ` · ${entry.categoryName}`
                       : ""}
                     {entry.recurringRuleId
                       ? ` · ${t("me.recurringBadge")}`
@@ -574,7 +662,7 @@ export function MePage() {
                 <div className="flex items-center gap-3">
                   <p
                     className={`tabular-nums font-semibold ${
-                      entry.type === "income"
+                      entry.type === "income" || entry.type === "transfer_in"
                         ? "text-income-fg"
                         : entry.type === "saving"
                           ? "text-accent"
@@ -616,7 +704,10 @@ export function MePage() {
           title={
             deletePrompt.installmentPlanId
               ? t("me.installmentDeleteTitle")
-              : t("me.recurringDeleteTitle")
+              : deletePrompt.type === "transfer_out" ||
+                  deletePrompt.type === "transfer_in"
+                ? t("me.transferDeleteTitle")
+                : t("me.recurringDeleteTitle")
           }
           description={
             deletePrompt.installmentPlanId
@@ -624,7 +715,10 @@ export function MePage() {
                   "{n}",
                   String(deletePrompt.installmentNumber ?? "")
                 )
-              : t("me.recurringDeleteHint")
+              : deletePrompt.type === "transfer_out" ||
+                  deletePrompt.type === "transfer_in"
+                ? t("me.transferDeleteHint")
+                : t("me.recurringDeleteHint")
           }
           pending={deleteMutation.isPending}
           onClose={() => {
@@ -633,50 +727,74 @@ export function MePage() {
             }
           }}
         >
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
-            disabled={deleteMutation.isPending}
-            onClick={() =>
-              deleteMutation.mutate({
-                entryId: deletePrompt.id,
-                installmentScope: "one",
-              })
-            }
-          >
-            {deleteMutation.isPending && deletingEntryId === deletePrompt.id ? (
-              <Spinner />
-            ) : null}
-            {deletePrompt.installmentPlanId
-              ? t("me.installmentDeleteOne")
-              : t("me.recurringDeleteOne")}
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2.5 text-sm font-medium text-expense-fg disabled:opacity-70 sm:py-2"
-            disabled={deleteMutation.isPending}
-            onClick={() =>
-              deleteMutation.mutate(
-                deletePrompt.installmentPlanId
-                  ? {
-                      entryId: deletePrompt.id,
-                      installmentScope: "forward",
-                    }
-                  : {
-                      entryId: deletePrompt.id,
-                      stopRecurringRuleId:
-                        deletePrompt.recurringRuleId ?? undefined,
-                    }
-              )
-            }
-          >
-            {deleteMutation.isPending && deletingEntryId === deletePrompt.id ? (
-              <Spinner />
-            ) : null}
-            {deletePrompt.installmentPlanId
-              ? t("me.installmentDeleteForward")
-              : t("me.recurringDeleteStop")}
-          </button>
+          {deletePrompt.type === "transfer_out" ||
+          deletePrompt.type === "transfer_in" ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2.5 text-sm font-medium text-expense-fg disabled:opacity-70 sm:py-2"
+              disabled={deleteMutation.isPending}
+              onClick={() =>
+                deleteMutation.mutate({
+                  entryId: deletePrompt.id,
+                })
+              }
+            >
+              {deleteMutation.isPending &&
+              deletingEntryId === deletePrompt.id ? (
+                <Spinner />
+              ) : null}
+              {t("me.delete")}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+                disabled={deleteMutation.isPending}
+                onClick={() =>
+                  deleteMutation.mutate({
+                    entryId: deletePrompt.id,
+                    installmentScope: "one",
+                  })
+                }
+              >
+                {deleteMutation.isPending &&
+                deletingEntryId === deletePrompt.id ? (
+                  <Spinner />
+                ) : null}
+                {deletePrompt.installmentPlanId
+                  ? t("me.installmentDeleteOne")
+                  : t("me.recurringDeleteOne")}
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-expense px-3 py-2.5 text-sm font-medium text-expense-fg disabled:opacity-70 sm:py-2"
+                disabled={deleteMutation.isPending}
+                onClick={() =>
+                  deleteMutation.mutate(
+                    deletePrompt.installmentPlanId
+                      ? {
+                          entryId: deletePrompt.id,
+                          installmentScope: "forward",
+                        }
+                      : {
+                          entryId: deletePrompt.id,
+                          stopRecurringRuleId:
+                            deletePrompt.recurringRuleId ?? undefined,
+                        }
+                  )
+                }
+              >
+                {deleteMutation.isPending &&
+                deletingEntryId === deletePrompt.id ? (
+                  <Spinner />
+                ) : null}
+                {deletePrompt.installmentPlanId
+                  ? t("me.installmentDeleteForward")
+                  : t("me.recurringDeleteStop")}
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="rounded-md px-3 py-2.5 text-sm text-muted underline disabled:opacity-70 sm:py-2"

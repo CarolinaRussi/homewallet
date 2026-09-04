@@ -106,6 +106,19 @@ export const messages = {
     "me.entryKind": "Tipo de lançamento",
     "me.kindOnce": "Único (este mês)",
     "me.kindSaving": "Guardar na Poupancinha",
+    "me.kindTransfer": "Transferência entre membros",
+    "me.transferHint":
+      "Sai da sua sobra e entra na sobra da outra pessoa. Não conta como gasto do espaço.",
+    "me.transferPeer": "Para quem",
+    "me.transferPeerPlaceholder": "Escolha um membro",
+    "me.transferTo": "Para",
+    "me.transferFrom": "De",
+    "me.transferOut": "Transferência enviada",
+    "me.transferIn": "Transferência recebida",
+    "me.transferDeleteTitle": "Excluir transferência?",
+    "me.transferDeleteHint":
+      "Remove os dois lados (quem enviou e quem recebeu).",
+    "me.categoryOptional": "Categoria (opcional)",
     "me.savingHint":
       "Sai da sobra do mês e vai pra uma caixinha. Não é despesa — é dinheiro guardado. Pra usar depois, vá em Poupancinha.",
     "me.kindRecurring": "Recorrente",
@@ -387,6 +400,18 @@ export const messages = {
     "me.entryKind": "Entry kind",
     "me.kindOnce": "One-time (this month)",
     "me.kindSaving": "Save to reserve",
+    "me.kindTransfer": "Transfer between members",
+    "me.transferHint":
+      "Leaves your leftover and adds to theirs. Does not count as space spend.",
+    "me.transferPeer": "To whom",
+    "me.transferPeerPlaceholder": "Pick a member",
+    "me.transferTo": "To",
+    "me.transferFrom": "From",
+    "me.transferOut": "Transfer sent",
+    "me.transferIn": "Transfer received",
+    "me.transferDeleteTitle": "Delete transfer?",
+    "me.transferDeleteHint": "Removes both sides (sender and receiver).",
+    "me.categoryOptional": "Category (optional)",
     "me.savingHint":
       "Leaves this month’s leftover and goes into a pot. Not an expense — saved money. To use it later, open Reserve.",
     "me.kindRecurring": "Recurring",

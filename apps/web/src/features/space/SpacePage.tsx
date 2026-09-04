@@ -157,7 +157,7 @@ export function SpacePage() {
               >
                 <div>
                   <p className="font-medium text-fg">
-                    {entry.categoryName}
+                    {entry.categoryName ?? t("me.kindTransfer")}
                     {entry.description ? (
                       <span className="font-normal text-muted">
                         {" "}

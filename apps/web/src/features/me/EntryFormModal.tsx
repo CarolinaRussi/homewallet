@@ -5,13 +5,15 @@ import type {
   EntryDateMode,
   EntrySummary,
   ReservePotSummary,
+  SpaceMemberSummary,
 } from "@homewallet/shared";
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { occurredOnToMonth, todayIsoDate } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
 
-export type EntryKind = "once" | "recurring" | "installment" | "saving";
+export type EntryKind =
+  "once" | "recurring" | "installment" | "saving" | "transfer";
 
 type EntryFormModalProps = {
   open: boolean;
@@ -20,6 +22,7 @@ type EntryFormModalProps = {
   entryDateMode: EntryDateMode;
   categories: CategorySummary[];
   pots: ReservePotSummary[];
+  peers: SpaceMemberSummary[];
   pending: boolean;
   creatingCategory: boolean;
   onClose: () => void;
@@ -34,6 +37,7 @@ export function EntryFormModal({
   entryDateMode,
   categories,
   pots,
+  peers,
   pending,
   creatingCategory,
   onClose,
@@ -41,9 +45,13 @@ export function EntryFormModal({
   onCreateCategory,
 }: EntryFormModalProps) {
   const { t } = useLocale();
-  const [entryKind, setEntryKind] = useState<EntryKind>(
-    editing?.type === "saving" ? "saving" : "once"
-  );
+  const [entryKind, setEntryKind] = useState<EntryKind>(() => {
+    if (editing?.type === "saving") return "saving";
+    if (editing?.type === "transfer_out" || editing?.type === "transfer_in") {
+      return "transfer";
+    }
+    return "once";
+  });
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? "");
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -56,10 +64,28 @@ export function EntryFormModal({
   const formKey = editing?.id ?? "new";
   const isSaving =
     editing?.type === "saving" || (!editing && entryKind === "saving");
+  const isTransfer =
+    editing?.type === "transfer_out" ||
+    editing?.type === "transfer_in" ||
+    (!editing && entryKind === "transfer");
+  const canTransfer = peers.length > 0;
   const ledgerCategories = categories.filter(
     (category) => category.name !== SAVING_CATEGORY_NAME
   );
   const formBusy = pending || creatingCategory;
+
+  function resolveSubmitKind(): EntryKind {
+    if (!editing) {
+      return entryKind;
+    }
+    if (editing.type === "saving") {
+      return "saving";
+    }
+    if (editing.type === "transfer_out" || editing.type === "transfer_in") {
+      return "transfer";
+    }
+    return "once";
+  }
 
   async function submitNewCategory() {
     const name = newCategoryName.trim();
@@ -94,16 +120,7 @@ export function EntryFormModal({
       <form
         key={formKey}
         className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-surface p-5 shadow-lg"
-        onSubmit={(event) =>
-          onSubmit(
-            event,
-            editing
-              ? editing.type === "saving"
-                ? "saving"
-                : "once"
-              : entryKind
-          )
-        }
+        onSubmit={(event) => onSubmit(event, resolveSubmitKind())}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 id="entry-form-title" className="text-lg font-semibold text-fg">
@@ -133,6 +150,9 @@ export function EntryFormModal({
               >
                 <option value="once">{t("me.kindOnce")}</option>
                 <option value="saving">{t("me.kindSaving")}</option>
+                {canTransfer ? (
+                  <option value="transfer">{t("me.kindTransfer")}</option>
+                ) : null}
                 <option value="recurring">{t("me.kindRecurring")}</option>
                 <option value="installment">{t("me.kindInstallment")}</option>
               </select>
@@ -141,6 +161,11 @@ export function EntryFormModal({
           {isSaving ? (
             <p className="text-xs text-muted sm:col-span-2">
               {t("me.savingHint")}
+            </p>
+          ) : null}
+          {isTransfer ? (
+            <p className="text-xs text-muted sm:col-span-2">
+              {t("me.transferHint")}
             </p>
           ) : null}
           {entryKind === "installment" && !editing ? (
@@ -156,6 +181,8 @@ export function EntryFormModal({
 
           {isSaving ? (
             <input type="hidden" name="type" value="saving" />
+          ) : isTransfer ? (
+            <input type="hidden" name="type" value="transfer" />
           ) : (
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t("me.type")}
@@ -170,6 +197,35 @@ export function EntryFormModal({
               </select>
             </label>
           )}
+
+          {isTransfer && !editing ? (
+            <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
+              {t("me.transferPeer")}
+              <select
+                name="peerUserId"
+                required
+                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  {t("me.transferPeerPlaceholder")}
+                </option>
+                {peers.map((peer) => (
+                  <option key={peer.userId} value={peer.userId}>
+                    {peer.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {isTransfer && editing?.counterpartyName ? (
+            <p className="text-sm text-muted sm:col-span-2">
+              {editing.type === "transfer_out"
+                ? t("me.transferTo")
+                : t("me.transferFrom")}
+              : {editing.counterpartyName}
+            </p>
+          ) : null}
 
           <label className="flex flex-col gap-1 text-sm text-muted">
             {entryKind === "installment" && !editing
@@ -208,13 +264,15 @@ export function EntryFormModal({
                 {t("me.category")}
                 <select
                   name="categoryId"
-                  required
+                  required={!isTransfer}
                   value={categoryId}
                   onChange={(event) => setCategoryId(event.target.value)}
                   className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
                 >
-                  <option value="" disabled>
-                    {t("me.categoryPlaceholder")}
+                  <option value="" disabled={!isTransfer}>
+                    {isTransfer
+                      ? t("me.categoryOptional")
+                      : t("me.categoryPlaceholder")}
                   </option>
                   {ledgerCategories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -281,7 +339,10 @@ export function EntryFormModal({
             </div>
           )}
 
-          {editing || entryKind === "once" || entryKind === "saving" ? (
+          {editing ||
+          entryKind === "once" ||
+          entryKind === "saving" ||
+          entryKind === "transfer" ? (
             <label className="flex flex-col gap-1 text-sm text-muted">
               {entryDateMode === "month" ? t("me.month") : t("me.date")}
               {entryDateMode === "month" ? (
@@ -358,7 +419,7 @@ export function EntryFormModal({
             </>
           ) : null}
 
-          {!isSaving ? (
+          {!isSaving && !isTransfer ? (
             <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
               {t("me.visibility")}
               <select
