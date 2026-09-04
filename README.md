@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 11 — Landing & email**. Public landing, passcode reset, and invite-by-email (Resend). Email confirmation + monthly summary deferred. Polish/deploy is Part 12.
+> Status: **Part 12a — Member transfers**. Paired transfers hit personal leftover, not space spend. Credit-card optional detail is Part 12b; deploy is owner-driven later.
 
 **Later (export):** filters by space/date, Excel-friendly PT (BOM + `;` + localized headers), optional reserve movements + recurring/installment files — today is a flat entries dump.
 

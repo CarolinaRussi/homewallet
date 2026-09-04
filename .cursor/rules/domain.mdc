@@ -7,7 +7,7 @@ alwaysApply: true
 
 - Members edit **only their own** entries.
 - Shared flag = aggregation/visibility, **not** settlement.
-- Transfers between members are a distinct type and **do not** count as space spend.
+- Transfers between members are a distinct type (`transfer_out` / `transfer_in`): reduce the sender’s leftover like personal spend, increase the receiver’s like income, and **do not** count as space spend.
 - Personal leftover **carries** by default; reserve grows via **saving entries** (and opening seeds); withdraw returns to leftover on the Reserve tab.
 - Space privacy default = personal private + shared/aggregates; transparent mode is opt-in.
 - Multi-owner: last owner leaving with members left → auto-transfer ownership; empty space → delete.
