@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 10 — Export & account**. CSV export + delete account (Settings → Conta). CSV import deferred. Landing/email is Part 11.
+> Status: **Part 11 — Landing & email**. Public landing, password reset, and invite-by-email (Resend). Email confirmation + monthly summary deferred. Polish/deploy is Part 12.
 
 **Later (export):** filters by space/date, Excel-friendly PT (BOM + `;` + localized headers), optional reserve movements + recurring/installment files — today is a flat entries dump.
 
@@ -58,6 +58,8 @@ Same `check:db` command; expect `OK connected (local)`.
 You can switch anytime by changing `DATABASE_URL` and restarting the API. Do not commit `.env`.
 
 Google sign-in is optional: set `GOOGLE_CLIENT_ID` in `apps/api/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`.
+
+Email (password reset + invites) is optional locally: set `RESEND_API_KEY` and `RESEND_FROM`. Without them, the API logs the message and link to the console.
 
 ## Stack
 
