@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { EntryType } from "./entry.js";
 import { monthQuerySchema } from "./entry.js";
+import type { BudgetLayer, BudgetLayersSummary } from "./limits.js";
+import { layerTargets, progressToward } from "./limits.js";
 import { shiftMonthKey } from "./leftover.js";
 import { monthsThrough } from "./recurring.js";
 
@@ -83,12 +85,15 @@ export type OverviewBreakdownSummary = {
   memberUserId: string | null;
   totalExpense: number;
   slices: OverviewCategorySlice[];
+  /** Null when space has 50/40/10 off. */
+  budgetLayers: BudgetLayersSummary | null;
 };
 
 export type OverviewCategoryAmount = {
   categoryId: string;
   name: string;
   amount: number;
+  budgetLayer: BudgetLayer | null;
 };
 
 /** Merge amounts by category, keep Top N, roll the rest into Other. */
@@ -148,6 +153,46 @@ export function buildCategoryBreakdown(
   }
 
   return { totalExpense, slices };
+}
+
+/** Roll category amounts into 50/40/10 progress vs income targets. */
+export function buildBudgetLayersFromAmounts(
+  amounts: OverviewCategoryAmount[],
+  income: number
+): BudgetLayersSummary {
+  const spent = {
+    essential: 0,
+    personal: 0,
+    future: 0,
+  };
+  let unmappedExpense = 0;
+
+  for (const item of amounts) {
+    if (item.amount <= 0) {
+      continue;
+    }
+    if (
+      item.budgetLayer === "essential" ||
+      item.budgetLayer === "personal" ||
+      item.budgetLayer === "future"
+    ) {
+      spent[item.budgetLayer] += item.amount;
+    } else {
+      unmappedExpense += item.amount;
+    }
+  }
+
+  const targets = layerTargets(income);
+  return {
+    enabled: true,
+    income,
+    byLayer: {
+      essential: progressToward(spent.essential, targets.essential),
+      personal: progressToward(spent.personal, targets.personal),
+      future: progressToward(spent.future, targets.future),
+    },
+    unmappedExpense,
+  };
 }
 
 /** Consecutive months ending at `endMonth` for a range preset. */

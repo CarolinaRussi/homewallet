@@ -8,8 +8,10 @@ import type {
 } from "@homewallet/shared";
 import {
   allocateExpenseToCategories,
+  buildBudgetLayersFromAmounts,
   buildCategoryBreakdown,
   buildOverviewSeries,
+  overviewEntryDeltas,
   overviewFlowOptionsForScope,
   overviewRangeMonths,
 } from "@homewallet/shared";
@@ -144,16 +146,19 @@ export function createOverviewService(
       }
 
       const lines = isExpense && entry.cardLines?.length ? entry.cardLines : [];
-      const nameByCategoryId = new Map<string, string>();
-      nameByCategoryId.set(
-        entry.categoryId,
-        entry.category?.name ?? entry.categoryId
-      );
+      const metaByCategoryId = new Map<
+        string,
+        { name: string; budgetLayer: OverviewCategoryAmount["budgetLayer"] }
+      >();
+      metaByCategoryId.set(entry.categoryId, {
+        name: entry.category?.name ?? entry.categoryId,
+        budgetLayer: entry.category?.budgetLayer ?? null,
+      });
       for (const line of lines) {
-        nameByCategoryId.set(
-          line.categoryId,
-          line.category?.name ?? line.categoryId
-        );
+        metaByCategoryId.set(line.categoryId, {
+          name: line.category?.name ?? line.categoryId,
+          budgetLayer: line.category?.budgetLayer ?? null,
+        });
       }
 
       const slices = allocateExpenseToCategories({
@@ -166,15 +171,30 @@ export function createOverviewService(
       });
 
       for (const slice of slices) {
+        const meta = metaByCategoryId.get(slice.categoryId);
         amounts.push({
           categoryId: slice.categoryId,
-          name: nameByCategoryId.get(slice.categoryId) ?? slice.categoryId,
+          name: meta?.name ?? slice.categoryId,
           amount: slice.amount,
+          budgetLayer: meta?.budgetLayer ?? null,
         });
       }
     }
 
     return amounts;
+  }
+
+  function scopedMonthIncome(entries: Entry[], scope: OverviewScope) {
+    const flowOptions = overviewFlowOptionsForScope(scope);
+    let income = 0;
+    for (const entry of entries) {
+      income += overviewEntryDeltas(
+        entry.type,
+        Number(entry.amount),
+        flowOptions
+      ).income;
+    }
+    return income;
   }
 
   return {
@@ -302,9 +322,14 @@ export function createOverviewService(
         );
       }
 
-      const { totalExpense, slices } = buildCategoryBreakdown(
-        collectCategoryAmounts(entries, scope)
-      );
+      const categoryAmounts = collectCategoryAmounts(entries, scope);
+      const { totalExpense, slices } = buildCategoryBreakdown(categoryAmounts);
+      const budgetLayers = membership.space.budgetLayersEnabled
+        ? buildBudgetLayersFromAmounts(
+            categoryAmounts,
+            scopedMonthIncome(entries, scope)
+          )
+        : null;
 
       return {
         month,
@@ -312,6 +337,7 @@ export function createOverviewService(
         memberUserId,
         totalExpense,
         slices,
+        budgetLayers,
       };
     },
   };

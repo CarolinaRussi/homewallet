@@ -1,4 +1,5 @@
 import {
+  buildBudgetLayersFromAmounts,
   buildCategoryBreakdown,
   buildOverviewSeries,
   overviewEntryDeltas,
@@ -90,13 +91,13 @@ assertEqual(everyonePoints[0]!.expense, 0, "everyone series skips transfer");
 
 const breakdown = buildCategoryBreakdown(
   [
-    { categoryId: "a", name: "Food", amount: 100 },
-    { categoryId: "b", name: "Rent", amount: 80 },
-    { categoryId: "c", name: "Fun", amount: 60 },
-    { categoryId: "d", name: "Transport", amount: 40 },
-    { categoryId: "e", name: "Health", amount: 30 },
-    { categoryId: "f", name: "Pets", amount: 20 },
-    { categoryId: "a", name: "Food", amount: 10 },
+    { categoryId: "a", name: "Food", amount: 100, budgetLayer: null },
+    { categoryId: "b", name: "Rent", amount: 80, budgetLayer: null },
+    { categoryId: "c", name: "Fun", amount: 60, budgetLayer: null },
+    { categoryId: "d", name: "Transport", amount: 40, budgetLayer: null },
+    { categoryId: "e", name: "Health", amount: 30, budgetLayer: null },
+    { categoryId: "f", name: "Pets", amount: 20, budgetLayer: null },
+    { categoryId: "a", name: "Food", amount: 10, budgetLayer: null },
   ],
   5
 );
@@ -105,5 +106,34 @@ assert(breakdown.slices.length === 6, "top 5 + other");
 assertEqual(breakdown.slices[0]!.amount, 110, "food merged first");
 assert(breakdown.slices[5]!.isOther, "last slice is Other");
 assertEqual(breakdown.slices[5]!.amount, 20, "Other = pets only");
+
+const layers = buildBudgetLayersFromAmounts(
+  [
+    {
+      categoryId: "a",
+      name: "Rent",
+      amount: 400,
+      budgetLayer: "essential",
+    },
+    {
+      categoryId: "b",
+      name: "Fun",
+      amount: 100,
+      budgetLayer: "personal",
+    },
+    {
+      categoryId: "c",
+      name: "Mystery",
+      amount: 50,
+      budgetLayer: null,
+    },
+  ],
+  1000
+);
+assertEqual(layers.income, 1000, "layers income");
+assertEqual(layers.byLayer.essential.current, 400, "essential spent");
+assertEqual(layers.byLayer.essential.target, 500, "essential 50%");
+assertEqual(layers.byLayer.personal.current, 100, "personal spent");
+assertEqual(layers.unmappedExpense, 50, "unmapped");
 
 console.log("overview-series check ok");
