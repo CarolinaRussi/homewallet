@@ -8,6 +8,7 @@ import type {
   ReserveMovementSummary,
 } from "@homewallet/shared";
 import {
+  cardOthersAmount,
   computeMonthSummary,
   layerTargets,
   progressToward,
@@ -191,12 +192,8 @@ export function createLeftoverService(
         future: 0,
       };
       let unmappedExpense = 0;
-      for (const entry of monthEntries) {
-        if (entry.type !== "expense" && entry.type !== "transfer_out") {
-          continue;
-        }
-        const amount = Number(entry.amount);
-        const layer = entry.category?.budgetLayer;
+
+      function addToLayer(amount: number, layer: string | null | undefined) {
         if (
           layer === "essential" ||
           layer === "personal" ||
@@ -206,6 +203,27 @@ export function createLeftoverService(
         } else {
           unmappedExpense += amount;
         }
+      }
+
+      for (const entry of monthEntries) {
+        if (entry.type !== "expense" && entry.type !== "transfer_out") {
+          continue;
+        }
+        const lines = entry.cardLines ?? [];
+        if (entry.type === "expense" && lines.length > 0) {
+          for (const line of lines) {
+            addToLayer(Number(line.amount), line.category?.budgetLayer);
+          }
+          const others = cardOthersAmount(
+            Number(entry.amount),
+            lines.map((line) => Number(line.amount))
+          );
+          if (others > 0) {
+            addToLayer(others, entry.category?.budgetLayer);
+          }
+          continue;
+        }
+        addToLayer(Number(entry.amount), entry.category?.budgetLayer);
       }
       const targets = layerTargets(summary.income);
       budgetLayers = {
