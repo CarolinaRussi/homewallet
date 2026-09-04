@@ -1,8 +1,17 @@
 import { z } from "zod";
 import { monthQuerySchema } from "./entry.js";
 
-export const RESERVE_MOVEMENT_TYPES = ["contribute", "withdraw"] as const;
+export const RESERVE_MOVEMENT_TYPES = [
+  "contribute",
+  "withdraw",
+  "seed",
+] as const;
 export type ReserveMovementType = (typeof RESERVE_MOVEMENT_TYPES)[number];
+
+/** How a movement changes reserve cash; seed/contribute grow it, withdraw shrinks it. */
+export function reserveBalanceDelta(type: ReserveMovementType, amount: number) {
+  return type === "withdraw" ? -amount : amount;
+}
 
 export const createReserveMovementBodySchema = z.object({
   type: z.enum(RESERVE_MOVEMENT_TYPES),
@@ -23,6 +32,23 @@ export type ReserveMovementSummary = {
   occurredOn: string;
 };
 
+export const createLeftoverSeedBodySchema = z.object({
+  amount: z.coerce.number().positive().finite(),
+  description: z.string().trim().max(200).optional().default(""),
+  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+});
+
+export type CreateLeftoverSeedBody = z.infer<
+  typeof createLeftoverSeedBodySchema
+>;
+
+export type LeftoverSeedSummary = {
+  id: string;
+  amount: number;
+  description: string;
+  occurredOn: string;
+};
+
 export type MonthSummary = {
   month: string;
   income: number;
@@ -33,6 +59,7 @@ export type MonthSummary = {
   leftover: number;
   reserveBalance: number;
   movements: ReserveMovementSummary[];
+  leftoverSeeds: LeftoverSeedSummary[];
 };
 
 export type MonthFlowBucket = {
@@ -41,13 +68,16 @@ export type MonthFlowBucket = {
   expense: number;
   contributed: number;
   withdrawn: number;
+  /** One-shot opening leftover; does not count as income. */
+  openingLeftover: number;
 };
 
 /** Pure leftover chain: each month’s leftover becomes next month’s carriedIn. */
 export function computeMonthSummary(
   targetMonth: string,
   buckets: MonthFlowBucket[],
-  movements: ReserveMovementSummary[]
+  movements: ReserveMovementSummary[],
+  leftoverSeeds: LeftoverSeedSummary[] = []
 ): MonthSummary {
   monthQuerySchema.parse(targetMonth);
 
@@ -59,6 +89,7 @@ export function computeMonthSummary(
       expense: bucket.expense,
       contributed: bucket.contributed,
       withdrawn: bucket.withdrawn,
+      openingLeftover: bucket.openingLeftover,
     });
   }
 
@@ -81,13 +112,15 @@ export function computeMonthSummary(
       expense: 0,
       contributed: 0,
       withdrawn: 0,
+      openingLeftover: 0,
     };
     leftover =
       carriedIn +
       bucket.income -
       bucket.expense -
       bucket.contributed +
-      bucket.withdrawn;
+      bucket.withdrawn +
+      bucket.openingLeftover;
 
     if (cursor === targetMonth) {
       income = bucket.income;
@@ -107,11 +140,11 @@ export function computeMonthSummary(
 
   const reserveBalance = movements
     .filter((movement) => movement.occurredOn.slice(0, 7) <= targetMonth)
-    .reduce((sum, movement) => {
-      return movement.type === "contribute"
-        ? sum + movement.amount
-        : sum - movement.amount;
-    }, 0);
+    .reduce(
+      (sum, movement) =>
+        sum + reserveBalanceDelta(movement.type, movement.amount),
+      0
+    );
 
   return {
     month: targetMonth,
@@ -123,6 +156,9 @@ export function computeMonthSummary(
     leftover,
     reserveBalance,
     movements: monthMovements,
+    leftoverSeeds: leftoverSeeds
+      .filter((seed) => seed.occurredOn.slice(0, 7) === targetMonth)
+      .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn)),
   };
 }
 

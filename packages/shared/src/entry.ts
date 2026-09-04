@@ -45,4 +45,8 @@ export type EntrySummary = {
   categoryId: string;
   categoryName: string;
   userId: string;
+  recurringRuleId: string | null;
+  installmentPlanId: string | null;
+  installmentNumber: number | null;
+  installmentCount: number | null;
 };
