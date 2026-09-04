@@ -26,7 +26,69 @@ export const monthQuerySchema = z
 
 export const createCategoryBodySchema = z.object({
   name: z.string().trim().min(1).max(60),
+  lineDetailEnabled: z.boolean().optional().default(false),
 });
+
+export const entryCardLineInputSchema = z.object({
+  description: z.string().trim().min(1).max(200),
+  amount: z.coerce.number().positive().finite(),
+  categoryId: z.string().uuid(),
+});
+
+export type EntryCardLineInput = z.infer<typeof entryCardLineInputSchema>;
+
+export const addEntryCardLineBodySchema = z.object({
+  description: z.string().trim().min(1).max(200),
+  amount: z.coerce.number().positive().finite(),
+  categoryId: z.string().uuid(),
+  /** When set (>= 2), materializes future statement lines 2..N. */
+  installmentCount: z.coerce.number().int().min(2).max(120).optional(),
+});
+
+export type AddEntryCardLineBody = z.infer<typeof addEntryCardLineBodySchema>;
+
+/** Remainder of a statement after detailed lines (cents-safe). */
+export function cardOthersAmount(
+  statementAmount: number,
+  lineAmounts: number[]
+): number {
+  const statementCents = Math.round(statementAmount * 100);
+  const linesCents = lineAmounts.reduce(
+    (sum, amount) => sum + Math.round(amount * 100),
+    0
+  );
+  return (statementCents - linesCents) / 100;
+}
+
+function refineCardLinesAgainstAmount(
+  amount: number | undefined,
+  cardLines: EntryCardLineInput[] | undefined,
+  context: z.RefinementCtx,
+  amountPath: (string | number)[]
+) {
+  if (!cardLines || cardLines.length === 0) {
+    return;
+  }
+  if (amount == null) {
+    context.addIssue({
+      code: "custom",
+      message: "amount is required when cardLines are set",
+      path: amountPath,
+    });
+    return;
+  }
+  const others = cardOthersAmount(
+    amount,
+    cardLines.map((line) => line.amount)
+  );
+  if (others < 0) {
+    context.addIssue({
+      code: "custom",
+      message: "cardLines sum cannot exceed amount",
+      path: ["cardLines"],
+    });
+  }
+}
 
 export const createEntryBodySchema = z
   .object({
@@ -38,8 +100,21 @@ export const createEntryBodySchema = z
     description: z.string().trim().max(200).optional().default(""),
     visibility: z.enum(ENTRY_VISIBILITIES).optional().default("personal"),
     occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+    cardLines: z.array(entryCardLineInputSchema).max(50).optional(),
   })
   .superRefine((body, context) => {
+    if (body.cardLines && body.cardLines.length > 0) {
+      if (body.type !== "expense") {
+        context.addIssue({
+          code: "custom",
+          message: "cardLines are only allowed on expenses",
+          path: ["cardLines"],
+        });
+      }
+      refineCardLinesAgainstAmount(body.amount, body.cardLines, context, [
+        "amount",
+      ]);
+    }
     if (body.type === "transfer") {
       if (!body.peerUserId) {
         context.addIssue({
@@ -81,8 +156,34 @@ export const updateEntryBodySchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
       .optional(),
+    cardLines: z.array(entryCardLineInputSchema).max(50).optional(),
+    /** Installment plan only: this parcel, or this and later. */
+    installmentScope: z.enum(["one", "forward"]).optional(),
   })
-  .refine((body) => Object.keys(body).length > 0, "Provide at least one field");
+  .refine((body) => {
+    const keys = Object.keys(body).filter((key) => key !== "installmentScope");
+    return keys.length > 0;
+  }, "Provide at least one field")
+  .superRefine((body, context) => {
+    if (body.cardLines === undefined) {
+      return;
+    }
+    if (body.type !== undefined && body.type !== "expense") {
+      if (body.cardLines.length > 0) {
+        context.addIssue({
+          code: "custom",
+          message: "cardLines are only allowed on expenses",
+          path: ["cardLines"],
+        });
+      }
+      return;
+    }
+    if (body.cardLines.length > 0 && body.amount != null) {
+      refineCardLinesAgainstAmount(body.amount, body.cardLines, context, [
+        "amount",
+      ]);
+    }
+  });
 
 export type CreateCategoryBody = z.infer<typeof createCategoryBodySchema>;
 export type CreateEntryBody = z.infer<typeof createEntryBodySchema>;
@@ -93,6 +194,20 @@ export type CategorySummary = {
   name: string;
   isDefault: boolean;
   budgetLayer: BudgetLayer | null;
+  /** When true, expenses in this category can break into statement lines. */
+  lineDetailEnabled: boolean;
+};
+
+export type EntryCardLineSummary = {
+  id: string;
+  description: string;
+  amount: number;
+  categoryId: string;
+  categoryName: string;
+  sortOrder: number;
+  installmentGroupId: string | null;
+  installmentNumber: number | null;
+  installmentCount: number | null;
 };
 
 export type EntrySummary = {
@@ -115,4 +230,8 @@ export type EntrySummary = {
   transferGroupId: string | null;
   counterpartyUserId: string | null;
   counterpartyName: string | null;
+  /** Detailed statement lines; empty when not used. */
+  cardLines: EntryCardLineSummary[];
+  /** Auto Outros = amount − sum(cardLines); null when no detail. */
+  cardOthersAmount: number | null;
 };

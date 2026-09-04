@@ -63,9 +63,16 @@ export const updateMyLimitsBodySchema = z
 
 export type UpdateMyLimitsBody = z.infer<typeof updateMyLimitsBodySchema>;
 
-export const updateCategoryBodySchema = z.object({
-  budgetLayer: z.enum(BUDGET_LAYERS).nullable(),
-});
+export const updateCategoryBodySchema = z
+  .object({
+    budgetLayer: z.enum(BUDGET_LAYERS).nullable().optional(),
+    lineDetailEnabled: z.boolean().optional(),
+  })
+  .refine(
+    (body) =>
+      body.budgetLayer !== undefined || body.lineDetailEnabled !== undefined,
+    "Provide at least one field"
+  );
 
 export type UpdateCategoryBody = z.infer<typeof updateCategoryBodySchema>;
 
