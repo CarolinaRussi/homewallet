@@ -3,7 +3,7 @@
 Working title for a personal & shared finance app (solo or multi-person **spaces**).  
 Public beta product + portfolio piece. First real users: a couple who today track money in spreadsheets.
 
-> Status: **Part 8 — Poupancinha pots**. Saving entries + named pots. Invites/privacy are Part 9.
+> Status: **Part 9 — Invites & privacy**. Join link/code polish, members, leave/ownership, transparent mode. Import/LGPD is Part 10.
 
 ## Quick start
 

@@ -8,6 +8,7 @@ alwaysApply: false
 
 - App personality: calm and clear. Landing may add light SaaS motion — no neon/purple glow.
 - Themes: light + dark via tokens; default light.
+- **UX first:** every interactive surface should feel intentional — never pop UI in/out with hard mounts. Overlays, sheets, toasts, and destructive confirms use soft enter/exit (~200–250ms). Prefer drawer on mobile, centered modal from `sm` up (`ConfirmSheet`). While data loads, show skeleton placeholders — never flash empty zeros or “sem dados”.
 - Landing first viewport: brand, one headline, one short line, one CTA, one dominant device visual on atmospheric background.
 - No hero card grids, floating promo badges, or inset collage heroes.
 - Cards are for interactive app surfaces, not marketing hero decoration.

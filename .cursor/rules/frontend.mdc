@@ -13,3 +13,5 @@ alwaysApply: false
 - Pillars: Me | Space | Overview. Desktop uses side nav.
 - My month: calm cards + list by default; optional table mode.
 - Do not copy reference dashboards layout-for-layout; sage palette is the color reference only.
+- Overlays: reuse `ConfirmSheet` (animated drawer/modal). Do not use `window.confirm` / `alert`. New dialogs should animate enter and exit — keep mounted until the exit transition finishes.
+- Loading: never flash empty zeros / “no data” while the first fetch is in flight. Use `Skeleton` / layout skeletons from `shared/ui/Skeleton` (`isLoading` / no data yet). Empty states only after load finishes with zero items.
