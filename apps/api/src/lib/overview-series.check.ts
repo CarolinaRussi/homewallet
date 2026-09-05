@@ -59,6 +59,16 @@ assertEqual(
   0,
   "shared ignores income"
 );
+assertEqual(
+  overviewEntryDeltas("reserve_withdraw", 80, meOpts).income,
+  0,
+  "reserve withdraw is not overview income"
+);
+assertEqual(
+  overviewEntryDeltas("reserve_withdraw", 80, meOpts).expense,
+  0,
+  "reserve withdraw is not overview expense"
+);
 
 const points = buildOverviewSeries(
   ["2026-01", "2026-02", "2026-03"],

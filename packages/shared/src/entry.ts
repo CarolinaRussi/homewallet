@@ -5,6 +5,8 @@ export const ENTRY_TYPES = [
   "income",
   "expense",
   "saving",
+  /** Withdraw from reserve back into the month — shows as income-like on Me. */
+  "reserve_withdraw",
   "transfer_out",
   "transfer_in",
 ] as const;
@@ -209,7 +211,7 @@ export const updateEntryBodySchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
       .optional(),
     cardLines: z.array(entryCardLineInputSchema).max(50).optional(),
-    /** Installment plan only: this parcel, or this and later. */
+    /** This installment/recurring month only, or this and later. */
     installmentScope: z.enum(["one", "forward"]).optional(),
   })
   .refine((body) => {
@@ -279,6 +281,8 @@ export type EntrySummary = {
   installmentPlanId: string | null;
   installmentNumber: number | null;
   installmentCount: number | null;
+  /** YYYY-MM when the recurring rule has an end; null = open-ended. */
+  recurringEndMonth: string | null;
   transferGroupId: string | null;
   counterpartyUserId: string | null;
   counterpartyName: string | null;

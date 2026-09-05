@@ -29,19 +29,20 @@ export function buildPotSummaries(
 ): ReservePotSummary[] {
   return pots.map((pot) => {
     let saved = 0;
+    let withdrawn = 0;
     for (const entry of entries) {
-      if (
-        entry.type === "saving" &&
-        entry.reservePotId === pot.id &&
-        entry.occurredOn <= throughDate
-      ) {
+      if (entry.reservePotId !== pot.id || entry.occurredOn > throughDate) {
+        continue;
+      }
+      if (entry.type === "saving") {
         saved += Number(entry.amount);
+      } else if (entry.type === "reserve_withdraw") {
+        withdrawn += Number(entry.amount);
       }
     }
 
     let seeded = 0;
     let contributed = 0;
-    let withdrawn = 0;
     for (const movement of movements) {
       if (
         movement.reservePotId !== pot.id ||
@@ -55,6 +56,7 @@ export function buildPotSummaries(
       } else if (movement.type === "contribute") {
         contributed += amount;
       } else if (movement.type === "withdraw") {
+        // Legacy withdraw rows (pre–reserve_withdraw entries).
         withdrawn += amount;
       }
     }

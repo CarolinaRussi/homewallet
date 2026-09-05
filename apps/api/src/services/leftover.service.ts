@@ -17,6 +17,7 @@ import { HttpError } from "../lib/http-error.js";
 import { monthBounds } from "../lib/entry-mappers.js";
 import { LeftoverSeed } from "../db/entities/leftover-seed.entity.js";
 import { ReserveMovement } from "../db/entities/reserve-movement.entity.js";
+import { categoryRepository } from "../repositories/category.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { leftoverSeedRepository } from "../repositories/leftover-seed.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
@@ -35,6 +36,25 @@ function toMovementSummary(movement: ReserveMovement): ReserveMovementSummary {
     occurredOn: movement.occurredOn,
     reservePotId: movement.reservePotId,
     reservePotName: movement.reservePot?.name ?? null,
+  };
+}
+
+function withdrawEntryToMovementSummary(entry: {
+  id: string;
+  amount: string | number;
+  description: string;
+  occurredOn: string;
+  reservePotId: string | null;
+  reservePot?: { name: string } | null;
+}): ReserveMovementSummary {
+  return {
+    id: entry.id,
+    type: "withdraw",
+    amount: Number(entry.amount),
+    description: entry.description,
+    occurredOn: entry.occurredOn,
+    reservePotId: entry.reservePotId,
+    reservePotName: entry.reservePot?.name ?? null,
   };
 }
 
@@ -90,6 +110,8 @@ function buildBuckets(
       bucket.expense += amount;
     } else if (entry.type === "saving") {
       bucket.contributed += amount;
+    } else if (entry.type === "reserve_withdraw") {
+      bucket.withdrawn += amount;
     }
   }
 
@@ -161,7 +183,13 @@ export function createLeftoverService(
     ]);
 
     const savingThroughTarget = entries.reduce((sum, entry) => {
-      return entry.type === "saving" ? sum + Number(entry.amount) : sum;
+      if (entry.type === "saving") {
+        return sum + Number(entry.amount);
+      }
+      if (entry.type === "reserve_withdraw") {
+        return sum - Number(entry.amount);
+      }
+      return sum;
     }, 0);
     const potSummaries = buildPotSummaries(pots, entries, movements, end);
 
@@ -172,6 +200,13 @@ export function createLeftoverService(
       seeds.map(toSeedSummary),
       savingThroughTarget,
       potSummaries
+    );
+
+    const entryWithdraws = monthEntries
+      .filter((entry) => entry.type === "reserve_withdraw")
+      .map(withdrawEntryToMovementSummary);
+    const monthMovements = [...summary.movements, ...entryWithdraws].sort(
+      (left, right) => right.occurredOn.localeCompare(left.occurredOn)
     );
 
     const personalAmount = amountOrNull(membership.personalLimitAmount);
@@ -257,6 +292,7 @@ export function createLeftoverService(
 
     return {
       ...summary,
+      movements: monthMovements,
       myLimits,
       personalLimit:
         myLimits.personalLimitEnabled && personalAmount != null
@@ -319,6 +355,35 @@ export function createLeftoverService(
         if (!pot || input.amount > pot.balance + 1e-9) {
           throw new HttpError(400, "Not enough balance in this pot");
         }
+
+        const category = await categoryRepository.ensureSavingCategory(
+          spaceId,
+          dataSource.manager
+        );
+        const entry = await entryRepository.create(dataSource.manager, {
+          spaceId,
+          userId,
+          categoryId: category.id,
+          type: "reserve_withdraw",
+          amount: input.amount.toFixed(2),
+          description: input.description,
+          visibility: "personal",
+          occurredOn: input.occurredOn,
+          recurringRuleId: null,
+          installmentPlanId: null,
+          installmentNumber: null,
+          reservePotId: input.reservePotId,
+          transferGroupId: null,
+          counterpartyUserId: null,
+        });
+        const loaded = await entryRepository.findById(
+          entry.id,
+          dataSource.manager
+        );
+        if (!loaded) {
+          throw new HttpError(500, "Failed to load reserve withdraw");
+        }
+        return withdrawEntryToMovementSummary(loaded);
       }
 
       const movement = await reserveMovementRepository.create(
@@ -348,17 +413,33 @@ export function createLeftoverService(
         movementId,
         dataSource.manager
       );
-      if (!movement) {
+      if (movement) {
+        if (movement.userId !== userId) {
+          throw new HttpError(
+            403,
+            "You can only delete your own reserve movements"
+          );
+        }
+        await requireMember(userId, movement.spaceId);
+        await reserveMovementRepository.remove(dataSource.manager, movement);
+        return;
+      }
+
+      const entry = await entryRepository.findById(
+        movementId,
+        dataSource.manager
+      );
+      if (!entry || entry.type !== "reserve_withdraw") {
         throw new HttpError(404, "Reserve movement not found");
       }
-      if (movement.userId !== userId) {
+      if (entry.userId !== userId) {
         throw new HttpError(
           403,
           "You can only delete your own reserve movements"
         );
       }
-      await requireMember(userId, movement.spaceId);
-      await reserveMovementRepository.remove(dataSource.manager, movement);
+      await requireMember(userId, entry.spaceId);
+      await entryRepository.remove(dataSource.manager, entry);
     },
 
     async createLeftoverSeed(

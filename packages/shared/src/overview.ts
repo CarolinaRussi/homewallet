@@ -233,7 +233,7 @@ export function overviewEntryDeltas(
   amount: number,
   options: OverviewFlowOptions
 ): { income: number; expense: number } {
-  if (type === "saving") {
+  if (type === "saving" || type === "reserve_withdraw") {
     return { income: 0, expense: 0 };
   }
   if (type === "transfer_in" || type === "transfer_out") {
