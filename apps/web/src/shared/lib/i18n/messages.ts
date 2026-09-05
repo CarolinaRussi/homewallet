@@ -268,6 +268,13 @@ export const messages = {
     "overview.range.12": "Últimos 12 meses",
     "overview.range.ytd": "Este ano",
     "overview.scope": "Quem",
+    "overview.scopeLabel": "Mostrando dados de",
+    "overview.scopeHint.me": "Seus lançamentos — renda e gastos pessoais.",
+    "overview.scopeHint.shared":
+      "Só gastos marcados como compartilhado (casa).",
+    "overview.scopeHint.everyone":
+      "Gastos de todos no espaço, sem transferências entre vocês.",
+    "overview.scopeHint.member": "Lançamentos de {name}.",
     "overview.scope.me": "Eu",
     "overview.scope.shared": "Compartilhado",
     "overview.scope.everyone": "Todos",
@@ -674,6 +681,12 @@ export const messages = {
     "overview.range.12": "Last 12 months",
     "overview.range.ytd": "This year",
     "overview.scope": "Who",
+    "overview.scopeLabel": "Showing data for",
+    "overview.scopeHint.me": "Your entries — personal income and spending.",
+    "overview.scopeHint.shared": "Shared-marked spending only (household).",
+    "overview.scopeHint.everyone":
+      "Everyone’s spending in the space, excluding transfers between you.",
+    "overview.scopeHint.member": "{name}’s entries.",
     "overview.scope.me": "Me",
     "overview.scope.shared": "Shared",
     "overview.scope.everyone": "Everyone",

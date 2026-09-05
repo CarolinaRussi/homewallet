@@ -108,10 +108,12 @@
 
   select {
     appearance: none;
+    accent-color: var(--hw-accent);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235c6b63' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
-    padding-right: 2.25rem;
+    /* Tailwind px-* must not squeeze text under the chevron */
+    padding-inline-end: 2.25rem !important;
   }
 
   .dark select {
@@ -127,6 +129,33 @@
   input[type="month"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.65;
+  }
+}
+
+@layer components {
+  .hw-select,
+  .hw-select-field {
+    min-height: 2.5rem;
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid var(--hw-border);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--hw-fg);
+  }
+
+  .hw-select {
+    background-color: var(--hw-surface);
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    padding-inline-start: 0.75rem;
+  }
+
+  .hw-select-field {
+    background-color: var(--hw-bg);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-inline-start: 0.75rem;
   }
 }
 

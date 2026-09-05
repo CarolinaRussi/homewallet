@@ -271,7 +271,7 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
               {t("spaces.privacyHint")}
             </p>
             <select
-              className="mt-2 max-w-md rounded-md border border-border bg-bg px-2 py-1.5 text-fg disabled:opacity-70"
+              className="hw-select-field mt-2 max-w-md disabled:opacity-70"
               value={space.privacyMode}
               disabled={settingsMutation.isPending}
               onChange={(event) =>
@@ -293,7 +293,7 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
           <label className="flex max-w-md flex-col gap-1 text-sm text-muted">
             {t("spaces.entryDateMode")}
             <select
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg disabled:opacity-70"
+              className="hw-select-field disabled:opacity-70"
               value={space.entryDateMode}
               disabled={settingsMutation.isPending}
               onChange={(event) =>
@@ -641,7 +641,7 @@ function CategoryLayerMapper({ spaceId }: { spaceId: string }) {
           >
             <span className="text-fg">{category.name}</span>
             <select
-              className="rounded-md border border-border bg-bg px-2 py-1 text-fg disabled:opacity-70"
+              className="hw-select-field py-1 text-sm disabled:opacity-70"
               value={category.budgetLayer ?? ""}
               disabled={layerMutation.isPending}
               onChange={(event) => {

@@ -71,7 +71,7 @@ export function SpaceEntryList({
         </h2>
         {showMemberFilter ? (
           <select
-            className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
+            className="hw-select"
             value={listFilter}
             onChange={(event) =>
               setListFilter(event.target.value as ListFilter)

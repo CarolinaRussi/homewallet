@@ -292,7 +292,7 @@ export function EntryCardLinesCollapse({
               value={categoryId}
               disabled={formBusy}
               onChange={(event) => setCategoryId(event.target.value)}
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+              className="hw-select-field text-sm"
               required
             >
               {ledgerCategories.map((category) => (
@@ -357,7 +357,7 @@ export function EntryCardLinesCollapse({
               value={categoryId}
               disabled={formBusy}
               onChange={(event) => setCategoryId(event.target.value)}
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+              className="hw-select-field text-sm"
               required
             >
               <option value="" disabled>
@@ -378,7 +378,7 @@ export function EntryCardLinesCollapse({
               onChange={(event) =>
                 setScheduleKind(event.target.value as ScheduleKind)
               }
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+              className="hw-select-field text-sm"
             >
               <option value="once">{t("me.cardInstallmentsOnce")}</option>
               <option value="installments">{t("me.cardInstallments")}</option>

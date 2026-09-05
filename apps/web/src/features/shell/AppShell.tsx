@@ -29,7 +29,7 @@ export function AppShell() {
         <div className="flex items-center gap-2">
           <select
             aria-label={t("locale.label")}
-            className="rounded-md border border-border bg-bg px-2 py-1 text-sm text-fg"
+            className="hw-select py-1 text-sm"
             value={locale}
             onChange={(event) =>
               setLocale(event.target.value === "en" ? "en" : "pt-BR")

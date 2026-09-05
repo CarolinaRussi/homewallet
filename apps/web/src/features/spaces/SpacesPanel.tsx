@@ -79,7 +79,7 @@ export function SpacesPanel() {
             <label className="flex max-w-sm flex-col gap-1 text-sm text-muted">
               {t("spaces.configureSpace")}
               <select
-                className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
+                className="hw-select-field"
                 value={spaceId}
                 onChange={(event) => selectSpace(event.target.value)}
                 aria-label={t("spaces.configureSpace")}

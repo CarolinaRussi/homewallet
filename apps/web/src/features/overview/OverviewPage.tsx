@@ -6,10 +6,12 @@ import { fetchSpaceMembers } from "../spaces/space-api";
 import { useActiveSpace } from "../spaces/use-active-space";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
+import { SelectField } from "../../shared/ui/SelectField";
 import { Skeleton } from "../../shared/ui/Skeleton";
 import { fetchOverviewBreakdown, fetchOverviewSeries } from "./overview-api";
 import { OverviewBudgetLayers } from "./OverviewBudgetLayers";
 import { OverviewCategoryDonut } from "./OverviewCategoryDonut";
+import { OverviewScopeFilter } from "./OverviewScopeFilter";
 import { OverviewTrendChart } from "./OverviewTrendChart";
 
 const RANGE_OPTIONS: OverviewRangePreset[] = ["3", "6", "12", "ytd"];
@@ -110,18 +112,10 @@ export function OverviewPage() {
     enabled: scopeReady,
   });
 
-  function onScopeSelectChange(value: string) {
-    if (value.startsWith("member:")) {
-      setScope("member");
-      setMemberUserId(value.slice("member:".length));
-      return;
-    }
-    setScope(value as OverviewScope);
-    setMemberUserId(undefined);
+  function onScopeChange(nextScope: OverviewScope, nextMemberUserId?: string) {
+    setScope(nextScope);
+    setMemberUserId(nextScope === "member" ? nextMemberUserId : undefined);
   }
-
-  const scopeSelectValue =
-    scope === "member" && memberUserId ? `member:${memberUserId}` : scope;
 
   if (spacesQuery.isLoading) {
     return (
@@ -148,35 +142,46 @@ export function OverviewPage() {
 
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-fg">
-            {t("overview.title")}
-          </h1>
-          <p className="mt-1 text-sm text-muted">{t("overview.hint")}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <header>
+        <h1 className="text-3xl font-semibold text-fg">
+          {t("overview.title")}
+        </h1>
+        <p className="mt-1 text-sm text-muted">{t("overview.hint")}</p>
+      </header>
+
+      <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 md:p-5">
+        {multiMember ? (
+          <OverviewScopeFilter
+            transparent={transparent}
+            scope={scope}
+            memberUserId={memberUserId}
+            peers={peers}
+            onScopeChange={onScopeChange}
+          />
+        ) : null}
+
+        <div
+          className={`flex flex-wrap gap-4 ${multiMember ? "border-t border-border pt-4" : ""}`}
+        >
           {spaces.length > 1 ? (
-            <select
-              className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
+            <SelectField
+              label={t("overview.space")}
               value={spaceId}
               onChange={(event) => selectSpace(event.target.value)}
-              aria-label={t("overview.space")}
             >
               {spaces.map((space) => (
                 <option key={space.id} value={space.id}>
                   {space.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
           ) : null}
-          <select
-            className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
+          <SelectField
+            label={t("overview.range")}
             value={range}
             onChange={(event) =>
               setRange(event.target.value as OverviewRangePreset)
             }
-            aria-label={t("overview.range")}
           >
             {RANGE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -192,33 +197,9 @@ export function OverviewPage() {
                 )}
               </option>
             ))}
-          </select>
-          {multiMember ? (
-            <select
-              className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
-              value={scopeSelectValue}
-              onChange={(event) => onScopeSelectChange(event.target.value)}
-              aria-label={t("overview.scope")}
-            >
-              <option value="me">{t("overview.scope.me")}</option>
-              {transparent ? (
-                <>
-                  <option value="everyone">
-                    {t("overview.scope.everyone")}
-                  </option>
-                  {peers.map((peer) => (
-                    <option key={peer.userId} value={`member:${peer.userId}`}>
-                      {peer.name}
-                    </option>
-                  ))}
-                </>
-              ) : (
-                <option value="shared">{t("overview.scope.shared")}</option>
-              )}
-            </select>
-          ) : null}
+          </SelectField>
         </div>
-      </header>
+      </section>
 
       {seriesQuery.isLoading ? (
         <Skeleton className="h-72 w-full rounded-lg" />

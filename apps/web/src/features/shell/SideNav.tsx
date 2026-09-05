@@ -52,7 +52,7 @@ export function SideNav({ onSignOut }: SideNavProps) {
         <label className="flex flex-col gap-1 text-xs text-muted">
           {t("locale.label")}
           <select
-            className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+            className="hw-select text-sm"
             value={locale}
             onChange={(event) =>
               setLocale(event.target.value === "en" ? "en" : "pt-BR")

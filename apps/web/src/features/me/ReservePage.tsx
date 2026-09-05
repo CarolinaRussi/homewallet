@@ -262,7 +262,7 @@ export function ReservePage() {
         </div>
         {spaces.length > 1 ? (
           <select
-            className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
+            className="hw-select"
             value={spaceId}
             onChange={(event) => selectSpace(event.target.value)}
           >
@@ -370,7 +370,7 @@ export function ReservePage() {
                 <select
                   name="reservePotId"
                   required
-                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                  className="hw-select-field"
                   defaultValue={pots[0]?.id ?? ""}
                 >
                   {pots.map((pot) => (
@@ -433,7 +433,7 @@ export function ReservePage() {
                 <select
                   name="reservePotId"
                   required
-                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                  className="hw-select-field"
                   defaultValue={pots[0]?.id ?? ""}
                 >
                   {pots.map((pot) => (

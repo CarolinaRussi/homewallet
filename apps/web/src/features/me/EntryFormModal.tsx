@@ -153,7 +153,7 @@ export function EntryFormModal({
                 onChange={(event) =>
                   setEntryKind(event.target.value as EntryKind)
                 }
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                className="hw-select-field"
               >
                 <option value="once">{t("me.kindOnce")}</option>
                 <option value="saving">{t("me.kindSaving")}</option>
@@ -203,7 +203,7 @@ export function EntryFormModal({
                 name="type"
                 required
                 defaultValue={editing?.type ?? "expense"}
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                className="hw-select-field"
               >
                 <option value="income">{t("me.income")}</option>
                 <option value="expense">{t("me.expense")}</option>
@@ -217,7 +217,7 @@ export function EntryFormModal({
               <select
                 name="peerUserId"
                 required
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                className="hw-select-field"
                 defaultValue=""
               >
                 <option value="" disabled>
@@ -262,7 +262,7 @@ export function EntryFormModal({
                 name="reservePotId"
                 required
                 defaultValue={editing?.reservePotId ?? pots[0]?.id ?? ""}
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                className="hw-select-field"
               >
                 {pots.map((pot) => (
                   <option key={pot.id} value={pot.id}>
@@ -280,7 +280,7 @@ export function EntryFormModal({
                   required={!isTransfer}
                   value={categoryId}
                   onChange={(event) => setCategoryId(event.target.value)}
-                  className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                  className="hw-select-field"
                 >
                   <option value="" disabled={!isTransfer}>
                     {isTransfer
@@ -451,7 +451,7 @@ export function EntryFormModal({
                 name="visibility"
                 required
                 defaultValue={editing?.visibility ?? "personal"}
-                className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
+                className="hw-select-field"
               >
                 <option value="personal">{t("me.personal")}</option>
                 <option value="shared">{t("me.shared")}</option>

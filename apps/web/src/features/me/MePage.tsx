@@ -756,7 +756,7 @@ export function MePage() {
         <div className="flex flex-wrap items-center gap-2">
           {spaces.length > 1 ? (
             <select
-              className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
+              className="hw-select"
               value={spaceId}
               onChange={(event) => selectSpace(event.target.value)}
               aria-label={t("me.activeSpace")}
