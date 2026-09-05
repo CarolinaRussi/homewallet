@@ -4,6 +4,7 @@ import {
   createEntryBodySchema,
   monthQuerySchema,
   updateEntryBodySchema,
+  updateEntryCardLineBodySchema,
 } from "@homewallet/shared";
 import type { EntryService } from "../services/entry.service.js";
 
@@ -71,6 +72,16 @@ export function createEntryController(entryService: EntryService) {
       return entryService.addCardLine(
         request.user.sub,
         request.params.entryId,
+        body
+      );
+    },
+
+    updateCardLine(request: FastifyRequest<{ Params: CardLineParams }>) {
+      const body = updateEntryCardLineBodySchema.parse(request.body);
+      return entryService.updateCardLine(
+        request.user.sub,
+        request.params.entryId,
+        request.params.lineId,
         body
       );
     },

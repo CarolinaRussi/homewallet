@@ -83,6 +83,10 @@ export const entryCardLineRepository = {
     });
   },
 
+  save(manager: EntityManager, line: EntryCardLine) {
+    return manager.save(line);
+  },
+
   /** All recurring card lines for a user in a space (with parent entry). */
   listRecurringForUser(
     spaceId: string,

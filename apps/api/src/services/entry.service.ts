@@ -7,6 +7,7 @@ import type {
   EntrySummary,
   EntryVisibility,
   UpdateEntryBody,
+  UpdateEntryCardLineBody,
 } from "@homewallet/shared";
 import {
   cardOthersAmount,
@@ -15,6 +16,7 @@ import {
 } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds, toEntrySummary } from "../lib/entry-mappers.js";
+import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { entryCardLineRepository } from "../repositories/entry-card-line.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
@@ -26,6 +28,28 @@ import type { RecurringService } from "./recurring.service.js";
 import type { ReservePotService } from "./reserve-pot.service.js";
 
 export type InstallmentDeleteScope = "one" | "forward";
+
+function cardLineMonth(line: EntryCardLine) {
+  return line.entry?.occurredOn?.slice(0, 7) ?? "";
+}
+
+function cardLinesForwardFrom(
+  anchor: EntryCardLine,
+  groupLines: EntryCardLine[]
+): EntryCardLine[] {
+  if (anchor.installmentGroupId && anchor.installmentNumber != null) {
+    return groupLines.filter(
+      (row) =>
+        row.installmentNumber != null &&
+        row.installmentNumber >= anchor.installmentNumber!
+    );
+  }
+  if (anchor.recurringGroupId) {
+    const startMonth = cardLineMonth(anchor);
+    return groupLines.filter((row) => cardLineMonth(row) >= startMonth);
+  }
+  return [anchor];
+}
 
 export function createEntryService(
   dataSource: DataSource,
@@ -270,6 +294,36 @@ export function createEntryService(
       installmentCount: fields.installmentCount,
       recurringGroupId: fields.recurringGroupId ?? null,
     });
+  }
+
+  /** After line edits: seeded syncs to sum; manual bumps if lines exceed total. */
+  async function reconcileStatementAmount(
+    manager: EntityManager,
+    entryId: string
+  ) {
+    const affected = await entryRepository.findById(entryId, manager);
+    if (!affected) {
+      return;
+    }
+    const remaining = await entryCardLineRepository.listForEntry(
+      entryId,
+      manager
+    );
+    if (remaining.length === 0 && affected.cardInstallmentSeeded) {
+      await entryRepository.remove(manager, affected);
+      return;
+    }
+    const linesSum = remaining.reduce(
+      (sum, row) => sum + Number(row.amount),
+      0
+    );
+    if (affected.cardInstallmentSeeded) {
+      await entryRepository.updateAmount(manager, entryId, linesSum.toFixed(2));
+      return;
+    }
+    if (linesSum - Number(affected.amount) > 1e-9) {
+      await entryRepository.updateAmount(manager, entryId, linesSum.toFixed(2));
+    }
   }
 
   /** Fresh load — TypeORM identity map keeps stale `cardLines` after append/remove. */
@@ -917,6 +971,91 @@ export function createEntryService(
       });
 
       const summary = await loadEntrySummary(entry.id);
+      if (!summary) {
+        throw new HttpError(500, "Failed to load entry");
+      }
+      return summary;
+    },
+
+    async updateCardLine(
+      userId: string,
+      entryId: string,
+      lineId: string,
+      input: UpdateEntryCardLineBody
+    ): Promise<EntrySummary> {
+      const entry = await entryRepository.findById(entryId, dataSource.manager);
+      if (!entry) {
+        throw new HttpError(404, "Entry not found");
+      }
+      if (entry.userId !== userId) {
+        throw new HttpError(403, "You can only edit your own entries");
+      }
+      await requireMember(userId, entry.spaceId);
+      await requireOwnCategory(entry.spaceId, input.categoryId);
+
+      const line = await entryCardLineRepository.findById(
+        lineId,
+        dataSource.manager
+      );
+      if (!line || line.entryId !== entryId) {
+        throw new HttpError(404, "Card line not found");
+      }
+
+      const scope = input.scope ?? "one";
+      const inSeries = Boolean(
+        line.installmentGroupId || line.recurringGroupId
+      );
+      if (scope === "forward" && !inSeries) {
+        throw new HttpError(
+          400,
+          "scope forward is only for installment or recurring card lines"
+        );
+      }
+
+      await dataSource.transaction(async (manager) => {
+        let targets: EntryCardLine[] = [line];
+        if (scope === "forward" && line.installmentGroupId) {
+          const groupLines =
+            await entryCardLineRepository.findByInstallmentGroup(
+              line.installmentGroupId,
+              manager
+            );
+          targets = cardLinesForwardFrom(line, groupLines);
+        } else if (scope === "forward" && line.recurringGroupId) {
+          const groupLines = await entryCardLineRepository.findByRecurringGroup(
+            line.recurringGroupId,
+            manager
+          );
+          targets = cardLinesForwardFrom(line, groupLines);
+        }
+
+        for (const target of targets) {
+          target.description = input.description;
+          target.amount = input.amount.toFixed(2);
+          target.categoryId = input.categoryId;
+          Reflect.deleteProperty(target, "category");
+          await entryCardLineRepository.save(manager, target);
+        }
+
+        // Editing only this occurrence: detach so future ensure/materialize
+        // templates stay on the remaining series (past untouched).
+        if (scope === "one" && inSeries) {
+          line.installmentGroupId = null;
+          line.installmentNumber = null;
+          line.installmentCount = null;
+          line.recurringGroupId = null;
+          await entryCardLineRepository.save(manager, line);
+        }
+
+        const affectedEntryIds = [
+          ...new Set(targets.map((row) => row.entryId)),
+        ];
+        for (const affectedId of affectedEntryIds) {
+          await reconcileStatementAmount(manager, affectedId);
+        }
+      });
+
+      const summary = await loadEntrySummary(entryId);
       if (!summary) {
         throw new HttpError(500, "Failed to load entry");
       }

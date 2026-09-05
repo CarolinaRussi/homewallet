@@ -59,6 +59,18 @@ export const addEntryCardLineBodySchema = z
 
 export type AddEntryCardLineBody = z.infer<typeof addEntryCardLineBodySchema>;
 
+export const updateEntryCardLineBodySchema = z.object({
+  description: z.string().trim().min(1).max(200),
+  amount: z.coerce.number().positive().finite(),
+  categoryId: z.string().uuid(),
+  /** one = this line only (detaches from series); forward = this and later. */
+  scope: z.enum(["one", "forward"]).optional().default("one"),
+});
+
+export type UpdateEntryCardLineBody = z.infer<
+  typeof updateEntryCardLineBodySchema
+>;
+
 /** Remainder of a statement after detailed lines (cents-safe). */
 export function cardOthersAmount(
   statementAmount: number,

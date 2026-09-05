@@ -94,4 +94,22 @@ assert(
   "future recurring months only after first statement"
 );
 
+/** Edit scope: forward = this month and later; past stays put. */
+function cardLineMonthsForward(startMonth: string, months: string[]): string[] {
+  return months.filter((month) => month >= startMonth);
+}
+
+assert(
+  cardLineMonthsForward("2026-06", ["2026-05", "2026-06", "2026-07"]).join(
+    "|"
+  ) === "2026-06|2026-07",
+  "card line edit forward skips past months"
+);
+assert(
+  cardLineMonthsForward("2026-06", ["2026-05", "2026-06", "2026-07"]).includes(
+    "2026-05"
+  ) === false,
+  "card line edit one/forward never rewrites past"
+);
+
 console.log("entry.card-lines check ok");
