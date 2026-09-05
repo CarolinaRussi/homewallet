@@ -30,6 +30,7 @@ import { CategoryLineDetail20260904150000 } from "./migrations/20260904150000-ca
 import { CardLineInstallments20260904160000 } from "./migrations/20260904160000-card-line-installments.js";
 import { CardLineRecurring20260904200000 } from "./migrations/20260904200000-card-line-recurring.js";
 import { CardLineRecurringSkips20260905010000 } from "./migrations/20260905010000-card-line-recurring-skips.js";
+import { RecurringRulesUserIndex20260905020000 } from "./migrations/20260905020000-recurring-rules-user-index.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -69,6 +70,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       CardLineInstallments20260904160000,
       CardLineRecurring20260904200000,
       CardLineRecurringSkips20260905010000,
+      RecurringRulesUserIndex20260905020000,
     ],
   });
 }

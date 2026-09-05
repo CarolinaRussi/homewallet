@@ -1,6 +1,12 @@
 import type { EntityManager } from "typeorm";
-import { Between, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
+import { Between, In, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
 import { Entry } from "../db/entities/entry.entity.js";
+
+/** Columns loaded by listMineThroughLight — enough for leftover/reserve aggregation. */
+export type EntryFlowRow = Pick<
+  Entry,
+  "type" | "amount" | "occurredOn" | "reservePotId"
+>;
 
 export const entryRepository = {
   listMineForMonth(
@@ -42,6 +48,48 @@ export const entryRepository = {
         occurredOn: LessThanOrEqual(throughDate),
       },
       order: { occurredOn: "ASC", createdAt: "ASC" },
+    });
+  },
+
+  listMineThroughLight(
+    spaceId: string,
+    userId: string,
+    throughDate: string,
+    manager: EntityManager
+  ): Promise<EntryFlowRow[]> {
+    return manager.find(Entry, {
+      where: {
+        spaceId,
+        userId,
+        occurredOn: LessThanOrEqual(throughDate),
+      },
+      select: {
+        type: true,
+        amount: true,
+        occurredOn: true,
+        reservePotId: true,
+      },
+      order: { occurredOn: "ASC", createdAt: "ASC" },
+    });
+  },
+
+  listRecurringForRulesThrough(
+    ruleIds: string[],
+    throughDate: string,
+    manager: EntityManager
+  ) {
+    if (ruleIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return manager.find(Entry, {
+      where: {
+        recurringRuleId: In(ruleIds),
+        occurredOn: LessThanOrEqual(throughDate),
+      },
+      select: {
+        recurringRuleId: true,
+        occurredOn: true,
+      },
     });
   },
 

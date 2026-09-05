@@ -4,6 +4,7 @@ import {
   monthToOccurredOn,
   recurringCoversMonth,
 } from "@homewallet/shared";
+import { monthBounds } from "../lib/entry-mappers.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { recurrenceSkipRepository } from "../repositories/recurrence-skip.repository.js";
 import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
@@ -32,6 +33,18 @@ export async function ensureRecurringThrough(
     skips.map((skip) => `${skip.recurringRuleId}:${skip.month}`)
   );
 
+  const { end: throughDate } = monthBounds(throughMonth);
+  const existingEntries = await entryRepository.listRecurringForRulesThrough(
+    rules.map((rule) => rule.id),
+    throughDate,
+    dataSource.manager
+  );
+  const existingKeys = new Set(
+    existingEntries.map(
+      (entry) => `${entry.recurringRuleId}:${entry.occurredOn}`
+    )
+  );
+
   for (const rule of rules) {
     const endMonth =
       rule.endMonth && rule.endMonth < throughMonth
@@ -50,12 +63,7 @@ export async function ensureRecurringThrough(
       }
 
       const occurredOn = monthToOccurredOn(month);
-      const existing = await entryRepository.findRecurringForMonth(
-        rule.id,
-        occurredOn,
-        dataSource.manager
-      );
-      if (existing) {
+      if (existingKeys.has(`${rule.id}:${occurredOn}`)) {
         continue;
       }
 
@@ -72,6 +80,7 @@ export async function ensureRecurringThrough(
         installmentPlanId: null,
         installmentNumber: null,
       });
+      existingKeys.add(`${rule.id}:${occurredOn}`);
     }
   }
 }

@@ -98,7 +98,7 @@ export function createReservePotService(dataSource: DataSource) {
       dataSource.manager
     );
     const [entries, movements] = await Promise.all([
-      entryRepository.listMineThrough(
+      entryRepository.listMineThroughLight(
         spaceId,
         userId,
         throughAll,

@@ -20,6 +20,8 @@ import { recurringRuleRepository } from "../repositories/recurring-rule.reposito
 import { ensureCardRecurringThrough } from "./card-recurring-generate.js";
 import { ensureRecurringThrough } from "./recurrence-generate.js";
 
+const ensureThroughInflight = new Map<string, Promise<void>>();
+
 function toRuleSummary(rule: RecurringRule): RecurringRuleSummary {
   return {
     id: rule.id,
@@ -75,13 +77,28 @@ export function createRecurringService(dataSource: DataSource) {
 
   return {
     async ensureThrough(userId: string, spaceId: string, throughMonth: string) {
-      await ensureRecurringThrough(dataSource, spaceId, userId, throughMonth);
-      await ensureCardRecurringThrough(
-        dataSource,
-        spaceId,
-        userId,
-        throughMonth
-      );
+      const key = `${spaceId}:${userId}:${throughMonth}`;
+      const inflight = ensureThroughInflight.get(key);
+      if (inflight) {
+        return inflight;
+      }
+
+      const run = (async () => {
+        await ensureRecurringThrough(dataSource, spaceId, userId, throughMonth);
+        await ensureCardRecurringThrough(
+          dataSource,
+          spaceId,
+          userId,
+          throughMonth
+        );
+      })();
+
+      ensureThroughInflight.set(key, run);
+      try {
+        await run;
+      } finally {
+        ensureThroughInflight.delete(key);
+      }
     },
 
     async listRules(

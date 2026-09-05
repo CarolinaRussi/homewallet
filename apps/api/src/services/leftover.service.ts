@@ -159,7 +159,12 @@ export function createLeftoverService(
     await reservePotService.ensureDefaults(userId, spaceId);
 
     const [entries, movements, seeds, monthEntries, pots] = await Promise.all([
-      entryRepository.listMineThrough(spaceId, userId, end, dataSource.manager),
+      entryRepository.listMineThroughLight(
+        spaceId,
+        userId,
+        end,
+        dataSource.manager
+      ),
       reserveMovementRepository.listForUserThrough(
         spaceId,
         userId,
@@ -312,7 +317,6 @@ export function createLeftoverService(
       spaceId: string,
       month: string
     ): Promise<MonthSummary> {
-      await requireMember(userId, spaceId);
       await recurringService.ensureThrough(userId, spaceId, month);
       return loadSummary(userId, spaceId, month);
     },
@@ -331,7 +335,7 @@ export function createLeftoverService(
 
       if (input.type === "withdraw") {
         const [entries, movements, pots] = await Promise.all([
-          entryRepository.listMineThrough(
+          entryRepository.listMineThroughLight(
             spaceId,
             userId,
             input.occurredOn,
