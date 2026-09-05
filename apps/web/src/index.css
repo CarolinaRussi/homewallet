@@ -35,6 +35,13 @@
   --hw-income-fg: #1f6b4a;
   --hw-expense: #f5e0e0;
   --hw-expense-fg: #8b3a3a;
+  --hw-chart-1: #5f8f76;
+  --hw-chart-2: #3d7a6b;
+  --hw-chart-3: #8b6b4a;
+  --hw-chart-4: #6b7a8b;
+  --hw-chart-5: #9a8b5c;
+  --hw-chart-6: #7a6b8b;
+  --hw-chart-other: #9aaba2;
 }
 
 .dark {
@@ -51,6 +58,13 @@
   --hw-income-fg: #a8e0c4;
   --hw-expense: #3d2424;
   --hw-expense-fg: #f0b4b4;
+  --hw-chart-1: #7fad93;
+  --hw-chart-2: #5a9e8f;
+  --hw-chart-3: #b8956e;
+  --hw-chart-4: #8a9aad;
+  --hw-chart-5: #b8a86a;
+  --hw-chart-6: #a08aad;
+  --hw-chart-other: #6b7a72;
 }
 
 @layer base {
