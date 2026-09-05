@@ -19,6 +19,23 @@ export const entryCardRecurringSkipRepository = {
     return manager.save(manager.create(EntryCardRecurringSkip, fields));
   },
 
+  /** Insert skip if missing — safe when deleting a second same-month duplicate. */
+  async ensureSkip(
+    manager: EntityManager,
+    fields: { recurringGroupId: string; month: string }
+  ) {
+    const existing = await manager.findOne(EntryCardRecurringSkip, {
+      where: {
+        recurringGroupId: fields.recurringGroupId,
+        month: fields.month,
+      },
+    });
+    if (existing) {
+      return existing;
+    }
+    return manager.save(manager.create(EntryCardRecurringSkip, fields));
+  },
+
   removeForGroup(manager: EntityManager, recurringGroupId: string) {
     return manager.delete(EntryCardRecurringSkip, { recurringGroupId });
   },

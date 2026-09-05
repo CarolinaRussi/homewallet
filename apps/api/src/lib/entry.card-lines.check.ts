@@ -99,6 +99,26 @@ function cardLineMonthsForward(startMonth: string, months: string[]): string[] {
   return months.filter((month) => month >= startMonth);
 }
 
+/** Edit/delete forward: anchor month + later only; same-month twins excluded. */
+function cardLineIdsForward(
+  anchorId: string,
+  anchorMonth: string,
+  rows: { id: string; month: string }[]
+): string[] {
+  return rows
+    .filter((row) => row.id === anchorId || row.month > anchorMonth)
+    .map((row) => row.id);
+}
+
+assert(
+  cardLineIdsForward("a", "2026-10", [
+    { id: "a", month: "2026-10" },
+    { id: "b", month: "2026-10" },
+    { id: "c", month: "2026-11" },
+  ]).join("|") === "a|c",
+  "forward delete keeps same-month duplicate of another id"
+);
+
 assert(
   cardLineMonthsForward("2026-06", ["2026-05", "2026-06", "2026-07"]).join(
     "|"

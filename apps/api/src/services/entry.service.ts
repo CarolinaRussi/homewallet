@@ -34,6 +34,10 @@ function cardLineMonth(line: EntryCardLine) {
   return line.entry?.occurredOn?.slice(0, 7) ?? "";
 }
 
+/**
+ * This occurrence + later months/parcels only.
+ * Same-month (or same parcel number) duplicates are NOT included — only the anchor id.
+ */
 function cardLinesForwardFrom(
   anchor: EntryCardLine,
   groupLines: EntryCardLine[]
@@ -41,13 +45,16 @@ function cardLinesForwardFrom(
   if (anchor.installmentGroupId && anchor.installmentNumber != null) {
     return groupLines.filter(
       (row) =>
-        row.installmentNumber != null &&
-        row.installmentNumber >= anchor.installmentNumber!
+        row.id === anchor.id ||
+        (row.installmentNumber != null &&
+          row.installmentNumber > anchor.installmentNumber!)
     );
   }
   if (anchor.recurringGroupId) {
     const startMonth = cardLineMonth(anchor);
-    return groupLines.filter((row) => cardLineMonth(row) >= startMonth);
+    return groupLines.filter(
+      (row) => row.id === anchor.id || cardLineMonth(row) > startMonth
+    );
   }
   return [anchor];
 }
@@ -1128,7 +1135,7 @@ export function createEntryService(
           );
         } else if (scope === "one" && recurringGroupId) {
           // Keep the series alive; skip this month so ensureThrough won't recreate it.
-          await entryCardRecurringSkipRepository.create(manager, {
+          await entryCardRecurringSkipRepository.ensureSkip(manager, {
             recurringGroupId,
             month: cardLineMonth(line) || entry.occurredOn.slice(0, 7),
           });
