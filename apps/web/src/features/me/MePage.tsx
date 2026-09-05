@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   AddEntryCardLineBody,
+  CategorySummary,
   CreateEntryBody,
   EntrySummary,
   EntryVisibility,
@@ -45,6 +46,7 @@ import { EntryCardLinesCollapse } from "./EntryCardLinesCollapse";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
 import { fetchMePage, invalidateMonthSummaryAfterWrite } from "./leftover-api";
+import { ME_FORM_STALE_MS, prefetchMeFormQueries } from "./me-query-options";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
 import { clearWelcomeIntent, peekWelcomeIntent } from "./welcome-intent";
 import {
@@ -331,23 +333,13 @@ export function MePage() {
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: fetchSession,
+    staleTime: ME_FORM_STALE_MS,
   });
   const membersQuery = useQuery({
     queryKey: ["space-members", spaceId],
     queryFn: () => fetchSpaceMembers(spaceId!),
-    enabled: Boolean(spaceId),
-  });
-
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", spaceId],
-    queryFn: () => fetchCategories(spaceId!),
-    enabled: Boolean(spaceId),
-  });
-
-  const potsQuery = useQuery({
-    queryKey: ["reserve-pots", spaceId],
-    queryFn: () => fetchReservePots(spaceId!),
-    enabled: Boolean(spaceId),
+    enabled: Boolean(spaceId) && (formOpen || Boolean(editing)),
+    staleTime: ME_FORM_STALE_MS,
   });
 
   const mePageQuery = useQuery({
@@ -355,6 +347,36 @@ export function MePage() {
     queryFn: () => fetchMePage(spaceId!, month),
     enabled: Boolean(spaceId),
   });
+
+  const formDataActive = formOpen || Boolean(editing);
+
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", spaceId],
+    queryFn: () => fetchCategories(spaceId!),
+    enabled: Boolean(spaceId) && formDataActive,
+    staleTime: ME_FORM_STALE_MS,
+  });
+
+  const potsQuery = useQuery({
+    queryKey: ["reserve-pots", spaceId],
+    queryFn: () => fetchReservePots(spaceId!),
+    enabled: Boolean(spaceId) && formDataActive,
+    staleTime: ME_FORM_STALE_MS,
+  });
+
+  const categoriesById = useMemo(() => {
+    const map = new Map<string, CategorySummary>();
+    for (const category of categoriesQuery.data ?? []) {
+      map.set(category.id, category);
+    }
+    return map;
+  }, [categoriesQuery.data]);
+
+  const mePageForMonth =
+    mePageQuery.data?.summary.month === month ? mePageQuery.data : undefined;
+  const mePageLoading =
+    mePageQuery.isLoading || (!mePageForMonth && mePageQuery.isFetching);
+  const mePageRefreshing = mePageQuery.isFetching && Boolean(mePageForMonth);
 
   const saveMutation = useMutation({
     mutationFn: async ({
@@ -389,13 +411,8 @@ export function MePage() {
           (current) => upsertMePageEntry(current, entry)
         );
       }
-      // Invalidate in background so isPending clears when the write finishes.
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      // Invalidate summary in background; entries already patched optimistically.
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
-      void queryClient.invalidateQueries({
-        queryKey: ["reserve-pots", spaceId],
-      });
       void queryClient.invalidateQueries({
         queryKey: ["installment-plans", spaceId],
       });
@@ -420,8 +437,6 @@ export function MePage() {
         ["me-page", spaceId, month],
         (current) => upsertMePageEntry(current, entry)
       );
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
@@ -446,8 +461,6 @@ export function MePage() {
         ["me-page", spaceId, month],
         (current) => upsertMePageEntry(current, entry)
       );
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
@@ -488,8 +501,6 @@ export function MePage() {
               : current
         );
       }
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
@@ -507,8 +518,6 @@ export function MePage() {
         ["me-page", spaceId, month],
         (current) => upsertMePageEntry(current, entry)
       );
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
@@ -556,8 +565,6 @@ export function MePage() {
           ? t("me.recurringAdded")
           : t("me.installmentAdded")
       );
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
         queryKey: ["recurring-rules", spaceId],
@@ -590,8 +597,6 @@ export function MePage() {
     onSuccess: () => {
       setDeletePrompt(null);
       showSuccess(t("me.deleted"));
-      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
         queryKey: ["installment-plans", spaceId],
@@ -610,11 +615,17 @@ export function MePage() {
   }
 
   function openCreateForm() {
+    if (spaceId) {
+      prefetchMeFormQueries(queryClient, spaceId);
+    }
     setEditing(null);
     setFormOpen(true);
   }
 
   function openEditForm(entry: EntrySummary) {
+    if (spaceId) {
+      prefetchMeFormQueries(queryClient, spaceId);
+    }
     setEditing(entry);
     setFormOpen(true);
   }
@@ -652,9 +663,6 @@ export function MePage() {
           return [...current, category];
         }
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["categories", spaceId],
-      });
     },
     onError: (error: Error) => showError(error.message),
   });
@@ -785,9 +793,9 @@ export function MePage() {
         month={month}
         currency={activeSpace.currency}
         entryDateMode={activeSpace.entryDateMode}
-        summary={mePageQuery.data?.summary}
-        summaryLoading={mePageQuery.isLoading}
-        summaryFetching={mePageQuery.isFetching && !mePageQuery.isLoading}
+        summary={mePageForMonth?.summary}
+        summaryLoading={mePageLoading}
+        summaryRefreshing={mePageRefreshing}
         onError={showError}
         onSuccess={showSuccess}
       />
@@ -808,7 +816,7 @@ export function MePage() {
         month={month}
         entryDateMode={activeSpace.entryDateMode}
         categories={categoriesQuery.data ?? []}
-        pots={potsQuery.data ?? []}
+        pots={potsQuery.data ?? mePageForMonth?.summary.pots ?? []}
         peers={(membersQuery.data ?? []).filter(
           (member) => member.userId !== sessionQuery.data?.user.id
         )}
@@ -823,7 +831,7 @@ export function MePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h2 className="font-medium text-fg">{t("me.list")}</h2>
-            {mePageQuery.isFetching && !mePageQuery.isLoading ? (
+            {mePageRefreshing ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                 <Spinner />
                 {t("me.updating")}
@@ -838,25 +846,20 @@ export function MePage() {
             {t("me.addEntry")}
           </button>
         </div>
-        {mePageQuery.isLoading ? (
+        {mePageLoading ? (
           <ListRowsSkeleton />
-        ) : mePageQuery.data?.entries.length === 0 ? (
+        ) : mePageForMonth?.entries.length === 0 ? (
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
-        {!mePageQuery.isLoading ? (
-          <div
-            className={`flex flex-col gap-2 transition-opacity duration-200 ${
-              mePageQuery.isFetching ? "opacity-60" : "opacity-100"
-            }`}
-          >
-            {mePageQuery.data?.entries.map((entry) => {
+        {mePageForMonth ? (
+          <div className="flex flex-col gap-2">
+            {mePageForMonth.entries.map((entry) => {
               const canDetail =
                 entry.type === "expense" &&
-                (((categoriesQuery.data ?? []).find(
-                  (category) => category.id === entry.categoryId
-                )?.lineDetailEnabled ??
-                  false) ||
-                  entry.cardLines.length > 0);
+                (entry.cardLines.length > 0 ||
+                  (entry.categoryId != null &&
+                    categoriesById.get(entry.categoryId)?.lineDetailEnabled ===
+                      true));
 
               return (
                 <article

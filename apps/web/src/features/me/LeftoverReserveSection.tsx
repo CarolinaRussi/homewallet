@@ -27,7 +27,7 @@ type LeftoverReserveSectionProps = {
   entryDateMode: EntryDateMode;
   summary?: MonthSummary;
   summaryLoading?: boolean;
-  summaryFetching?: boolean;
+  summaryRefreshing?: boolean;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 };
@@ -39,7 +39,7 @@ export function LeftoverReserveSection({
   entryDateMode,
   summary,
   summaryLoading = false,
-  summaryFetching = false,
+  summaryRefreshing = false,
   onError,
   onSuccess,
 }: LeftoverReserveSectionProps) {
@@ -99,11 +99,13 @@ export function LeftoverReserveSection({
   }
 
   return (
-    <section
-      className={`flex flex-col gap-4 transition-opacity duration-200 ${
-        summaryFetching ? "opacity-60" : "opacity-100"
-      }`}
-    >
+    <section className="flex flex-col gap-4">
+      {summaryRefreshing ? (
+        <p className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <Spinner />
+          {t("me.updating")}
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-lg border border-border bg-surface p-4">
           <p className="text-sm text-muted">{t("me.income")}</p>
