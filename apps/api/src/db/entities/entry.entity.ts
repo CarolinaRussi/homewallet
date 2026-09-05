@@ -12,6 +12,7 @@ import type { EntryType, EntryVisibility } from "@homewallet/shared";
 import { Category } from "./category.entity.js";
 import { EntryCardLine } from "./entry-card-line.entity.js";
 import { InstallmentPlan } from "./installment-plan.entity.js";
+import { RecurringRule } from "./recurring-rule.entity.js";
 import { ReservePot } from "./reserve-pot.entity.js";
 import { Space } from "./space.entity.js";
 import { User } from "./user.entity.js";
@@ -86,6 +87,10 @@ export class Entry extends BaseEntity {
   @ManyToOne(() => InstallmentPlan, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "installment_plan_id" })
   installmentPlan!: InstallmentPlan | null;
+
+  @ManyToOne(() => RecurringRule, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "recurring_rule_id" })
+  recurringRule!: RecurringRule | null;
 
   @ManyToOne(() => ReservePot, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "reserve_pot_id" })

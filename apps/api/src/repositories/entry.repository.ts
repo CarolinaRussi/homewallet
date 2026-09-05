@@ -19,6 +19,7 @@ export const entryRepository = {
       relations: {
         category: true,
         installmentPlan: true,
+        recurringRule: true,
         reservePot: true,
         user: true,
         counterparty: true,
@@ -59,6 +60,7 @@ export const entryRepository = {
       relations: {
         category: true,
         installmentPlan: true,
+        recurringRule: true,
         reservePot: true,
         user: true,
         counterparty: true,
@@ -82,6 +84,7 @@ export const entryRepository = {
       relations: {
         category: true,
         installmentPlan: true,
+        recurringRule: true,
         reservePot: true,
         user: true,
         counterparty: true,
@@ -136,6 +139,7 @@ export const entryRepository = {
       relations: {
         category: true,
         installmentPlan: true,
+        recurringRule: true,
         reservePot: true,
         user: true,
         counterparty: true,
@@ -209,6 +213,20 @@ export const entryRepository = {
         installmentNumber: MoreThanOrEqual(fromNumber),
       },
       order: { installmentNumber: "ASC" },
+    });
+  },
+
+  listRecurringFromDate(
+    recurringRuleId: string,
+    fromOccurredOn: string,
+    manager: EntityManager
+  ) {
+    return manager.find(Entry, {
+      where: {
+        recurringRuleId,
+        occurredOn: MoreThanOrEqual(fromOccurredOn),
+      },
+      order: { occurredOn: "ASC" },
     });
   },
 

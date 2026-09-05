@@ -21,6 +21,7 @@ import { entryRepository } from "../repositories/entry.repository.js";
 import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurrenceSkipRepository } from "../repositories/recurrence-skip.repository.js";
+import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
 import type { RecurringService } from "./recurring.service.js";
 import type { ReservePotService } from "./reserve-pot.service.js";
 
@@ -489,13 +490,17 @@ export function createEntryService(
       await requireMember(userId, entry.spaceId);
 
       const installmentScope = input.installmentScope ?? "one";
+      const canForwardInstallment =
+        Boolean(entry.installmentPlanId) && entry.installmentNumber != null;
+      const canForwardRecurring = Boolean(entry.recurringRuleId);
       if (
         installmentScope === "forward" &&
-        (!entry.installmentPlanId || entry.installmentNumber == null)
+        !canForwardInstallment &&
+        !canForwardRecurring
       ) {
         throw new HttpError(
           400,
-          "installmentScope forward is only for installment entries"
+          "installmentScope forward is only for installment or recurring entries"
         );
       }
       if (installmentScope === "forward" && input.cardLines !== undefined) {
@@ -559,6 +564,50 @@ export function createEntryService(
           Reflect.deleteProperty(other, "counterparty");
           await entryRepository.save(manager, other);
         });
+
+        const summary = await loadEntrySummary(entry.id);
+        if (!summary) {
+          throw new HttpError(500, "Failed to load entry");
+        }
+        return summary;
+      }
+
+      if (entry.type === "reserve_withdraw") {
+        if (input.type !== undefined) {
+          throw new HttpError(400, "Cannot change reserve withdraw type");
+        }
+        if (input.visibility !== undefined) {
+          throw new HttpError(400, "Reserve withdraw stays personal");
+        }
+        if (input.cardLines !== undefined) {
+          throw new HttpError(400, "Reserve withdraw cannot have card lines");
+        }
+        if (installmentScope === "forward") {
+          throw new HttpError(400, "Reserve withdraw has no installment scope");
+        }
+
+        const potId = input.reservePotId ?? entry.reservePotId;
+        if (!potId) {
+          throw new HttpError(
+            400,
+            "reservePotId is required for reserve withdraw"
+          );
+        }
+        await reservePotService.requireOwnPot(userId, entry.spaceId, potId);
+        const category = await resolveSavingCategory(entry.spaceId);
+        entry.categoryId = category.id;
+        entry.visibility = "personal";
+        entry.reservePotId = potId;
+        if (input.amount !== undefined) entry.amount = input.amount.toFixed(2);
+        if (input.description !== undefined)
+          entry.description = input.description;
+        if (input.occurredOn) entry.occurredOn = input.occurredOn;
+
+        Reflect.deleteProperty(entry, "category");
+        Reflect.deleteProperty(entry, "user");
+        Reflect.deleteProperty(entry, "reservePot");
+        Reflect.deleteProperty(entry, "cardLines");
+        await entryRepository.save(dataSource.manager, entry);
 
         const summary = await loadEntrySummary(entry.id);
         if (!summary) {
@@ -650,47 +699,82 @@ export function createEntryService(
           }
         }
 
-        if (
-          installmentScope !== "forward" ||
-          !entry.installmentPlanId ||
-          entry.installmentNumber == null
-        ) {
+        if (installmentScope !== "forward") {
           return;
         }
 
-        const siblings = await entryRepository.listInstallmentFromNumber(
-          entry.installmentPlanId,
-          entry.installmentNumber,
-          manager
-        );
-        for (const sibling of siblings) {
-          if (sibling.id === entry.id) {
-            continue;
+        if (entry.installmentPlanId && entry.installmentNumber != null) {
+          const siblings = await entryRepository.listInstallmentFromNumber(
+            entry.installmentPlanId,
+            entry.installmentNumber,
+            manager
+          );
+          for (const sibling of siblings) {
+            if (sibling.id === entry.id) {
+              continue;
+            }
+            sibling.type = entry.type;
+            sibling.categoryId = entry.categoryId;
+            sibling.reservePotId = entry.reservePotId;
+            sibling.visibility = entry.visibility;
+            sibling.amount = entry.amount;
+            sibling.description = entry.description;
+            await entryRepository.save(manager, sibling);
           }
-          sibling.type = entry.type;
-          sibling.categoryId = entry.categoryId;
-          sibling.reservePotId = entry.reservePotId;
-          sibling.visibility = entry.visibility;
-          sibling.amount = entry.amount;
-          sibling.description = entry.description;
-          await entryRepository.save(manager, sibling);
+
+          const plan = await installmentPlanRepository.findById(
+            entry.installmentPlanId,
+            manager
+          );
+          if (plan) {
+            if (entry.categoryId) plan.categoryId = entry.categoryId;
+            if (entry.type === "income" || entry.type === "expense") {
+              plan.type = entry.type;
+            }
+            plan.amount = entry.amount;
+            plan.description = entry.description;
+            plan.visibility = entry.visibility;
+            // Avoid stale category relation overwriting categoryId on save.
+            Reflect.deleteProperty(plan, "category");
+            await installmentPlanRepository.save(manager, plan);
+          }
+          return;
         }
 
-        const plan = await installmentPlanRepository.findById(
-          entry.installmentPlanId,
-          manager
-        );
-        if (plan) {
-          if (entry.categoryId) plan.categoryId = entry.categoryId;
-          if (entry.type === "income" || entry.type === "expense") {
-            plan.type = entry.type;
+        if (entry.recurringRuleId) {
+          const siblings = await entryRepository.listRecurringFromDate(
+            entry.recurringRuleId,
+            entry.occurredOn,
+            manager
+          );
+          for (const sibling of siblings) {
+            if (sibling.id === entry.id) {
+              continue;
+            }
+            sibling.type = entry.type;
+            sibling.categoryId = entry.categoryId;
+            sibling.reservePotId = entry.reservePotId;
+            sibling.visibility = entry.visibility;
+            sibling.amount = entry.amount;
+            sibling.description = entry.description;
+            await entryRepository.save(manager, sibling);
           }
-          plan.amount = entry.amount;
-          plan.description = entry.description;
-          plan.visibility = entry.visibility;
-          // Avoid stale category relation overwriting categoryId on save.
-          Reflect.deleteProperty(plan, "category");
-          await installmentPlanRepository.save(manager, plan);
+
+          const rule = await recurringRuleRepository.findById(
+            entry.recurringRuleId,
+            manager
+          );
+          if (rule) {
+            if (entry.categoryId) rule.categoryId = entry.categoryId;
+            if (entry.type === "income" || entry.type === "expense") {
+              rule.type = entry.type;
+            }
+            rule.amount = entry.amount;
+            rule.description = entry.description;
+            rule.visibility = entry.visibility;
+            Reflect.deleteProperty(rule, "category");
+            await recurringRuleRepository.save(manager, rule);
+          }
         }
       });
 

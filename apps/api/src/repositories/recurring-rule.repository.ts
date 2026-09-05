@@ -21,6 +21,10 @@ export const recurringRuleRepository = {
     return manager.save(manager.create(RecurringRule, fields));
   },
 
+  save(manager: EntityManager, rule: RecurringRule) {
+    return manager.save(rule);
+  },
+
   remove(manager: EntityManager, rule: RecurringRule) {
     return manager.remove(rule);
   },
