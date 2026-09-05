@@ -17,6 +17,7 @@ import { entryRepository } from "../repositories/entry.repository.js";
 import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
+import { ensureCardRecurringThrough } from "./card-recurring-generate.js";
 import { ensureRecurringThrough } from "./recurrence-generate.js";
 
 function toRuleSummary(rule: RecurringRule): RecurringRuleSummary {
@@ -73,8 +74,14 @@ export function createRecurringService(dataSource: DataSource) {
   }
 
   return {
-    ensureThrough(userId: string, spaceId: string, throughMonth: string) {
-      return ensureRecurringThrough(dataSource, spaceId, userId, throughMonth);
+    async ensureThrough(userId: string, spaceId: string, throughMonth: string) {
+      await ensureRecurringThrough(dataSource, spaceId, userId, throughMonth);
+      await ensureCardRecurringThrough(
+        dataSource,
+        spaceId,
+        userId,
+        throughMonth
+      );
     },
 
     async listRules(

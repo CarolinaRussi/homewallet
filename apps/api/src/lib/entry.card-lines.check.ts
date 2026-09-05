@@ -1,5 +1,6 @@
 import {
   cardOthersAmount,
+  monthsThrough,
   remainingInstallmentSchedule,
 } from "@homewallet/shared";
 
@@ -80,6 +81,17 @@ assert(
 assert(
   schedule.filter((item) => item.number > 1).length === 2,
   "future parcels only when materializing 2..N"
+);
+
+/** Recurring card line: ensureThrough fills start..through (same as entry recurring). */
+assert(
+  monthsThrough("2026-05", "2026-07").join("|") === "2026-05|2026-06|2026-07",
+  "recurring card months through"
+);
+assert(
+  monthsThrough("2026-05", "2026-07").filter((month) => month > "2026-05")
+    .length === 2,
+  "future recurring months only after first statement"
 );
 
 console.log("entry.card-lines check ok");

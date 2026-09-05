@@ -39,6 +39,9 @@ export class EntryCardLine extends BaseEntity {
   @Column({ name: "installment_count", type: "int", nullable: true })
   installmentCount!: number | null;
 
+  @Column({ name: "recurring_group_id", type: "uuid", nullable: true })
+  recurringGroupId!: string | null;
+
   @ManyToOne(() => Entry, (entry) => entry.cardLines, { onDelete: "CASCADE" })
   @JoinColumn({ name: "entry_id" })
   entry!: Entry;

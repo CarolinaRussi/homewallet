@@ -39,13 +39,23 @@ export const entryCardLineInputSchema = z.object({
 
 export type EntryCardLineInput = z.infer<typeof entryCardLineInputSchema>;
 
-export const addEntryCardLineBodySchema = z.object({
-  description: z.string().trim().min(1).max(200),
-  amount: z.coerce.number().positive().finite(),
-  categoryId: z.string().uuid(),
-  /** When set (>= 2), materializes future statement lines 2..N. */
-  installmentCount: z.coerce.number().int().min(2).max(120).optional(),
-});
+export const addEntryCardLineBodySchema = z
+  .object({
+    description: z.string().trim().min(1).max(200),
+    amount: z.coerce.number().positive().finite(),
+    categoryId: z.string().uuid(),
+    /** When set (>= 2), materializes future statement lines 2..N. */
+    installmentCount: z.coerce.number().int().min(2).max(120).optional(),
+    /** Open-ended subscription on future statements (ensureThrough). */
+    recurring: z.boolean().optional(),
+  })
+  .refine(
+    (body) => !(body.recurring === true && body.installmentCount != null),
+    {
+      message: "Choose installments or recurring, not both",
+      path: ["recurring"],
+    }
+  );
 
 export type AddEntryCardLineBody = z.infer<typeof addEntryCardLineBodySchema>;
 
@@ -262,6 +272,7 @@ export type EntryCardLineSummary = {
   installmentGroupId: string | null;
   installmentNumber: number | null;
   installmentCount: number | null;
+  recurringGroupId: string | null;
 };
 
 export type EntrySummary = {

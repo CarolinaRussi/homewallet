@@ -1,19 +1,22 @@
 import type { EntityManager } from "typeorm";
 import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
 
+type CardLineWriteFields = {
+  categoryId: string;
+  description: string;
+  amount: string;
+  sortOrder: number;
+  installmentGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
+  recurringGroupId?: string | null;
+};
+
 export const entryCardLineRepository = {
   replaceForEntry(
     manager: EntityManager,
     entryId: string,
-    lines: {
-      categoryId: string;
-      description: string;
-      amount: string;
-      sortOrder: number;
-      installmentGroupId?: string | null;
-      installmentNumber?: number | null;
-      installmentCount?: number | null;
-    }[]
+    lines: CardLineWriteFields[]
   ) {
     return (async () => {
       await manager.delete(EntryCardLine, { entryId });
@@ -31,6 +34,7 @@ export const entryCardLineRepository = {
             installmentGroupId: line.installmentGroupId ?? null,
             installmentNumber: line.installmentNumber ?? null,
             installmentCount: line.installmentCount ?? null,
+            recurringGroupId: line.recurringGroupId ?? null,
           })
         )
       );
@@ -41,14 +45,7 @@ export const entryCardLineRepository = {
     manager: EntityManager,
     fields: {
       entryId: string;
-      categoryId: string;
-      description: string;
-      amount: string;
-      sortOrder: number;
-      installmentGroupId?: string | null;
-      installmentNumber?: number | null;
-      installmentCount?: number | null;
-    }
+    } & CardLineWriteFields
   ) {
     return manager.save(manager.create(EntryCardLine, fields));
   },
@@ -77,6 +74,28 @@ export const entryCardLineRepository = {
       where: { installmentGroupId },
       relations: { entry: true },
     });
+  },
+
+  findByRecurringGroup(recurringGroupId: string, manager: EntityManager) {
+    return manager.find(EntryCardLine, {
+      where: { recurringGroupId },
+      relations: { entry: true },
+    });
+  },
+
+  /** All recurring card lines for a user in a space (with parent entry). */
+  listRecurringForUser(
+    spaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
+    return manager
+      .createQueryBuilder(EntryCardLine, "line")
+      .innerJoinAndSelect("line.entry", "entry")
+      .where("entry.space_id = :spaceId", { spaceId })
+      .andWhere("entry.user_id = :userId", { userId })
+      .andWhere("line.recurring_group_id IS NOT NULL")
+      .getMany();
   },
 
   remove(manager: EntityManager, line: EntryCardLine) {

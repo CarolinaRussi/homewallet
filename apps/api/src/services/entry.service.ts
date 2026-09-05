@@ -252,6 +252,7 @@ export function createEntryService(
       installmentGroupId: string | null;
       installmentNumber: number | null;
       installmentCount: number | null;
+      recurringGroupId?: string | null;
     }
   ) {
     const existingLines = await entryCardLineRepository.listForEntry(
@@ -267,6 +268,7 @@ export function createEntryService(
       installmentGroupId: fields.installmentGroupId,
       installmentNumber: fields.installmentNumber,
       installmentCount: fields.installmentCount,
+      recurringGroupId: fields.recurringGroupId ?? null,
     });
   }
 
@@ -835,7 +837,9 @@ export function createEntryService(
       }
 
       const installmentCount = input.installmentCount;
+      const isRecurring = input.recurring === true;
       const installmentGroupId = installmentCount != null ? randomUUID() : null;
+      const recurringGroupId = isRecurring ? randomUUID() : null;
       const startMonth = entry.occurredOn.slice(0, 7);
 
       await dataSource.transaction(async (manager) => {
@@ -846,6 +850,7 @@ export function createEntryService(
           installmentGroupId,
           installmentNumber: installmentCount != null ? 1 : null,
           installmentCount: installmentCount ?? null,
+          recurringGroupId,
         });
 
         if (entry.cardInstallmentSeeded) {
@@ -941,13 +946,19 @@ export function createEntryService(
       }
 
       await dataSource.transaction(async (manager) => {
-        const groupId = line.installmentGroupId;
-        const linesToRemove = groupId
+        const installmentGroupId = line.installmentGroupId;
+        const recurringGroupId = line.recurringGroupId;
+        const linesToRemove = installmentGroupId
           ? await entryCardLineRepository.findByInstallmentGroup(
-              groupId,
+              installmentGroupId,
               manager
             )
-          : [line];
+          : recurringGroupId
+            ? await entryCardLineRepository.findByRecurringGroup(
+                recurringGroupId,
+                manager
+              )
+            : [line];
 
         const affectedEntryIds = [
           ...new Set(linesToRemove.map((row) => row.entryId)),

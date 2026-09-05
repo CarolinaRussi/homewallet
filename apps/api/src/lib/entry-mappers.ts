@@ -29,6 +29,7 @@ function toCardLineSummary(line: EntryCardLine): EntryCardLineSummary {
     installmentGroupId: line.installmentGroupId,
     installmentNumber: line.installmentNumber,
     installmentCount: line.installmentCount,
+    recurringGroupId: line.recurringGroupId,
   };
 }
 
