@@ -1,23 +1,54 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
-import {
-  currentMonthValue,
-  formatEntryDate,
-  formatMoney,
-  shiftMonth,
-} from "../../shared/lib/money";
+import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
 import { ListRowsSkeleton, Skeleton } from "../../shared/ui/Skeleton";
+import { fetchSession } from "../auth/auth-api";
 import { fetchSharedEntries } from "../entries/entry-api";
-import { fetchSpaceMonth } from "../spaces/space-api";
+import { fetchOverviewBreakdown } from "../overview/overview-api";
+import { fetchSpaceMembers, fetchSpaceMonth } from "../spaces/space-api";
 import { useActiveSpace } from "../spaces/use-active-space";
+import { spaceDashboardScope } from "./space-dashboard-scope";
+import { SpaceCategoryBars } from "./SpaceCategoryBars";
+import { SpaceEntryList } from "./SpaceEntryList";
+import { SpaceLimitCard } from "./SpaceLimitCard";
+import { SpaceMonthHero } from "./SpaceMonthHero";
 
 export function SpacePage() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
     useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
   const transparent = activeSpace?.privacyMode === "transparent";
+
+  const sessionQuery = useQuery({
+    queryKey: ["session"],
+    queryFn: fetchSession,
+  });
+
+  const membersQuery = useQuery({
+    queryKey: ["space-members", spaceId],
+    queryFn: () => fetchSpaceMembers(spaceId!),
+    enabled: Boolean(spaceId),
+  });
+
+  const members = membersQuery.data ?? [];
+  const multiMember = members.length > 1;
+  const myUserId = sessionQuery.data?.user.id;
+  const dashboardScope = activeSpace
+    ? spaceDashboardScope(activeSpace.privacyMode, multiMember)
+    : "me";
+
+  const breakdownQuery = useQuery({
+    queryKey: ["space-breakdown", spaceId, month, dashboardScope],
+    queryFn: () =>
+      fetchOverviewBreakdown(spaceId!, {
+        month,
+        scope: dashboardScope,
+      }),
+    enabled: Boolean(spaceId),
+  });
 
   const sharedQuery = useQuery({
     queryKey: ["entries-shared", spaceId, month, activeSpace?.privacyMode],
@@ -38,6 +69,7 @@ export function SpacePage() {
           <Skeleton className="h-9 w-36" />
           <Skeleton className="mt-2 h-4 w-72" />
         </header>
+        <Skeleton className="h-32 w-full rounded-lg" />
         <ListRowsSkeleton />
       </main>
     );
@@ -52,17 +84,24 @@ export function SpacePage() {
     );
   }
 
-  const spaceLimit = spaceMonthQuery.data?.spaceLimit;
-  const pageLoading = sharedQuery.isLoading || spaceMonthQuery.isLoading;
+  const pageLoading =
+    breakdownQuery.isLoading ||
+    sharedQuery.isLoading ||
+    spaceMonthQuery.isLoading;
+  const pageRefreshing =
+    (breakdownQuery.isFetching && !breakdownQuery.isLoading) ||
+    (sharedQuery.isFetching && !sharedQuery.isLoading);
+
+  const heroHint = transparent
+    ? t("space.heroHintTransparent")
+    : t("space.heroHintShared");
 
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-fg">{t("space.title")}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {transparent ? t("space.transparentHint") : t("space.sharedHint")}
-          </p>
+          <p className="mt-1 text-sm text-muted">{t("space.panelHint")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {spaces.length > 1 ? (
@@ -70,6 +109,7 @@ export function SpacePage() {
               className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-fg"
               value={spaceId}
               onChange={(event) => selectSpace(event.target.value)}
+              aria-label={t("overview.space")}
             >
               {spaces.map((space) => (
                 <option key={space.id} value={space.id}>
@@ -82,6 +122,7 @@ export function SpacePage() {
             type="button"
             className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
             onClick={() => setMonth(shiftMonth(month, -1))}
+            aria-label={t("overview.prevMonth")}
           >
             ←
           </button>
@@ -92,14 +133,23 @@ export function SpacePage() {
             type="button"
             className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"
             onClick={() => setMonth(shiftMonth(month, 1))}
+            aria-label={t("overview.nextMonth")}
           >
             →
           </button>
         </div>
       </header>
 
+      {pageRefreshing ? (
+        <p className="text-sm text-muted">{t("me.updating")}</p>
+      ) : null}
+
       {pageLoading ? (
-        <ListRowsSkeleton />
+        <>
+          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-48 w-full rounded-lg" />
+          <ListRowsSkeleton />
+        </>
       ) : (
         <>
           {transparent ? (
@@ -108,157 +158,43 @@ export function SpacePage() {
             </p>
           ) : null}
 
-          {spaceLimit?.progress ? (
-            <article className="rounded-lg border border-border bg-surface p-4">
-              <p className="text-sm font-medium text-fg">{t("limits.space")}</p>
-              <p className="mt-1 text-sm tabular-nums text-muted">
-                {formatMoney(
-                  spaceLimit.progress.current,
-                  activeSpace.currency,
-                  locale
-                )}{" "}
-                /{" "}
-                {formatMoney(
-                  spaceLimit.progress.target,
-                  activeSpace.currency,
-                  locale
-                )}
-              </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
-                <div
-                  className={`h-full rounded-full ${
-                    spaceLimit.progress.overBy > 0
-                      ? "bg-expense-fg"
-                      : "bg-accent"
-                  }`}
-                  style={{
-                    width: `${Math.min(Math.max(spaceLimit.progress.ratio, 0), 1) * 100}%`,
-                  }}
-                />
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                {spaceLimit.progress.overBy > 0
-                  ? `${t("limits.over")}: ${formatMoney(spaceLimit.progress.overBy, activeSpace.currency, locale)}`
-                  : `${t("limits.remaining")}: ${formatMoney(spaceLimit.progress.remaining, activeSpace.currency, locale)}`}
-              </p>
-            </article>
+          <SpaceMonthHero
+            totalExpense={breakdownQuery.data?.totalExpense ?? 0}
+            month={month}
+            currency={activeSpace.currency}
+            hint={heroHint}
+          />
+
+          {spaceMonthQuery.data?.spaceLimit ? (
+            <SpaceLimitCard
+              spaceLimit={spaceMonthQuery.data.spaceLimit}
+              currency={activeSpace.currency}
+            />
           ) : null}
 
-          <section className="flex flex-col gap-2">
-            {sharedQuery.data?.length === 0 ? (
-              <p className="text-sm text-muted">
-                {transparent ? t("space.emptyVisible") : t("space.emptyShared")}
-              </p>
-            ) : null}
-            {sharedQuery.data?.map((entry) => (
-              <article
-                key={entry.id}
-                className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4"
-              >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium text-fg">
-                      {entry.categoryName ?? t("me.kindTransfer")}
-                      {entry.description ? (
-                        <span className="font-normal text-muted">
-                          {" "}
-                          · {entry.description}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {formatEntryDate(
-                        entry.occurredOn,
-                        activeSpace.entryDateMode
-                      )}{" "}
-                      ·{" "}
-                      {entry.type === "income"
-                        ? t("me.income")
-                        : entry.type === "saving"
-                          ? t("me.kindSaving")
-                          : t("me.expense")}{" "}
-                      ·{" "}
-                      {entry.visibility === "shared"
-                        ? t("me.shared")
-                        : t("me.personal")}
-                      {transparent && entry.userName
-                        ? ` · ${entry.userName}`
-                        : null}
-                    </p>
-                  </div>
-                  <p
-                    className={`tabular-nums font-semibold ${
-                      entry.type === "income"
-                        ? "text-income-fg"
-                        : entry.type === "saving"
-                          ? "text-accent"
-                          : "text-expense-fg"
-                    }`}
-                  >
-                    {formatMoney(entry.amount, activeSpace.currency, locale)}
-                  </p>
-                </div>
-                {entry.cardLines.length > 0 ? (
-                  <details className="rounded-md border border-dashed border-border px-3 py-2 text-sm">
-                    <summary className="cursor-pointer text-muted">
-                      {t("me.cardCollapseOpen").replace(
-                        "{n}",
-                        String(entry.cardLines.length)
-                      )}
-                    </summary>
-                    <ul className="mt-2 flex flex-col gap-1.5 border-t border-border/60 pt-2">
-                      {entry.cardLines.map((line) => (
-                        <li
-                          key={line.id}
-                          className="flex flex-wrap items-baseline justify-between gap-2 text-sm"
-                        >
-                          <span className="text-fg">
-                            <span className="text-muted">
-                              {line.categoryName}
-                            </span>
-                            {line.description ? (
-                              <span className="text-muted">
-                                {" "}
-                                · {line.description}
-                              </span>
-                            ) : null}
-                            {line.installmentNumber != null &&
-                            line.installmentCount != null ? (
-                              <span className="text-muted">
-                                {" "}
-                                · {line.installmentNumber}/
-                                {line.installmentCount}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="tabular-nums text-expense-fg">
-                            {formatMoney(
-                              line.amount,
-                              activeSpace.currency,
-                              locale
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                      {entry.cardOthersAmount != null &&
-                      entry.cardOthersAmount > 0 ? (
-                        <li className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-muted">
-                          <span>{t("me.cardOthers")}</span>
-                          <span className="tabular-nums">
-                            {formatMoney(
-                              entry.cardOthersAmount,
-                              activeSpace.currency,
-                              locale
-                            )}
-                          </span>
-                        </li>
-                      ) : null}
-                    </ul>
-                  </details>
-                ) : null}
-              </article>
-            ))}
-          </section>
+          <SpaceCategoryBars
+            slices={breakdownQuery.data?.slices ?? []}
+            currency={activeSpace.currency}
+          />
+
+          <p className="text-sm">
+            <Link
+              to="/overview"
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              {t("space.viewTrend")} →
+            </Link>
+          </p>
+
+          <SpaceEntryList
+            entries={sharedQuery.data ?? []}
+            members={members}
+            myUserId={myUserId}
+            multiMember={multiMember}
+            transparent={transparent}
+            currency={activeSpace.currency}
+            entryDateMode={activeSpace.entryDateMode}
+          />
         </>
       )}
     </main>
