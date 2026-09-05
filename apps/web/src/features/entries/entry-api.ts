@@ -66,10 +66,18 @@ export function updateEntryCardLine(
   });
 }
 
-export function removeEntryCardLine(entryId: string, lineId: string) {
-  return api<EntrySummary | void>(`/entries/${entryId}/card-lines/${lineId}`, {
-    method: "DELETE",
-  });
+export function removeEntryCardLine(
+  entryId: string,
+  lineId: string,
+  scope: "one" | "forward" = "one"
+) {
+  const query = scope === "forward" ? "?scope=forward" : "";
+  return api<EntrySummary | void>(
+    `/entries/${entryId}/card-lines/${lineId}${query}`,
+    {
+      method: "DELETE",
+    }
+  );
 }
 
 export function deleteEntry(

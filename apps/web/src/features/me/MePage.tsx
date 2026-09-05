@@ -448,10 +448,12 @@ export function MePage() {
     mutationFn: async ({
       entryId,
       lineId,
+      scope,
     }: {
       entryId: string;
       lineId: string;
-    }) => removeEntryCardLine(entryId, lineId),
+      scope: "one" | "forward";
+    }) => removeEntryCardLine(entryId, lineId, scope),
     onSuccess: (result, variables) => {
       showSuccess(t("me.cardStatementSaved"));
       if (result && typeof result === "object" && "id" in result) {
@@ -462,6 +464,11 @@ export function MePage() {
         );
       } else {
         flashEntry(variables.entryId);
+        queryClient.setQueryData<EntrySummary[]>(
+          ["entries", spaceId, month],
+          (current) =>
+            (current ?? []).filter((row) => row.id !== variables.entryId)
+        );
       }
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       void queryClient.invalidateQueries({
@@ -978,10 +985,11 @@ export function MePage() {
                           body,
                         })
                       }
-                      onRemoveLine={(lineId) =>
-                        cardLineRemoveMutation.mutate({
+                      onRemoveLine={(lineId, scope) =>
+                        cardLineRemoveMutation.mutateAsync({
                           entryId: entry.id,
                           lineId,
+                          scope,
                         })
                       }
                       onClear={() => cardLineClearMutation.mutate(entry.id)}

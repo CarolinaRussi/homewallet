@@ -1,8 +1,6 @@
 import type { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CardLineRecurringSkips20260905010000
-  implements MigrationInterface
-{
+export class CardLineRecurringSkips20260905010000 implements MigrationInterface {
   name = "CardLineRecurringSkips20260905010000";
 
   async up(queryRunner: QueryRunner): Promise<void> {

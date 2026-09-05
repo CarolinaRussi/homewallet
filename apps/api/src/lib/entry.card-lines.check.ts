@@ -114,8 +114,12 @@ assert(
 
 /** Delete scope: same forward filter — past months stay. */
 assert(
-  cardLineMonthsForward("2026-07", ["2026-05", "2026-06", "2026-07", "2026-08"])
-    .join("|") === "2026-07|2026-08",
+  cardLineMonthsForward("2026-07", [
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08",
+  ]).join("|") === "2026-07|2026-08",
   "card line delete forward keeps past months"
 );
 

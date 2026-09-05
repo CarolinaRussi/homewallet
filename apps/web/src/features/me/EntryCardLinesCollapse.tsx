@@ -22,7 +22,7 @@ type EntryCardLinesCollapseProps = {
   pending: boolean;
   onAdd: (body: AddEntryCardLineBody) => Promise<unknown>;
   onUpdate: (lineId: string, body: UpdateEntryCardLineBody) => Promise<unknown>;
-  onRemoveLine: (lineId: string) => void;
+  onRemoveLine: (lineId: string, scope: "one" | "forward") => Promise<unknown>;
   onClear: () => void;
 };
 
@@ -61,6 +61,8 @@ export function EntryCardLinesCollapse({
     line: EntryCardLineSummary;
     body: Omit<UpdateEntryCardLineBody, "scope">;
   } | null>(null);
+  const [deleteScopePrompt, setDeleteScopePrompt] =
+    useState<EntryCardLineSummary | null>(null);
 
   const ledgerCategories = categories.filter(
     (category) => category.name !== SAVING_CATEGORY_NAME
@@ -163,6 +165,30 @@ export function EntryCardLinesCollapse({
     }
   }
 
+  async function requestRemove(line: EntryCardLineSummary) {
+    if (hasCardLineForwardScope(line)) {
+      setDeleteScopePrompt(line);
+      return;
+    }
+    try {
+      await onRemoveLine(line.id, "one");
+    } catch {
+      // parent shows error
+    }
+  }
+
+  async function applyDeleteScope(scope: "one" | "forward") {
+    if (!deleteScopePrompt) {
+      return;
+    }
+    try {
+      await onRemoveLine(deleteScopePrompt.id, scope);
+      setDeleteScopePrompt(null);
+    } catch {
+      // keep prompt open
+    }
+  }
+
   const formBusy = pending;
 
   return (
@@ -211,12 +237,7 @@ export function EntryCardLinesCollapse({
                   type="button"
                   className="text-xs text-muted underline disabled:opacity-70"
                   disabled={formBusy}
-                  onClick={() => onRemoveLine(line.id)}
-                  title={
-                    line.recurringGroupId || line.installmentGroupId
-                      ? t("me.cardLineRecurringRemoveHint")
-                      : undefined
-                  }
+                  onClick={() => void requestRemove(line)}
                 >
                   {t("me.cardLineRemove")}
                 </button>
@@ -476,6 +497,54 @@ export function EntryCardLinesCollapse({
             {editScopePrompt.line.installmentGroupId
               ? t("me.installmentEditForward")
               : t("me.recurringEditForward")}
+          </button>
+        </ConfirmSheet>
+      ) : null}
+
+      {deleteScopePrompt ? (
+        <ConfirmSheet
+          open
+          title={
+            deleteScopePrompt.installmentGroupId
+              ? t("me.cardLineInstallmentDeleteTitle")
+              : t("me.cardLineRecurringDeleteTitle")
+          }
+          description={
+            deleteScopePrompt.installmentGroupId
+              ? t("me.cardLineInstallmentDeleteHint").replace(
+                  "{n}",
+                  String(deleteScopePrompt.installmentNumber ?? "")
+                )
+              : t("me.cardLineRecurringDeleteHint")
+          }
+          pending={pending}
+          onClose={() => {
+            if (!pending) {
+              setDeleteScopePrompt(null);
+            }
+          }}
+        >
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+            disabled={pending}
+            onClick={() => void applyDeleteScope("one")}
+          >
+            {pending ? <Spinner /> : null}
+            {deleteScopePrompt.installmentGroupId
+              ? t("me.installmentDeleteOne")
+              : t("me.recurringDeleteOne")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium text-fg disabled:opacity-70 sm:py-2"
+            disabled={pending}
+            onClick={() => void applyDeleteScope("forward")}
+          >
+            {pending ? <Spinner /> : null}
+            {deleteScopePrompt.installmentGroupId
+              ? t("me.installmentDeleteForward")
+              : t("me.recurringDeleteForward")}
           </button>
         </ConfirmSheet>
       ) : null}

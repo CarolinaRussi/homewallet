@@ -181,14 +181,19 @@ export const messages = {
     "me.cardLineSchedule": "Tipo",
     "me.cardLineRecurring": "Recorrente",
     "me.cardLineRecurringBadge": "recorrente",
-    "me.cardLineRecurringRemoveHint":
-      "Remove esta assinatura de todas as faturas.",
     "me.cardLineInstallmentEditTitle": "Editar parcela da fatura",
     "me.cardLineInstallmentEditHint":
       "Esta é a parcela {n}. Os meses anteriores não mudam.",
     "me.cardLineRecurringEditTitle": "Editar item recorrente",
     "me.cardLineRecurringEditHint":
       "Os meses anteriores desta assinatura não mudam.",
+    "me.cardLineInstallmentDeleteTitle": "Excluir parcela da fatura",
+    "me.cardLineInstallmentDeleteHint":
+      "Esta é a parcela {n}. Os meses anteriores não são excluídos.",
+    "me.cardLineRecurringDeleteTitle": "Excluir item recorrente",
+    "me.cardLineRecurringDeleteHint":
+      "Os meses anteriores desta assinatura não são excluídos.",
+    "me.recurringDeleteForward": "Este e os próximos",
     "me.cardLineRemove": "Remover",
     "me.cardOthers": "Outros",
     "me.cardOthersLeft": "Cabe até {amount} (Outros)",
@@ -556,14 +561,19 @@ export const messages = {
     "me.cardLineSchedule": "Schedule",
     "me.cardLineRecurring": "Recurring",
     "me.cardLineRecurringBadge": "recurring",
-    "me.cardLineRecurringRemoveHint":
-      "Removes this subscription from all statements.",
     "me.cardLineInstallmentEditTitle": "Edit statement installment",
     "me.cardLineInstallmentEditHint":
       "This is installment {n}. Earlier months stay unchanged.",
     "me.cardLineRecurringEditTitle": "Edit recurring line",
     "me.cardLineRecurringEditHint":
       "Earlier months of this subscription stay unchanged.",
+    "me.cardLineInstallmentDeleteTitle": "Delete statement installment",
+    "me.cardLineInstallmentDeleteHint":
+      "This is installment {n}. Earlier months are not deleted.",
+    "me.cardLineRecurringDeleteTitle": "Delete recurring line",
+    "me.cardLineRecurringDeleteHint":
+      "Earlier months of this subscription are not deleted.",
+    "me.recurringDeleteForward": "This and later months",
     "me.cardLineRemove": "Remove",
     "me.cardOthers": "Others",
     "me.cardOthersLeft": "Up to {amount} left (Others)",
