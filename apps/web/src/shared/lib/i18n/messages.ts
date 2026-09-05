@@ -177,6 +177,11 @@ export const messages = {
     "me.cardLineAdd": "Adicionar item",
     "me.cardInstallments": "Parcelas",
     "me.cardInstallmentsOnce": "À vista",
+    "me.cardLineSchedule": "Tipo",
+    "me.cardLineRecurring": "Recorrente",
+    "me.cardLineRecurringBadge": "recorrente",
+    "me.cardLineRecurringRemoveHint":
+      "Remove esta assinatura de todas as faturas.",
     "me.cardLineRemove": "Remover",
     "me.cardOthers": "Outros",
     "me.cardOthersLeft": "Cabe até {amount} (Outros)",
@@ -540,6 +545,11 @@ export const messages = {
     "me.cardLineAdd": "Add line",
     "me.cardInstallments": "Installments",
     "me.cardInstallmentsOnce": "One-time",
+    "me.cardLineSchedule": "Schedule",
+    "me.cardLineRecurring": "Recurring",
+    "me.cardLineRecurringBadge": "recurring",
+    "me.cardLineRecurringRemoveHint":
+      "Removes this subscription from all statements.",
     "me.cardLineRemove": "Remove",
     "me.cardOthers": "Others",
     "me.cardOthersLeft": "Up to {amount} left (Others)",

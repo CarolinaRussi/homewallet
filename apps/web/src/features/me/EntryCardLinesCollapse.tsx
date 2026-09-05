@@ -10,6 +10,8 @@ import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { formatMoney } from "../../shared/lib/money";
 import { Spinner } from "../../shared/ui/Spinner";
 
+type ScheduleKind = "once" | "installments" | "recurring";
+
 type EntryCardLinesCollapseProps = {
   entry: EntrySummary;
   categories: CategorySummary[];
@@ -34,6 +36,7 @@ export function EntryCardLinesCollapse({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState(0);
   const [categoryId, setCategoryId] = useState("");
+  const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("once");
   const [installmentCount, setInstallmentCount] = useState("");
   const ledgerCategories = categories.filter(
     (category) => category.name !== SAVING_CATEGORY_NAME
@@ -58,6 +61,7 @@ export function EntryCardLinesCollapse({
     setDescription("");
     setAmount(0);
     setCategoryId("");
+    setScheduleKind("once");
     setInstallmentCount("");
   }
 
@@ -66,13 +70,18 @@ export function EntryCardLinesCollapse({
     if (!description.trim() || amount <= 0 || !categoryId) {
       return;
     }
-    const parcels = Number(installmentCount);
     const body: AddEntryCardLineBody = {
       description: description.trim(),
       amount,
       categoryId,
     };
-    if (Number.isInteger(parcels) && parcels >= 2) {
+    if (scheduleKind === "recurring") {
+      body.recurring = true;
+    } else if (scheduleKind === "installments") {
+      const parcels = Number(installmentCount);
+      if (!Number.isInteger(parcels) || parcels < 2) {
+        return;
+      }
       body.installmentCount = parcels;
     }
     try {
@@ -106,6 +115,12 @@ export function EntryCardLinesCollapse({
                     · {line.installmentNumber}/{line.installmentCount}
                   </span>
                 ) : null}
+                {line.recurringGroupId ? (
+                  <span className="text-muted">
+                    {" "}
+                    · {t("me.cardLineRecurringBadge")}
+                  </span>
+                ) : null}
               </span>
               <span className="flex items-center gap-2">
                 <span className="tabular-nums text-expense-fg">
@@ -116,6 +131,11 @@ export function EntryCardLinesCollapse({
                   className="text-xs text-muted underline disabled:opacity-70"
                   disabled={pending}
                   onClick={() => onRemoveLine(line.id)}
+                  title={
+                    line.recurringGroupId
+                      ? t("me.cardLineRecurringRemoveHint")
+                      : undefined
+                  }
                 >
                   {t("me.cardLineRemove")}
                 </button>
@@ -137,7 +157,7 @@ export function EntryCardLinesCollapse({
 
       {adding ? (
         <form
-          className="mt-3 grid gap-2 border-t border-border/60 pt-3 sm:grid-cols-[minmax(0,1.2fr)_6.5rem_minmax(0,1fr)_5rem_auto] sm:items-end"
+          className="mt-3 grid gap-2 border-t border-border/60 pt-3 sm:grid-cols-[minmax(0,1.2fr)_6.5rem_minmax(0,1fr)_minmax(0,7rem)_auto] sm:items-end"
           onSubmit={submitAdd}
         >
           <label className="flex flex-col gap-1 text-xs text-muted">
@@ -185,19 +205,36 @@ export function EntryCardLinesCollapse({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted">
-            {t("me.cardInstallments")}
-            <input
-              type="number"
-              min="2"
-              max="120"
-              value={installmentCount}
+            {t("me.cardLineSchedule")}
+            <select
+              value={scheduleKind}
               disabled={pending}
-              onChange={(event) => setInstallmentCount(event.target.value)}
-              placeholder={t("me.cardInstallmentsOnce")}
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg tabular-nums"
-            />
+              onChange={(event) =>
+                setScheduleKind(event.target.value as ScheduleKind)
+              }
+              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+            >
+              <option value="once">{t("me.cardInstallmentsOnce")}</option>
+              <option value="installments">{t("me.cardInstallments")}</option>
+              <option value="recurring">{t("me.cardLineRecurring")}</option>
+            </select>
           </label>
-          <div className="flex flex-wrap items-center gap-2">
+          {scheduleKind === "installments" ? (
+            <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-full sm:max-w-[8rem]">
+              {t("me.installmentCount")}
+              <input
+                type="number"
+                min="2"
+                max="120"
+                value={installmentCount}
+                disabled={pending}
+                onChange={(event) => setInstallmentCount(event.target.value)}
+                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg tabular-nums"
+                required
+              />
+            </label>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2 sm:col-span-full">
             <button
               type="submit"
               className="inline-flex items-center justify-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-sm text-fg disabled:opacity-70"
