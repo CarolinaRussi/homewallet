@@ -1,0 +1,35 @@
+---
+description: Customer experience — feedback, motion, forms, and loading for every user-facing change
+alwaysApply: true
+---
+
+# Customer experience (HomeWallet)
+
+Every user-facing change must feel **calm, clear, and finished** — not a raw CRUD screen. Prefer the existing patterns in `shared/ui` and `index.css` over one-off hacks.
+
+## Before shipping UI
+
+Ask: can the person tell what happened, what’s loading, and what to do next — without knowing about the network?
+
+## Must-haves
+
+1. **Overlays** — Enter/exit motion. Reuse `ConfirmSheet` / `AppSheet`. Never mount/unmount a modal with a hard cut. Keep mounted until exit finishes.
+2. **Feedback** — Success and errors use the project banner style (`FeedbackBanner` / `hw-feedback` + income/expense surfaces). No bare `text-expense-fg` error lines on a blank background.
+3. **Writes vs refreshes** — Mutation `isPending` ends when the **write** finishes. Do not `await` `invalidateQueries` inside `onSuccess` (blocks the next action). Upsert cache when you can; refetch in the background.
+4. **Loading** — First load: skeletons (`shared/ui/Skeleton`). Refetch / month change with existing data: dim or show a quiet “updating” cue — never flash empty zeros or an empty list as if there were no data.
+5. **After save** — Toast/banner + list row highlight (`hw-entry-flash`) when an entry was added/edited. Person should see the result without hunting.
+6. **Native controls** — `select`, `date`, `month` use token colors / `color-scheme` / shared field classes. Do not leave OS-default “Win98” chrome unstyled when a few CSS lines fix the closed control.
+
+## Prefer
+
+- One shared sheet, one shared feedback banner, tokens from `index.css`
+- Soft motion for presence (overlay, sheet, feedback) — not noise
+- Disabled + spinner only on the control that is actually waiting
+
+## Avoid
+
+- `window.confirm` / `alert`
+- Closing a dialog with no animation
+- Leaving the primary CTA stuck on “saving” while background GETs run
+- Empty states while `isLoading` / no data yet
+- Inventing a new toast/modal system per feature
