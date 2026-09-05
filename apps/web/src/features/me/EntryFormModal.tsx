@@ -49,7 +49,9 @@ export function EntryFormModal({
 }: EntryFormModalProps) {
   const { t } = useLocale();
   const [entryKind, setEntryKind] = useState<EntryKind>(() => {
-    if (editing?.type === "saving") return "saving";
+    if (editing?.type === "saving" || editing?.type === "reserve_withdraw") {
+      return "saving";
+    }
     if (editing?.type === "transfer_out" || editing?.type === "transfer_in") {
       return "transfer";
     }
@@ -66,8 +68,11 @@ export function EntryFormModal({
   }
 
   const formKey = editing?.id ?? "new";
+  const isReserveWithdraw = editing?.type === "reserve_withdraw";
   const isSaving =
-    editing?.type === "saving" || (!editing && entryKind === "saving");
+    editing?.type === "saving" ||
+    isReserveWithdraw ||
+    (!editing && entryKind === "saving");
   const isTransfer =
     editing?.type === "transfer_out" ||
     editing?.type === "transfer_in" ||
@@ -82,7 +87,7 @@ export function EntryFormModal({
     if (!editing) {
       return entryKind;
     }
-    if (editing.type === "saving") {
+    if (editing.type === "saving" || editing.type === "reserve_withdraw") {
       return "saving";
     }
     if (editing.type === "transfer_out" || editing.type === "transfer_in") {
@@ -168,7 +173,9 @@ export function EntryFormModal({
           ) : null}
           {isSaving ? (
             <p className="text-xs text-muted sm:col-span-2">
-              {t("me.savingHint")}
+              {isReserveWithdraw
+                ? t("me.reserveWithdrawHint")
+                : t("me.savingHint")}
             </p>
           ) : null}
           {isTransfer ? (
@@ -188,7 +195,11 @@ export function EntryFormModal({
           ) : null}
 
           {isSaving ? (
-            <input type="hidden" name="type" value="saving" />
+            <input
+              type="hidden"
+              name="type"
+              value={isReserveWithdraw ? "reserve_withdraw" : "saving"}
+            />
           ) : isTransfer ? (
             <input type="hidden" name="type" value="transfer" />
           ) : (

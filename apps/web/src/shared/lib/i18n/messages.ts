@@ -106,6 +106,7 @@ export const messages = {
     "me.entryKind": "Tipo de lançamento",
     "me.kindOnce": "Único (este mês)",
     "me.kindSaving": "Guardar na Poupancinha",
+    "me.kindReserveWithdraw": "Da poupancinha",
     "me.kindTransfer": "Transferência entre membros",
     "me.transferHint":
       "Sai da sua sobra e entra na sobra da outra pessoa. Não conta como gasto do espaço.",
@@ -138,6 +139,11 @@ export const messages = {
       "Essa é a parcela {n}. Aplicar só nela, ou nela e todas as próximas do mesmo plano?",
     "me.installmentEditOne": "Só esta parcela",
     "me.installmentEditForward": "Esta e as próximas",
+    "me.recurringEditTitle": "Editar recorrente",
+    "me.recurringEditHint":
+      "Aplicar só neste mês, ou neste e em todos os próximos da mesma recorrente?",
+    "me.recurringEditOne": "Só este mês",
+    "me.recurringEditForward": "Este e os próximos",
     "me.recurringDeleteTitle": "Excluir recorrente",
     "me.recurringDeleteHint":
       "Quer apagar só este mês, ou parar a recorrente (não gera mais nos próximos meses)?",
@@ -461,6 +467,7 @@ export const messages = {
     "me.entryKind": "Entry kind",
     "me.kindOnce": "One-time (this month)",
     "me.kindSaving": "Save to reserve",
+    "me.kindReserveWithdraw": "From reserve",
     "me.kindTransfer": "Transfer between members",
     "me.transferHint":
       "Leaves your leftover and adds to theirs. Does not count as space spend.",
@@ -492,6 +499,11 @@ export const messages = {
       "This is installment {n}. Apply only to this one, or this and all later ones in the plan?",
     "me.installmentEditOne": "Only this installment",
     "me.installmentEditForward": "This and later ones",
+    "me.recurringEditTitle": "Edit recurring",
+    "me.recurringEditHint":
+      "Apply to this month only, or this and all later months of the same recurring?",
+    "me.recurringEditOne": "Only this month",
+    "me.recurringEditForward": "This and later months",
     "me.recurringDeleteTitle": "Delete recurring",
     "me.recurringDeleteHint":
       "Delete only this month, or stop the recurring rule (no more future months)?",

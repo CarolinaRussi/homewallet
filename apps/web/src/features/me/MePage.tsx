@@ -50,6 +50,22 @@ import {
 } from "./recurring-api";
 import { fetchReservePots } from "./reserve-api";
 
+function entryHasFutureScope(entry: EntrySummary) {
+  if (entry.installmentPlanId && entry.installmentNumber != null) {
+    return (
+      entry.installmentCount == null ||
+      entry.installmentNumber < entry.installmentCount
+    );
+  }
+  if (entry.recurringRuleId) {
+    if (!entry.recurringEndMonth) {
+      return true;
+    }
+    return entry.occurredOn.slice(0, 7) < entry.recurringEndMonth;
+  }
+  return false;
+}
+
 function readEntryBody(
   form: HTMLFormElement,
   entryDateMode: "month" | "day"
@@ -90,6 +106,22 @@ function readEntryBody(
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
     visibility: String(data.get("visibility")) as EntryVisibility,
+    occurredOn,
+  };
+}
+
+function readReserveWithdrawUpdateBody(
+  form: HTMLFormElement,
+  entryDateMode: "month" | "day"
+): UpdateEntryBody {
+  const data = new FormData(form);
+  const rawDate = String(data.get("occurredOn") ?? "");
+  const occurredOn =
+    entryDateMode === "month" ? monthToOccurredOn(rawDate) : rawDate;
+  return {
+    amount: Number(data.get("amount")),
+    reservePotId: String(data.get("reservePotId")),
+    description: String(data.get("description") ?? ""),
     occurredOn,
   };
 }
@@ -159,7 +191,7 @@ export function MePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [deletePrompt, setDeletePrompt] = useState<EntrySummary | null>(null);
-  const [editInstallmentPrompt, setEditInstallmentPrompt] = useState<{
+  const [editScopePrompt, setEditScopePrompt] = useState<{
     entry: EntrySummary;
     body: UpdateEntryBody;
   } | null>(null);
@@ -274,21 +306,27 @@ export function MePage() {
     mutationFn: async ({
       body,
       mode,
+      entryId,
     }: {
       body: CreateEntryBody | UpdateEntryBody;
       mode: "create" | "edit";
+      entryId?: string;
     }) => {
       if (!spaceId) {
         throw new Error("No space");
       }
-      if (mode === "edit" && editing) {
-        return updateEntry(editing.id, body as UpdateEntryBody);
+      if (mode === "edit") {
+        const id = entryId ?? editing?.id;
+        if (!id) {
+          throw new Error("No entry to edit");
+        }
+        return updateEntry(id, body as UpdateEntryBody);
       }
       return createEntry(spaceId, body as CreateEntryBody);
     },
     onSuccess: async (entry, variables) => {
       closeEntryForm();
-      setEditInstallmentPrompt(null);
+      setEditScopePrompt(null);
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
       queryClient.setQueryData<EntrySummary[]>(
@@ -501,11 +539,11 @@ export function MePage() {
   }
 
   function requestDelete(entry: EntrySummary) {
-    if (entry.installmentPlanId && entry.installmentNumber != null) {
-      setDeletePrompt(entry);
-      return;
-    }
-    if (entry.recurringRuleId) {
+    if (
+      ((entry.installmentPlanId && entry.installmentNumber != null) ||
+        entry.recurringRuleId) &&
+      entryHasFutureScope(entry)
+    ) {
       setDeletePrompt(entry);
       return;
     }
@@ -554,13 +592,24 @@ export function MePage() {
         });
         return;
       }
+      if (editing.type === "reserve_withdraw") {
+        saveMutation.mutate({
+          body: readReserveWithdrawUpdateBody(form, activeSpace.entryDateMode),
+          mode: "edit",
+        });
+        return;
+      }
       const body = readEntryUpdateBody(form, activeSpace.entryDateMode);
-      if (editing.installmentPlanId && editing.installmentNumber != null) {
-        setEditInstallmentPrompt({ entry: editing, body });
+      if (
+        ((editing.installmentPlanId && editing.installmentNumber != null) ||
+          editing.recurringRuleId) &&
+        entryHasFutureScope(editing)
+      ) {
+        setEditScopePrompt({ entry: editing, body });
         setFormOpen(false);
         return;
       }
-      saveMutation.mutate({ body, mode: "edit" });
+      saveMutation.mutate({ body, mode: "edit", entryId: editing.id });
       return;
     }
     if (
@@ -741,7 +790,10 @@ export function MePage() {
                                   : t("me.transferFrom")
                               } ${entry.counterpartyName}`
                             : t("me.kindTransfer")
-                          : entry.categoryName}
+                          : entry.type === "reserve_withdraw"
+                            ? (entry.reservePotName ??
+                              t("me.kindReserveWithdraw"))
+                            : entry.categoryName}
                         {entry.description ? (
                           <span className="font-normal text-muted">
                             {" "}
@@ -757,17 +809,20 @@ export function MePage() {
                         ·{" "}
                         {entry.type === "income"
                           ? t("me.income")
-                          : entry.type === "saving"
-                            ? t("me.kindSaving")
-                            : entry.type === "transfer_out"
-                              ? t("me.transferOut")
-                              : entry.type === "transfer_in"
-                                ? t("me.transferIn")
-                                : t("me.expense")}
+                          : entry.type === "reserve_withdraw"
+                            ? t("me.kindReserveWithdraw")
+                            : entry.type === "saving"
+                              ? t("me.kindSaving")
+                              : entry.type === "transfer_out"
+                                ? t("me.transferOut")
+                                : entry.type === "transfer_in"
+                                  ? t("me.transferIn")
+                                  : t("me.expense")}
                         {entry.type === "saving" && entry.reservePotName
                           ? ` · ${entry.reservePotName}`
                           : ""}
                         {entry.type !== "saving" &&
+                        entry.type !== "reserve_withdraw" &&
                         entry.type !== "transfer_out" &&
                         entry.type !== "transfer_in"
                           ? ` · ${
@@ -793,7 +848,8 @@ export function MePage() {
                       <p
                         className={`tabular-nums font-semibold ${
                           entry.type === "income" ||
-                          entry.type === "transfer_in"
+                          entry.type === "transfer_in" ||
+                          entry.type === "reserve_withdraw"
                             ? "text-income-fg"
                             : entry.type === "saving"
                               ? "text-accent"
@@ -865,20 +921,28 @@ export function MePage() {
 
       {welcomeModal}
 
-      {editInstallmentPrompt ? (
+      {editScopePrompt ? (
         <ConfirmSheet
           open
-          title={t("me.installmentEditTitle")}
-          description={t("me.installmentEditHint").replace(
-            "{n}",
-            String(editInstallmentPrompt.entry.installmentNumber ?? "")
-          )}
+          title={
+            editScopePrompt.entry.installmentPlanId
+              ? t("me.installmentEditTitle")
+              : t("me.recurringEditTitle")
+          }
+          description={
+            editScopePrompt.entry.installmentPlanId
+              ? t("me.installmentEditHint").replace(
+                  "{n}",
+                  String(editScopePrompt.entry.installmentNumber ?? "")
+                )
+              : t("me.recurringEditHint")
+          }
           pending={saveMutation.isPending}
           onClose={() => {
             if (!saveMutation.isPending) {
-              setEditing(editInstallmentPrompt.entry);
+              setEditing(editScopePrompt.entry);
               setFormOpen(true);
-              setEditInstallmentPrompt(null);
+              setEditScopePrompt(null);
             }
           }}
         >
@@ -889,15 +953,18 @@ export function MePage() {
             onClick={() =>
               saveMutation.mutate({
                 body: {
-                  ...editInstallmentPrompt.body,
+                  ...editScopePrompt.body,
                   installmentScope: "one",
                 },
                 mode: "edit",
+                entryId: editScopePrompt.entry.id,
               })
             }
           >
             {saveMutation.isPending ? <Spinner /> : null}
-            {t("me.installmentEditOne")}
+            {editScopePrompt.entry.installmentPlanId
+              ? t("me.installmentEditOne")
+              : t("me.recurringEditOne")}
           </button>
           <button
             type="button"
@@ -906,24 +973,27 @@ export function MePage() {
             onClick={() =>
               saveMutation.mutate({
                 body: {
-                  ...editInstallmentPrompt.body,
+                  ...editScopePrompt.body,
                   installmentScope: "forward",
                 },
                 mode: "edit",
+                entryId: editScopePrompt.entry.id,
               })
             }
           >
             {saveMutation.isPending ? <Spinner /> : null}
-            {t("me.installmentEditForward")}
+            {editScopePrompt.entry.installmentPlanId
+              ? t("me.installmentEditForward")
+              : t("me.recurringEditForward")}
           </button>
           <button
             type="button"
             className="rounded-md px-3 py-2.5 text-sm text-muted underline disabled:opacity-70 sm:py-2"
             disabled={saveMutation.isPending}
             onClick={() => {
-              setEditing(editInstallmentPrompt.entry);
+              setEditing(editScopePrompt.entry);
               setFormOpen(true);
-              setEditInstallmentPrompt(null);
+              setEditScopePrompt(null);
             }}
           >
             {t("me.cancel")}

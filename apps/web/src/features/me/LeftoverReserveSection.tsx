@@ -104,7 +104,11 @@ export function LeftoverReserveSection({
         <article className="rounded-lg border border-border bg-surface p-4">
           <p className="text-sm text-muted">{t("me.income")}</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-income-fg">
-            {formatMoney(summary?.income ?? 0, currency, locale)}
+            {formatMoney(
+              (summary?.income ?? 0) + (summary?.withdrawn ?? 0),
+              currency,
+              locale
+            )}
           </p>
         </article>
         <article className="rounded-lg border border-border bg-surface p-4">

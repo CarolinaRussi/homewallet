@@ -110,6 +110,9 @@ export function ReservePage() {
       await queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["entries", spaceId],
+      });
     },
     onError: (error: Error) => {
       setSuccessMessage("");
@@ -153,6 +156,9 @@ export function ReservePage() {
       });
       await queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["entries", spaceId],
       });
     },
     onError: (error: Error) => setErrorMessage(error.message),
