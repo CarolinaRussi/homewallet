@@ -100,6 +100,8 @@ export const messages = {
       "Se quiser, informe a sobra e a Poupancinha que você já tinha pra começar deste mês. Pode pular e fazer isso depois.",
     "welcome.leftoverLabel": "Sobra que já tinha (opcional)",
     "welcome.reserveLabel": "Poupancinha que já tinha (opcional)",
+    "welcome.reserveNeedsPot":
+      "Crie uma caixinha na Poupancinha antes de informar o saldo.",
     "welcome.saveAndContinue": "Salvar e ir pro meu mês",
     "welcome.skip": "Ir pro meu mês sem informar",
     "welcome.goHome": "Ir pra visão geral",
@@ -208,6 +210,7 @@ export const messages = {
     "me.edit": "Editar",
     "me.delete": "Excluir",
     "me.list": "Lançamentos",
+    "me.updating": "Atualizando…",
     "me.empty": "Nenhum lançamento neste mês ainda.",
     "me.newCategory": "Nova categoria",
     "me.addCategory": "Criar categoria",
@@ -461,6 +464,8 @@ export const messages = {
       "Optionally add leftover and reserve you already had to start this month. You can skip and do it later.",
     "welcome.leftoverLabel": "Opening leftover (optional)",
     "welcome.reserveLabel": "Opening reserve (optional)",
+    "welcome.reserveNeedsPot":
+      "Create a reserve pot before adding an opening balance.",
     "welcome.saveAndContinue": "Save and go to My month",
     "welcome.skip": "Go to My month without this",
     "welcome.goHome": "Go to Overview",
@@ -568,6 +573,7 @@ export const messages = {
     "me.edit": "Edit",
     "me.delete": "Delete",
     "me.list": "Entries",
+    "me.updating": "Updating…",
     "me.empty": "No entries this month yet.",
     "me.newCategory": "New category",
     "me.addCategory": "Add category",

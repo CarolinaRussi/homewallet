@@ -10,6 +10,8 @@ import type {
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { occurredOnToMonth, todayIsoDate } from "../../shared/lib/money";
+import { AppSheet } from "../../shared/ui/AppSheet";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { Spinner } from "../../shared/ui/Spinner";
 
 export type EntryKind =
@@ -63,10 +65,6 @@ export function EntryFormModal({
   const [newCategoryLineDetail, setNewCategoryLineDetail] = useState(false);
   const [categoryError, setCategoryError] = useState("");
 
-  if (!open) {
-    return null;
-  }
-
   const formKey = editing?.id ?? "new";
   const isReserveWithdraw = editing?.type === "reserve_withdraw";
   const isSaving =
@@ -119,23 +117,19 @@ export function EntryFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-fg/40 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="entry-form-title"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !formBusy) {
-          onClose();
-        }
-      }}
+    <AppSheet
+      open={open}
+      onClose={onClose}
+      pending={formBusy}
+      labelledBy="entry-form-title"
+      size="lg"
     >
       <form
         key={formKey}
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-surface p-5 shadow-lg"
+        className="flex max-h-[min(90vh,40rem)] flex-col gap-4 overflow-y-auto"
         onSubmit={(event) => onSubmit(event, resolveSubmitKind())}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <h2 id="entry-form-title" className="text-lg font-semibold text-fg">
             {editing ? t("me.editEntry") : t("me.addEntry")}
           </h2>
@@ -328,7 +322,7 @@ export function EntryFormModal({
                     {t("me.categoryLineDetail")}
                   </label>
                   {categoryError ? (
-                    <p className="text-xs text-expense-fg">{categoryError}</p>
+                    <FeedbackBanner tone="error" message={categoryError} />
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -477,7 +471,7 @@ export function EntryFormModal({
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
@@ -496,6 +490,6 @@ export function EntryFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </AppSheet>
   );
 }

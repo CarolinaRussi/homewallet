@@ -11,6 +11,7 @@ import {
   todayIsoDate,
 } from "../../shared/lib/money";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import {
   ListRowsSkeleton,
   PotGridSkeleton,
@@ -275,10 +276,10 @@ export function ReservePage() {
       </header>
 
       {errorMessage ? (
-        <p className="text-sm text-expense-fg">{errorMessage}</p>
+        <FeedbackBanner tone="error" message={errorMessage} />
       ) : null}
       {successMessage ? (
-        <p className="text-sm text-income-fg">{successMessage}</p>
+        <FeedbackBanner tone="success" message={successMessage} />
       ) : null}
 
       {pageLoading ? (

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { Spinner } from "../../shared/ui/Spinner";
 import { deleteAccount, downloadEntriesCsv } from "../auth/auth-api";
 import { clearWelcomeIntent } from "../me/welcome-intent";
@@ -50,7 +51,7 @@ export function AccountPanel() {
       </div>
 
       {errorMessage ? (
-        <p className="text-sm text-expense-fg">{errorMessage}</p>
+        <FeedbackBanner tone="error" message={errorMessage} />
       ) : null}
 
       <div className="flex flex-wrap gap-3">

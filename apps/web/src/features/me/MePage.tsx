@@ -31,13 +31,14 @@ import {
 } from "../entries/entry-api";
 import { mapEntryError } from "../entries/entry-errors";
 import { fetchSpaceMembers } from "../spaces/space-api";
-import { Spinner } from "../../shared/ui/Spinner";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import {
   ListRowsSkeleton,
   Skeleton,
   SummaryCardsSkeleton,
 } from "../../shared/ui/Skeleton";
+import { Spinner } from "../../shared/ui/Spinner";
 import { EntryCardLinesCollapse } from "./EntryCardLinesCollapse";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
@@ -49,6 +50,20 @@ import {
   deleteRecurringRule,
 } from "./recurring-api";
 import { fetchReservePots } from "./reserve-api";
+
+function upsertMonthEntry(
+  current: EntrySummary[] | undefined,
+  entry: EntrySummary
+) {
+  if (!current) {
+    return [entry];
+  }
+  const index = current.findIndex((row) => row.id === entry.id);
+  if (index === -1) {
+    return [entry, ...current];
+  }
+  return current.map((row) => (row.id === entry.id ? entry : row));
+}
 
 function entryHasFutureScope(entry: EntrySummary) {
   if (entry.installmentPlanId && entry.installmentNumber != null) {
@@ -324,24 +339,26 @@ export function MePage() {
       }
       return createEntry(spaceId, body as CreateEntryBody);
     },
-    onSuccess: async (entry, variables) => {
+    onSuccess: (entry, variables) => {
       closeEntryForm();
       setEditScopePrompt(null);
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
-      queryClient.setQueryData<EntrySummary[]>(
-        ["entries", spaceId, month],
-        (current) =>
-          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
-      );
-      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      await queryClient.invalidateQueries({
+      if (entry.occurredOn.slice(0, 7) === month) {
+        queryClient.setQueryData<EntrySummary[]>(
+          ["entries", spaceId, month],
+          (current) => upsertMonthEntry(current, entry)
+        );
+      }
+      // Invalidate in background so isPending clears when the write finishes.
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
       });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["installment-plans", spaceId],
       });
     },
@@ -359,16 +376,15 @@ export function MePage() {
       entryId: string;
       body: AddEntryCardLineBody;
     }) => addEntryCardLine(entryId, body),
-    onSuccess: async (entry) => {
+    onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
       queryClient.setQueryData<EntrySummary[]>(
         ["entries", spaceId, month],
-        (current) =>
-          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
+        (current) => upsertMonthEntry(current, entry)
       );
-      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
     },
@@ -386,21 +402,19 @@ export function MePage() {
       entryId: string;
       lineId: string;
     }) => removeEntryCardLine(entryId, lineId),
-    onSuccess: async (result, variables) => {
+    onSuccess: (result, variables) => {
       showSuccess(t("me.cardStatementSaved"));
       if (result && typeof result === "object" && "id" in result) {
         flashEntry(result.id);
         queryClient.setQueryData<EntrySummary[]>(
           ["entries", spaceId, month],
-          (current) =>
-            current?.map((row) => (row.id === result.id ? result : row)) ??
-            current
+          (current) => upsertMonthEntry(current, result)
         );
       } else {
         flashEntry(variables.entryId);
       }
-      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
     },
@@ -413,16 +427,15 @@ export function MePage() {
   const cardLineClearMutation = useMutation({
     mutationFn: async (entryId: string) =>
       updateEntry(entryId, { cardLines: [] }),
-    onSuccess: async (entry) => {
+    onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
       queryClient.setQueryData<EntrySummary[]>(
         ["entries", spaceId, month],
-        (current) =>
-          current?.map((row) => (row.id === entry.id ? entry : row)) ?? current
+        (current) => upsertMonthEntry(current, entry)
       );
-      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
     },
@@ -465,23 +478,23 @@ export function MePage() {
         firstInstallmentNumber: fields.firstInstallmentNumber,
       });
     },
-    onSuccess: async (_result, variables) => {
+    onSuccess: (_result, variables) => {
       closeEntryForm();
       showSuccess(
         variables.kind === "recurring"
           ? t("me.recurringAdded")
           : t("me.installmentAdded")
       );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["entries", spaceId] }),
-        queryClient.invalidateQueries({ queryKey: ["month-summary", spaceId] }),
-        queryClient.invalidateQueries({
-          queryKey: ["recurring-rules", spaceId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["installment-plans", spaceId],
-        }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["recurring-rules", spaceId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["installment-plans", spaceId],
+      });
     },
     onError: (error: Error) => {
       setSuccessMessage("");
@@ -505,17 +518,17 @@ export function MePage() {
       }
     },
     onMutate: ({ entryId }) => setDeletingEntryId(entryId),
-    onSuccess: async () => {
+    onSuccess: () => {
       setDeletePrompt(null);
       showSuccess(t("me.deleted"));
-      await queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["installment-plans", spaceId],
       });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["recurring-rules", spaceId],
       });
     },
@@ -712,18 +725,12 @@ export function MePage() {
       />
 
       {successMessage || errorMessage ? (
-        <p
-          role="status"
-          className={`sticky top-2 z-10 rounded-md border px-3 py-2 text-sm ${
-            feedbackLeaving ? "hw-feedback-out" : "hw-feedback"
-          } ${
-            successMessage
-              ? "border-accent bg-income text-income-fg"
-              : "border-expense-fg/30 bg-expense text-expense-fg"
-          }`}
-        >
-          {successMessage || errorMessage}
-        </p>
+        <FeedbackBanner
+          tone={successMessage ? "success" : "error"}
+          message={successMessage || errorMessage}
+          leaving={feedbackLeaving}
+          sticky
+        />
       ) : null}
 
       <EntryFormModal
@@ -746,7 +753,15 @@ export function MePage() {
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-medium text-fg">{t("me.list")}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-medium text-fg">{t("me.list")}</h2>
+            {entriesQuery.isFetching && !entriesQuery.isLoading ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                <Spinner />
+                {t("me.updating")}
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
             className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
@@ -760,8 +775,13 @@ export function MePage() {
         ) : entriesQuery.data?.length === 0 ? (
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
-        {!entriesQuery.isLoading
-          ? entriesQuery.data?.map((entry) => {
+        {!entriesQuery.isLoading ? (
+          <div
+            className={`flex flex-col gap-2 transition-opacity duration-200 ${
+              entriesQuery.isFetching ? "opacity-60" : "opacity-100"
+            }`}
+          >
+            {entriesQuery.data?.map((entry) => {
               const canDetail =
                 entry.type === "expense" &&
                 (((categoriesQuery.data ?? []).find(
@@ -915,8 +935,9 @@ export function MePage() {
                   ) : null}
                 </article>
               );
-            })
-          : null}
+            })}
+          </div>
+        ) : null}
       </section>
 
       {welcomeModal}

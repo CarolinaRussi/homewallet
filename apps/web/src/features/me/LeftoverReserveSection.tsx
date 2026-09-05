@@ -98,8 +98,14 @@ export function LeftoverReserveSection({
     );
   }
 
+  const summaryRefreshing = summaryQuery.isFetching && !summaryQuery.isLoading;
+
   return (
-    <section className="flex flex-col gap-4">
+    <section
+      className={`flex flex-col gap-4 transition-opacity duration-200 ${
+        summaryRefreshing ? "opacity-60" : "opacity-100"
+      }`}
+    >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-lg border border-border bg-surface p-4">
           <p className="text-sm text-muted">{t("me.income")}</p>

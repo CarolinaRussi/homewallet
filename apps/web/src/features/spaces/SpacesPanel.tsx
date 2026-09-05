@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { SpaceCardsSkeleton } from "../../shared/ui/Skeleton";
 import { Spinner } from "../../shared/ui/Spinner";
 import { setWelcomeIntent } from "../me/welcome-intent";
@@ -67,7 +68,7 @@ export function SpacesPanel() {
       </div>
 
       {errorMessage ? (
-        <p className="text-sm text-expense-fg">{errorMessage}</p>
+        <FeedbackBanner tone="error" message={errorMessage} />
       ) : null}
 
       {spacesQuery.isLoading ? (

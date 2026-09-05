@@ -3,6 +3,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, monthToOccurredOn } from "../../shared/lib/money";
+import { AppSheet } from "../../shared/ui/AppSheet";
+import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { Spinner } from "../../shared/ui/Spinner";
 import { createLeftoverSeed, createReserveMovement } from "./leftover-api";
 import { fetchReservePots } from "./reserve-api";
@@ -29,6 +31,7 @@ export function WelcomeSpaceModal({
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState("");
+  const [open, setOpen] = useState(true);
   const month = currentMonthValue();
 
   const potsQuery = useQuery({
@@ -55,7 +58,7 @@ export function WelcomeSpaceModal({
       }
       if (reserveAmount > 0) {
         if (!defaultPot) {
-          throw new Error("No reserve pot");
+          throw new Error(t("welcome.reserveNeedsPot"));
         }
         await createReserveMovement(spaceId, {
           type: "seed",
@@ -67,16 +70,22 @@ export function WelcomeSpaceModal({
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["month-summary", spaceId],
       });
-      await queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
       });
-      onDone("me");
+      setOpen(false);
+      window.setTimeout(() => onDone("me"), 220);
     },
     onError: (error: Error) => setErrorMessage(error.message),
   });
+
+  function finish(destination: WelcomeDoneDestination) {
+    setOpen(false);
+    window.setTimeout(() => onDone(destination), 220);
+  }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,24 +94,26 @@ export function WelcomeSpaceModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-fg/40 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="welcome-space-title"
+    <AppSheet
+      open={open}
+      onClose={() => finish("me")}
+      pending={saveMutation.isPending}
+      labelledBy="welcome-space-title"
     >
-      <form
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-lg"
-        onSubmit={onSubmit}
-      >
-        <h2 id="welcome-space-title" className="text-lg font-semibold text-fg">
-          {firstSpace
-            ? t("welcome.firstSpaceTitle")
-            : t("welcome.newSpaceTitle")}
-        </h2>
-        <p className="mt-2 text-sm text-muted">{t("welcome.hint")}</p>
+      <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+        <div>
+          <h2
+            id="welcome-space-title"
+            className="text-lg font-semibold text-fg"
+          >
+            {firstSpace
+              ? t("welcome.firstSpaceTitle")
+              : t("welcome.newSpaceTitle")}
+          </h2>
+          <p className="mt-2 text-sm text-muted">{t("welcome.hint")}</p>
+        </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-3">
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t("welcome.leftoverLabel")}
             <input
@@ -128,10 +139,10 @@ export function WelcomeSpaceModal({
         </div>
 
         {errorMessage ? (
-          <p className="mt-3 text-sm text-expense-fg">{errorMessage}</p>
+          <FeedbackBanner tone="error" message={errorMessage} />
         ) : null}
 
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <button
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 font-medium text-accent-fg disabled:opacity-70"
@@ -146,7 +157,7 @@ export function WelcomeSpaceModal({
             type="button"
             className="rounded-md border border-border px-3 py-2 text-sm text-fg disabled:opacity-70"
             disabled={saveMutation.isPending}
-            onClick={() => onDone("me")}
+            onClick={() => finish("me")}
           >
             {t("welcome.skip")}
           </button>
@@ -154,12 +165,12 @@ export function WelcomeSpaceModal({
             type="button"
             className="rounded-md px-3 py-2 text-sm text-muted underline disabled:opacity-70"
             disabled={saveMutation.isPending}
-            onClick={() => onDone("home")}
+            onClick={() => finish("home")}
           >
             {t("welcome.goHome")}
           </button>
         </div>
       </form>
-    </div>
+    </AppSheet>
   );
 }
