@@ -11,6 +11,7 @@ import { createAuthController } from "./controllers/auth.controller.js";
 import { createCategoryController } from "./controllers/category.controller.js";
 import { createEntryController } from "./controllers/entry.controller.js";
 import { createLeftoverController } from "./controllers/leftover.controller.js";
+import { createMePageController } from "./controllers/me-page.controller.js";
 import { createOverviewController } from "./controllers/overview.controller.js";
 import { createRecurringController } from "./controllers/recurring.controller.js";
 import { createReservePotController } from "./controllers/reserve-pot.controller.js";
@@ -38,6 +39,7 @@ import { createAuthService } from "./services/auth.service.js";
 import { createCategoryService } from "./services/category.service.js";
 import { createEntryService } from "./services/entry.service.js";
 import { createLeftoverService } from "./services/leftover.service.js";
+import { createMePageService } from "./services/me-page.service.js";
 import { createMonthSnapshotService } from "./services/month-snapshot.service.js";
 import { createMailService } from "./services/mail.service.js";
 import { createOverviewService } from "./services/overview.service.js";
@@ -100,6 +102,12 @@ const leftoverService = createLeftoverService(
   dataSource,
   recurringService,
   reservePotService,
+  monthSnapshotService
+);
+const mePageService = createMePageService(
+  entryService,
+  leftoverService,
+  recurringService,
   monthSnapshotService
 );
 const overviewService = createOverviewService(dataSource, recurringService);
@@ -174,6 +182,7 @@ await app.register(async (scoped) =>
     createCategoryController(categoryService),
     createEntryController(entryService),
     createLeftoverController(leftoverService),
+    createMePageController(mePageService),
     createRecurringController(recurringService),
     createReservePotController(reservePotService),
     createOverviewController(overviewService)

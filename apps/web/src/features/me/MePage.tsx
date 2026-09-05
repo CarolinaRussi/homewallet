@@ -7,6 +7,7 @@ import type {
   CreateEntryBody,
   EntrySummary,
   EntryVisibility,
+  MePagePayload,
   UpdateEntryBody,
   UpdateEntryCardLineBody,
 } from "@homewallet/shared";
@@ -26,7 +27,6 @@ import {
   createEntry,
   deleteEntry,
   fetchCategories,
-  fetchMyEntries,
   removeEntryCardLine,
   updateEntry,
   updateEntryCardLine,
@@ -44,7 +44,7 @@ import { Spinner } from "../../shared/ui/Spinner";
 import { EntryCardLinesCollapse } from "./EntryCardLinesCollapse";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
-import { invalidateMonthSummaryAfterWrite } from "./leftover-api";
+import { fetchMePage, invalidateMonthSummaryAfterWrite } from "./leftover-api";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
 import { clearWelcomeIntent, peekWelcomeIntent } from "./welcome-intent";
 import {
@@ -66,6 +66,19 @@ function upsertMonthEntry(
     return [entry, ...current];
   }
   return current.map((row) => (row.id === entry.id ? entry : row));
+}
+
+function upsertMePageEntry(
+  current: MePagePayload | undefined,
+  entry: EntrySummary
+): MePagePayload | undefined {
+  if (!current) {
+    return current;
+  }
+  return {
+    ...current,
+    entries: upsertMonthEntry(current.entries, entry),
+  };
 }
 
 function entryHasFutureScope(entry: EntrySummary) {
@@ -337,9 +350,9 @@ export function MePage() {
     enabled: Boolean(spaceId),
   });
 
-  const entriesQuery = useQuery({
-    queryKey: ["entries", spaceId, month],
-    queryFn: () => fetchMyEntries(spaceId!, month),
+  const mePageQuery = useQuery({
+    queryKey: ["me-page", spaceId, month],
+    queryFn: () => fetchMePage(spaceId!, month),
     enabled: Boolean(spaceId),
   });
 
@@ -371,12 +384,13 @@ export function MePage() {
       showSuccess(variables.mode === "edit" ? t("me.saved") : t("me.added"));
       flashEntry(entry.id);
       if (entry.occurredOn.slice(0, 7) === month) {
-        queryClient.setQueryData<EntrySummary[]>(
-          ["entries", spaceId, month],
-          (current) => upsertMonthEntry(current, entry)
+        queryClient.setQueryData<MePagePayload>(
+          ["me-page", spaceId, month],
+          (current) => upsertMePageEntry(current, entry)
         );
       }
       // Invalidate in background so isPending clears when the write finishes.
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
@@ -402,10 +416,11 @@ export function MePage() {
     onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
-      queryClient.setQueryData<EntrySummary[]>(
-        ["entries", spaceId, month],
-        (current) => upsertMonthEntry(current, entry)
+      queryClient.setQueryData<MePagePayload>(
+        ["me-page", spaceId, month],
+        (current) => upsertMePageEntry(current, entry)
       );
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
@@ -427,10 +442,11 @@ export function MePage() {
     onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
-      queryClient.setQueryData<EntrySummary[]>(
-        ["entries", spaceId, month],
-        (current) => upsertMonthEntry(current, entry)
+      queryClient.setQueryData<MePagePayload>(
+        ["me-page", spaceId, month],
+        (current) => upsertMePageEntry(current, entry)
       );
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
@@ -453,18 +469,26 @@ export function MePage() {
       showSuccess(t("me.cardStatementSaved"));
       if (result && typeof result === "object" && "id" in result) {
         flashEntry(result.id);
-        queryClient.setQueryData<EntrySummary[]>(
-          ["entries", spaceId, month],
-          (current) => upsertMonthEntry(current, result)
+        queryClient.setQueryData<MePagePayload>(
+          ["me-page", spaceId, month],
+          (current) => upsertMePageEntry(current, result)
         );
       } else {
         flashEntry(variables.entryId);
-        queryClient.setQueryData<EntrySummary[]>(
-          ["entries", spaceId, month],
+        queryClient.setQueryData<MePagePayload>(
+          ["me-page", spaceId, month],
           (current) =>
-            (current ?? []).filter((row) => row.id !== variables.entryId)
+            current
+              ? {
+                  ...current,
+                  entries: (current.entries ?? []).filter(
+                    (row) => row.id !== variables.entryId
+                  ),
+                }
+              : current
         );
       }
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
@@ -479,10 +503,11 @@ export function MePage() {
     onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
-      queryClient.setQueryData<EntrySummary[]>(
-        ["entries", spaceId, month],
-        (current) => upsertMonthEntry(current, entry)
+      queryClient.setQueryData<MePagePayload>(
+        ["me-page", spaceId, month],
+        (current) => upsertMePageEntry(current, entry)
       );
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
@@ -531,6 +556,7 @@ export function MePage() {
           ? t("me.recurringAdded")
           : t("me.installmentAdded")
       );
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
@@ -564,6 +590,7 @@ export function MePage() {
     onSuccess: () => {
       setDeletePrompt(null);
       showSuccess(t("me.deleted"));
+      void queryClient.invalidateQueries({ queryKey: ["me-page", spaceId] });
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
       invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
@@ -758,6 +785,9 @@ export function MePage() {
         month={month}
         currency={activeSpace.currency}
         entryDateMode={activeSpace.entryDateMode}
+        summary={mePageQuery.data?.summary}
+        summaryLoading={mePageQuery.isLoading}
+        summaryFetching={mePageQuery.isFetching && !mePageQuery.isLoading}
         onError={showError}
         onSuccess={showSuccess}
       />
@@ -793,7 +823,7 @@ export function MePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h2 className="font-medium text-fg">{t("me.list")}</h2>
-            {entriesQuery.isFetching && !entriesQuery.isLoading ? (
+            {mePageQuery.isFetching && !mePageQuery.isLoading ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                 <Spinner />
                 {t("me.updating")}
@@ -808,18 +838,18 @@ export function MePage() {
             {t("me.addEntry")}
           </button>
         </div>
-        {entriesQuery.isLoading ? (
+        {mePageQuery.isLoading ? (
           <ListRowsSkeleton />
-        ) : entriesQuery.data?.length === 0 ? (
+        ) : mePageQuery.data?.entries.length === 0 ? (
           <p className="text-sm text-muted">{t("me.empty")}</p>
         ) : null}
-        {!entriesQuery.isLoading ? (
+        {!mePageQuery.isLoading ? (
           <div
             className={`flex flex-col gap-2 transition-opacity duration-200 ${
-              entriesQuery.isFetching ? "opacity-60" : "opacity-100"
+              mePageQuery.isFetching ? "opacity-60" : "opacity-100"
             }`}
           >
-            {entriesQuery.data?.map((entry) => {
+            {mePageQuery.data?.entries.map((entry) => {
               const canDetail =
                 entry.type === "expense" &&
                 (((categoriesQuery.data ?? []).find(

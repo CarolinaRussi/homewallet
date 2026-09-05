@@ -361,6 +361,22 @@ export function createEntryService(
     return toEntrySummary(loaded);
   }
 
+  async function queryMineForMonth(
+    userId: string,
+    spaceId: string,
+    month: string
+  ): Promise<EntrySummary[]> {
+    const { start, end } = monthBounds(month);
+    const entries = await entryRepository.listMineForMonth(
+      spaceId,
+      userId,
+      start,
+      end,
+      dataSource.manager
+    );
+    return entries.map(toEntrySummary);
+  }
+
   return {
     async listMine(
       userId: string,
@@ -369,15 +385,16 @@ export function createEntryService(
     ): Promise<EntrySummary[]> {
       await requireMember(userId, spaceId);
       await recurringService.ensureThrough(userId, spaceId, month);
-      const { start, end } = monthBounds(month);
-      const entries = await entryRepository.listMineForMonth(
-        spaceId,
-        userId,
-        start,
-        end,
-        dataSource.manager
-      );
-      return entries.map(toEntrySummary);
+      return queryMineForMonth(userId, spaceId, month);
+    },
+
+    async listMinePrepared(
+      userId: string,
+      spaceId: string,
+      month: string
+    ): Promise<EntrySummary[]> {
+      await requireMember(userId, spaceId);
+      return queryMineForMonth(userId, spaceId, month);
     },
 
     async listShared(

@@ -1,11 +1,11 @@
 import { z } from "zod";
+import { monthQuerySchema, type EntrySummary } from "./entry.js";
 import type {
   BudgetLayersSummary,
   MyLimitSettings,
   ProgressSnapshot,
 } from "./limits.js";
 import type { ReservePotSummary } from "./reserve.js";
-import { monthQuerySchema } from "./entry.js";
 
 /** Legacy contribute still counted in balance math for old rows. */
 export const RESERVE_MOVEMENT_TYPES = [
@@ -80,6 +80,12 @@ export type MonthSummary = {
   budgetLayers: BudgetLayersSummary | null;
   /** True while a background snapshot rebuild is still catching up. */
   stale?: boolean;
+};
+
+/** Aggregated Me tab payload — one ensureThrough, entries + month summary. */
+export type MePagePayload = {
+  entries: EntrySummary[];
+  summary: MonthSummary;
 };
 
 export type MonthFlowBucket = {

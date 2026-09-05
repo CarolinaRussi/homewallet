@@ -273,6 +273,14 @@ export function createLeftoverService(
   }
 
   return {
+    async loadMonthSummary(
+      userId: string,
+      spaceId: string,
+      month: string
+    ): Promise<MonthSummary> {
+      return loadSummary(userId, spaceId, month);
+    },
+
     async getMonthSummary(
       userId: string,
       spaceId: string,

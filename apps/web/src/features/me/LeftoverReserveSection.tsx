@@ -1,7 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { EntryDateMode, ProgressSnapshot } from "@homewallet/shared";
+import type {
+  EntryDateMode,
+  MonthSummary,
+  ProgressSnapshot,
+} from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import {
   formatMoney,
@@ -13,7 +17,6 @@ import { SummaryCardsSkeleton } from "../../shared/ui/Skeleton";
 import {
   createLeftoverSeed,
   deleteLeftoverSeed,
-  fetchMonthSummary,
   invalidateMonthSummaryAfterWrite,
 } from "./leftover-api";
 
@@ -22,6 +25,9 @@ type LeftoverReserveSectionProps = {
   month: string;
   currency: string;
   entryDateMode: EntryDateMode;
+  summary?: MonthSummary;
+  summaryLoading?: boolean;
+  summaryFetching?: boolean;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 };
@@ -31,16 +37,14 @@ export function LeftoverReserveSection({
   month,
   currency,
   entryDateMode,
+  summary,
+  summaryLoading = false,
+  summaryFetching = false,
   onError,
   onSuccess,
 }: LeftoverReserveSectionProps) {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
-
-  const summaryQuery = useQuery({
-    queryKey: ["month-summary", spaceId, month],
-    queryFn: () => fetchMonthSummary(spaceId, month),
-  });
 
   const leftoverSeedMutation = useMutation({
     mutationFn: (body: {
@@ -79,7 +83,6 @@ export function LeftoverReserveSection({
     form.reset();
   }
 
-  const summary = summaryQuery.data;
   const defaultDate =
     entryDateMode === "month"
       ? month
@@ -87,7 +90,7 @@ export function LeftoverReserveSection({
         ? todayIsoDate()
         : `${month}-01`;
 
-  if (summaryQuery.isLoading) {
+  if (summaryLoading) {
     return (
       <section className="flex flex-col gap-4">
         <SummaryCardsSkeleton />
@@ -95,12 +98,10 @@ export function LeftoverReserveSection({
     );
   }
 
-  const summaryRefreshing = summaryQuery.isFetching && !summaryQuery.isLoading;
-
   return (
     <section
       className={`flex flex-col gap-4 transition-opacity duration-200 ${
-        summaryRefreshing ? "opacity-60" : "opacity-100"
+        summaryFetching ? "opacity-60" : "opacity-100"
       }`}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
