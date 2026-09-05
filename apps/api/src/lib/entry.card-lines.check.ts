@@ -34,11 +34,11 @@ assert(cardOthersAmount(10, [10.01]) === -0.01, "overshoot negative");
 
 assert(
   statementAmountAfterLineAdd(1000, false, [200, 50]) === 1000,
-  "manual statement: no total bump"
+  "manual + normal line: no total bump"
 );
 assert(
   cardOthersAmount(1000, [200, 50]) === 750,
-  "manual: Outros shrinks when lines grow"
+  "manual + normal line: Outros shrinks"
 );
 assert(
   statementAmountAfterLineAdd(40, true, [40, 30]) === 70,
@@ -47,6 +47,28 @@ assert(
 assert(
   cardOthersAmount(70, [40, 30]) === 0,
   "seeded fully detailed → Outros 0"
+);
+
+/** Installment onto manual future statement: bump total, keep Outros. */
+function manualAmountAfterInstallmentParcel(
+  currentAmount: number,
+  parcelAmount: number
+): number {
+  return Math.round(currentAmount * 100 + parcelAmount * 100) / 100;
+}
+
+assert(
+  manualAmountAfterInstallmentParcel(979.99, 100) === 1079.99,
+  "manual future + installment: bump total"
+);
+assert(
+  cardOthersAmount(1079.99, [200, 250, 250, 279.99, 100]) === 0,
+  "after bump + parcel line, fully detailed stays Outros 0"
+);
+assert(
+  cardOthersAmount(manualAmountAfterInstallmentParcel(1000, 50), [900, 50]) ===
+    100,
+  "manual future + installment: Outros preserved"
 );
 
 const schedule = remainingInstallmentSchedule("2026-01", 1, 3);

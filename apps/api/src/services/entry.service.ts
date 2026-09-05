@@ -880,23 +880,6 @@ export function createEntryService(
             lineAmount: input.amount,
           });
 
-          const targetLines = await entryCardLineRepository.listForEntry(
-            target.id,
-            manager
-          );
-          if (!target.cardInstallmentSeeded) {
-            const others = cardOthersAmount(
-              Number(target.amount),
-              targetLines.map((row) => Number(row.amount))
-            );
-            if (input.amount - others > 1e-9) {
-              throw new HttpError(
-                400,
-                "Installment does not fit a future statement total"
-              );
-            }
-          }
-
           await appendCardLine(manager, target.id, {
             categoryId: input.categoryId,
             description: input.description,
@@ -906,6 +889,8 @@ export function createEntryService(
             installmentCount,
           });
 
+          // Seeded: sync total to sum(lines). Manual: bump by parcel so Outros stays
+          // (parcel is new bank spend, not something already inside the hand total).
           if (target.cardInstallmentSeeded) {
             const lines = await entryCardLineRepository.listForEntry(
               target.id,
@@ -915,6 +900,12 @@ export function createEntryService(
               manager,
               target.id,
               lines.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2)
+            );
+          } else {
+            await entryRepository.updateAmount(
+              manager,
+              target.id,
+              (Number(target.amount) + input.amount).toFixed(2)
             );
           }
         }
