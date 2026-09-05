@@ -145,9 +145,12 @@ export function createLeftoverService(
           bucket.month < earliest ? bucket.month : earliest,
         month
       );
-      await monthSnapshotService.rebuildFrom(userId, spaceId, backfillFrom);
+      if (!monthSnapshotService.isStale(spaceId, userId, backfillFrom)) {
+        monthSnapshotService.touch(userId, spaceId, backfillFrom);
+      }
     }
 
+    const stale = monthSnapshotService.isStale(spaceId, userId, month);
     const seedSummaries = seeds.map(toSeedSummary);
     const legacyMovements = movements
       .map(toMovementSummary)
@@ -265,6 +268,7 @@ export function createLeftoverService(
           ? progressToward(core.leftover, leftoverAmount)
           : null,
       budgetLayers,
+      stale: stale || undefined,
     };
   }
 
@@ -280,7 +284,7 @@ export function createLeftoverService(
         month
       );
       if (materialized) {
-        await monthSnapshotService.rebuildFrom(userId, spaceId, month);
+        monthSnapshotService.touch(userId, spaceId, month);
       }
       return loadSummary(userId, spaceId, month);
     },

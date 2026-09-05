@@ -14,6 +14,7 @@ import {
   createLeftoverSeed,
   deleteLeftoverSeed,
   fetchMonthSummary,
+  invalidateMonthSummaryAfterWrite,
 } from "./leftover-api";
 
 type LeftoverReserveSectionProps = {
@@ -47,22 +48,18 @@ export function LeftoverReserveSection({
       occurredOn: string;
       description: string;
     }) => createLeftoverSeed(spaceId, body),
-    onSuccess: async () => {
+    onSuccess: () => {
       onSuccess(t("me.leftoverSeeded"));
-      await queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId);
     },
     onError: (error: Error) => onError(error.message),
   });
 
   const deleteLeftoverMutation = useMutation({
     mutationFn: deleteLeftoverSeed,
-    onSuccess: async () => {
+    onSuccess: () => {
       onSuccess(t("me.leftoverSeedDeleted"));
-      await queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId);
     },
     onError: (error: Error) => onError(error.message),
   });

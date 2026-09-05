@@ -161,7 +161,7 @@ export function createRecurringService(
         throw new HttpError(500, "Failed to load recurring rule");
       }
       await ensureThrough(userId, spaceId, input.startMonth);
-      await monthSnapshotService.rebuildFrom(userId, spaceId, input.startMonth);
+      monthSnapshotService.touch(userId, spaceId, input.startMonth);
       return toRuleSummary(loaded);
     },
 
@@ -247,7 +247,7 @@ export function createRecurringService(
       if (!loaded) {
         throw new HttpError(500, "Failed to load installment plan");
       }
-      await monthSnapshotService.rebuildFrom(userId, spaceId, input.startMonth);
+      monthSnapshotService.touch(userId, spaceId, input.startMonth);
       return toPlanSummary(loaded);
     },
 
@@ -268,11 +268,7 @@ export function createRecurringService(
       await requireMember(userId, plan.spaceId);
       await entryRepository.removeByInstallmentPlan(planId, dataSource.manager);
       await installmentPlanRepository.remove(dataSource.manager, plan);
-      await monthSnapshotService.rebuildFrom(
-        userId,
-        plan.spaceId,
-        plan.startMonth
-      );
+      monthSnapshotService.touch(userId, plan.spaceId, plan.startMonth);
     },
   };
 }

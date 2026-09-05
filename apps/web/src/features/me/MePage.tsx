@@ -44,6 +44,7 @@ import { Spinner } from "../../shared/ui/Spinner";
 import { EntryCardLinesCollapse } from "./EntryCardLinesCollapse";
 import { EntryFormModal, type EntryKind } from "./EntryFormModal";
 import { LeftoverReserveSection } from "./LeftoverReserveSection";
+import { invalidateMonthSummaryAfterWrite } from "./leftover-api";
 import { WelcomeSpaceModal, type WelcomeSpaceState } from "./WelcomeSpaceModal";
 import { clearWelcomeIntent, peekWelcomeIntent } from "./welcome-intent";
 import {
@@ -377,9 +378,7 @@ export function MePage() {
       }
       // Invalidate in background so isPending clears when the write finishes.
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
         queryKey: ["reserve-pots", spaceId],
       });
@@ -408,9 +407,7 @@ export function MePage() {
         (current) => upsertMonthEntry(current, entry)
       );
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
       showError(mapEntryError(error, t));
@@ -435,9 +432,7 @@ export function MePage() {
         (current) => upsertMonthEntry(current, entry)
       );
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
       showError(mapEntryError(error, t));
@@ -471,9 +466,7 @@ export function MePage() {
         );
       }
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
       showError(mapEntryError(error, t));
@@ -491,9 +484,7 @@ export function MePage() {
         (current) => upsertMonthEntry(current, entry)
       );
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
     },
     onError: (error: Error) => {
       showError(mapEntryError(error, t));
@@ -541,9 +532,7 @@ export function MePage() {
           : t("me.installmentAdded")
       );
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
         queryKey: ["recurring-rules", spaceId],
       });
@@ -576,9 +565,7 @@ export function MePage() {
       setDeletePrompt(null);
       showSuccess(t("me.deleted"));
       void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
-      void queryClient.invalidateQueries({
-        queryKey: ["month-summary", spaceId],
-      });
+      invalidateMonthSummaryAfterWrite(queryClient, spaceId!);
       void queryClient.invalidateQueries({
         queryKey: ["installment-plans", spaceId],
       });

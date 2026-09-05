@@ -14,6 +14,7 @@ import {
   toSeedSummary,
   type SnapshotCore,
 } from "./month-snapshot.build.js";
+import { createMonthSnapshotQueue } from "./month-snapshot.queue.js";
 import type { ReservePotService } from "./reserve-pot.service.js";
 
 export function createMonthSnapshotService(
@@ -86,6 +87,29 @@ export function createMonthSnapshotService(
     );
   }
 
+  async function rebuildFrom(
+    userId: string,
+    spaceId: string,
+    fromMonth: string,
+    manager: EntityManager = dataSource.manager
+  ) {
+    const rows = await computeSnapshotsFrom(
+      spaceId,
+      userId,
+      fromMonth,
+      manager
+    );
+    for (const row of rows) {
+      await memberMonthSnapshotRepository.upsert(manager, {
+        spaceId,
+        userId,
+        ...row,
+      });
+    }
+  }
+
+  const queue = createMonthSnapshotQueue(rebuildFrom);
+
   return {
     async findCoreForMonth(
       spaceId: string,
@@ -115,32 +139,17 @@ export function createMonthSnapshotService(
       };
     },
 
-    async rebuildFrom(
-      userId: string,
-      spaceId: string,
-      fromMonth: string,
-      manager: EntityManager = dataSource.manager
-    ) {
-      const rows = await computeSnapshotsFrom(
-        spaceId,
-        userId,
-        fromMonth,
-        manager
-      );
-      for (const row of rows) {
-        await memberMonthSnapshotRepository.upsert(manager, {
-          spaceId,
-          userId,
-          ...row,
-        });
-      }
+    rebuildFrom,
+
+    isStale(spaceId: string, userId: string, month: string) {
+      return queue.isStale(spaceId, userId, month);
     },
 
-    async touch(userId: string, spaceId: string, ...months: string[]) {
+    touch(userId: string, spaceId: string, ...months: string[]) {
       if (months.length === 0) {
         return;
       }
-      await this.rebuildFrom(userId, spaceId, earliestMonth(...months));
+      queue.schedule(userId, spaceId, earliestMonth(...months));
     },
 
     computeSnapshotsFrom,

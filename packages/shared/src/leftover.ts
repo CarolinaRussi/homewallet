@@ -78,6 +78,8 @@ export type MonthSummary = {
   personalLimit: ProgressSnapshot | null;
   leftoverTarget: ProgressSnapshot | null;
   budgetLayers: BudgetLayersSummary | null;
+  /** True while a background snapshot rebuild is still catching up. */
+  stale?: boolean;
 };
 
 export type MonthFlowBucket = {
