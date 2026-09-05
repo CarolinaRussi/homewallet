@@ -21,8 +21,8 @@ export function OverviewPage() {
   const [range, setRange] = useState<OverviewRangePreset>("6");
   const [scope, setScope] = useState<OverviewScope>("me");
   const [memberUserId, setMemberUserId] = useState<string | undefined>();
-  const [endMonth, setEndMonth] = useState(currentMonthValue);
   const [compositionMonth, setCompositionMonth] = useState(currentMonthValue);
+  const endMonth = currentMonthValue();
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -227,9 +227,7 @@ export function OverviewPage() {
           points={seriesQuery.data.points}
           includesIncome={seriesQuery.data.includesIncome}
           currency={activeSpace.currency}
-          endMonth={endMonth}
-          onEndMonthChange={setEndMonth}
-          shiftMonth={shiftMonth}
+          range={range}
         />
       ) : (
         <p className="text-sm text-muted">{t("overview.hint")}</p>
