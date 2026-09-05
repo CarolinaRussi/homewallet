@@ -251,21 +251,44 @@ export function MePage() {
     }
   }
 
-  function showSuccess(message: string) {
+  function dismissFeedback() {
     clearFeedbackTimers();
-    setErrorMessage("");
     setFeedbackLeaving(false);
-    setSuccessMessage(message);
+    setSuccessMessage("");
+    setErrorMessage("");
+  }
+
+  function scheduleFeedbackClear(clearMessage: () => void, holdMs: number) {
+    clearFeedbackTimers();
+    setFeedbackLeaving(false);
     feedbackClearRef.current = window.setTimeout(() => {
       setFeedbackLeaving(true);
       feedbackClearRef.current = null;
       feedbackHideRef.current = window.setTimeout(() => {
-        setSuccessMessage("");
+        clearMessage();
         setFeedbackLeaving(false);
         feedbackHideRef.current = null;
       }, 350);
-    }, 2200);
+    }, holdMs);
   }
+
+  function showSuccess(message: string) {
+    setErrorMessage("");
+    setSuccessMessage(message);
+    scheduleFeedbackClear(() => setSuccessMessage(""), 2200);
+  }
+
+  function showError(message: string) {
+    setSuccessMessage("");
+    setErrorMessage(message);
+    scheduleFeedbackClear(() => setErrorMessage(""), 5000);
+  }
+
+  useEffect(() => {
+    dismissFeedback();
+    // Context change: stale success/error must not stick across months/spaces.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only month/space
+  }, [month, spaceId]);
 
   function flashEntry(entryId: string) {
     setHighlightEntryId(entryId);
@@ -363,8 +386,7 @@ export function MePage() {
       });
     },
     onError: (error: Error) => {
-      setSuccessMessage("");
-      setErrorMessage(error.message);
+      showError(error.message);
     },
   });
 
@@ -389,8 +411,7 @@ export function MePage() {
       });
     },
     onError: (error: Error) => {
-      setSuccessMessage("");
-      setErrorMessage(mapEntryError(error, t));
+      showError(mapEntryError(error, t));
     },
   });
 
@@ -419,8 +440,7 @@ export function MePage() {
       });
     },
     onError: (error: Error) => {
-      setSuccessMessage("");
-      setErrorMessage(mapEntryError(error, t));
+      showError(mapEntryError(error, t));
     },
   });
 
@@ -440,8 +460,7 @@ export function MePage() {
       });
     },
     onError: (error: Error) => {
-      setSuccessMessage("");
-      setErrorMessage(mapEntryError(error, t));
+      showError(mapEntryError(error, t));
     },
   });
 
@@ -497,8 +516,7 @@ export function MePage() {
       });
     },
     onError: (error: Error) => {
-      setSuccessMessage("");
-      setErrorMessage(error.message);
+      showError(error.message);
     },
   });
 
@@ -532,7 +550,7 @@ export function MePage() {
         queryKey: ["recurring-rules", spaceId],
       });
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error: Error) => showError(error.message),
     onSettled: () => setDeletingEntryId(null),
   });
 
@@ -588,7 +606,7 @@ export function MePage() {
         queryKey: ["categories", spaceId],
       });
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error: Error) => showError(error.message),
   });
 
   function onSubmit(event: FormEvent<HTMLFormElement>, entryKind: EntryKind) {
@@ -717,10 +735,7 @@ export function MePage() {
         month={month}
         currency={activeSpace.currency}
         entryDateMode={activeSpace.entryDateMode}
-        onError={(message) => {
-          setSuccessMessage("");
-          setErrorMessage(message);
-        }}
+        onError={showError}
         onSuccess={showSuccess}
       />
 
