@@ -112,4 +112,11 @@ assert(
   "card line edit one/forward never rewrites past"
 );
 
+/** Delete scope: same forward filter — past months stay. */
+assert(
+  cardLineMonthsForward("2026-07", ["2026-05", "2026-06", "2026-07", "2026-08"])
+    .join("|") === "2026-07|2026-08",
+  "card line delete forward keeps past months"
+);
+
 console.log("entry.card-lines check ok");

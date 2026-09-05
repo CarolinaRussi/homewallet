@@ -12,7 +12,7 @@ type SpaceParams = { spaceId: string };
 type EntryParams = { entryId: string };
 type CardLineParams = { entryId: string; lineId: string };
 type MonthQuery = { month?: string };
-type DeleteQuery = { installmentScope?: string };
+type DeleteQuery = { installmentScope?: string; scope?: string };
 
 function resolveMonth(query: MonthQuery) {
   if (query.month) {
@@ -25,6 +25,10 @@ function resolveMonth(query: MonthQuery) {
 
 function resolveInstallmentScope(query: DeleteQuery) {
   return query.installmentScope === "forward" ? "forward" : "one";
+}
+
+function resolveCardLineScope(query: { scope?: string }) {
+  return query.scope === "forward" ? "forward" : "one";
 }
 
 export function createEntryController(entryService: EntryService) {
@@ -87,13 +91,17 @@ export function createEntryController(entryService: EntryService) {
     },
 
     async removeCardLine(
-      request: FastifyRequest<{ Params: CardLineParams }>,
+      request: FastifyRequest<{
+        Params: CardLineParams;
+        Querystring: { scope?: string };
+      }>,
       reply: FastifyReply
     ) {
       const result = await entryService.removeCardLine(
         request.user.sub,
         request.params.entryId,
-        request.params.lineId
+        request.params.lineId,
+        resolveCardLineScope(request.query)
       );
       if (!result) {
         return reply.code(204).send();

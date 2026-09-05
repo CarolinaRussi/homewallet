@@ -19,6 +19,7 @@ import { monthBounds, toEntrySummary } from "../lib/entry-mappers.js";
 import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { entryCardLineRepository } from "../repositories/entry-card-line.repository.js";
+import { entryCardRecurringSkipRepository } from "../repositories/entry-card-recurring-skip.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
@@ -1065,7 +1066,8 @@ export function createEntryService(
     async removeCardLine(
       userId: string,
       entryId: string,
-      lineId: string
+      lineId: string,
+      scope: InstallmentDeleteScope = "one"
     ): Promise<EntrySummary | null> {
       const entry = await entryRepository.findById(entryId, dataSource.manager);
       if (!entry) {
@@ -1084,20 +1086,53 @@ export function createEntryService(
         throw new HttpError(404, "Card line not found");
       }
 
+      const inSeries = Boolean(
+        line.installmentGroupId || line.recurringGroupId
+      );
+      if (scope === "forward" && !inSeries) {
+        throw new HttpError(
+          400,
+          "scope forward is only for installment or recurring card lines"
+        );
+      }
+
       await dataSource.transaction(async (manager) => {
-        const installmentGroupId = line.installmentGroupId;
+        let linesToRemove: EntryCardLine[] = [line];
         const recurringGroupId = line.recurringGroupId;
-        const linesToRemove = installmentGroupId
-          ? await entryCardLineRepository.findByInstallmentGroup(
+        const installmentGroupId = line.installmentGroupId;
+
+        if (scope === "forward" && installmentGroupId) {
+          const groupLines =
+            await entryCardLineRepository.findByInstallmentGroup(
               installmentGroupId,
               manager
-            )
-          : recurringGroupId
-            ? await entryCardLineRepository.findByRecurringGroup(
-                recurringGroupId,
-                manager
-              )
-            : [line];
+            );
+          linesToRemove = cardLinesForwardFrom(line, groupLines);
+        } else if (scope === "forward" && recurringGroupId) {
+          const groupLines = await entryCardLineRepository.findByRecurringGroup(
+            recurringGroupId,
+            manager
+          );
+          linesToRemove = cardLinesForwardFrom(line, groupLines);
+          // Past months keep amounts as one-offs; stop ensureThrough for this group.
+          for (const pastLine of groupLines) {
+            if (linesToRemove.some((row) => row.id === pastLine.id)) {
+              continue;
+            }
+            pastLine.recurringGroupId = null;
+            await entryCardLineRepository.save(manager, pastLine);
+          }
+          await entryCardRecurringSkipRepository.removeForGroup(
+            manager,
+            recurringGroupId
+          );
+        } else if (scope === "one" && recurringGroupId) {
+          // Keep the series alive; skip this month so ensureThrough won't recreate it.
+          await entryCardRecurringSkipRepository.create(manager, {
+            recurringGroupId,
+            month: cardLineMonth(line) || entry.occurredOn.slice(0, 7),
+          });
+        }
 
         const affectedEntryIds = [
           ...new Set(linesToRemove.map((row) => row.entryId)),
@@ -1109,30 +1144,11 @@ export function createEntryService(
         );
 
         for (const affectedId of affectedEntryIds) {
-          const affected = await entryRepository.findById(affectedId, manager);
-          if (!affected) {
-            continue;
-          }
-          const remaining = await entryCardLineRepository.listForEntry(
-            affectedId,
-            manager
-          );
-          if (remaining.length === 0 && affected.cardInstallmentSeeded) {
-            await entryRepository.remove(manager, affected);
-            continue;
-          }
-          if (affected.cardInstallmentSeeded && remaining.length > 0) {
-            await entryRepository.updateAmount(
-              manager,
-              affectedId,
-              remaining
-                .reduce((sum, row) => sum + Number(row.amount), 0)
-                .toFixed(2)
-            );
-          }
+          await reconcileStatementAmount(manager, affectedId);
         }
       });
 
+      // Statement may have been removed if it was seeded and emptied.
       return loadEntrySummary(entryId);
     },
 

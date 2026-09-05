@@ -54,9 +54,11 @@ export async function registerLedgerRoutes(
     "/entries/:entryId/card-lines/:lineId",
     (request) => entryController.updateCardLine(request)
   );
-  app.delete<{ Params: { entryId: string; lineId: string } }>(
-    "/entries/:entryId/card-lines/:lineId",
-    (request, reply) => entryController.removeCardLine(request, reply)
+  app.delete<{
+    Params: { entryId: string; lineId: string };
+    Querystring: { scope?: string };
+  }>("/entries/:entryId/card-lines/:lineId", (request, reply) =>
+    entryController.removeCardLine(request, reply)
   );
   app.delete<{
     Params: { entryId: string };

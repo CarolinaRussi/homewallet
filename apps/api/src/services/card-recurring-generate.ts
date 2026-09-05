@@ -6,6 +6,7 @@ import {
 } from "@homewallet/shared";
 import { monthBounds } from "../lib/entry-mappers.js";
 import { entryCardLineRepository } from "../repositories/entry-card-line.repository.js";
+import { entryCardRecurringSkipRepository } from "../repositories/entry-card-recurring-skip.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 
 async function preferCardStatementEntry(
@@ -192,6 +193,13 @@ export async function ensureCardRecurringThrough(
   }
 
   const groups = buildRecurringGroups(lines);
+  const skips = await entryCardRecurringSkipRepository.listForGroups(
+    groups.map((group) => group.recurringGroupId),
+    dataSource.manager
+  );
+  const skipKeys = new Set(
+    skips.map((skip) => `${skip.recurringGroupId}:${skip.month}`)
+  );
 
   await dataSource.transaction(async (manager) => {
     for (const group of groups) {
@@ -200,6 +208,9 @@ export async function ensureCardRecurringThrough(
       }
       for (const month of monthsThrough(group.startMonth, throughMonth)) {
         if (group.monthsWithLine.has(month)) {
+          continue;
+        }
+        if (skipKeys.has(`${group.recurringGroupId}:${month}`)) {
           continue;
         }
         const target = await ensureCardStatementEntry(manager, {
