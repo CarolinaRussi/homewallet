@@ -8,6 +8,7 @@ import type {
   EntrySummary,
   EntryVisibility,
   UpdateEntryBody,
+  UpdateEntryCardLineBody,
 } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import {
@@ -28,6 +29,7 @@ import {
   fetchMyEntries,
   removeEntryCardLine,
   updateEntry,
+  updateEntryCardLine,
 } from "../entries/entry-api";
 import { mapEntryError } from "../entries/entry-errors";
 import { fetchSpaceMembers } from "../spaces/space-api";
@@ -398,6 +400,33 @@ export function MePage() {
       entryId: string;
       body: AddEntryCardLineBody;
     }) => addEntryCardLine(entryId, body),
+    onSuccess: (entry) => {
+      showSuccess(t("me.cardStatementSaved"));
+      flashEntry(entry.id);
+      queryClient.setQueryData<EntrySummary[]>(
+        ["entries", spaceId, month],
+        (current) => upsertMonthEntry(current, entry)
+      );
+      void queryClient.invalidateQueries({ queryKey: ["entries", spaceId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["month-summary", spaceId],
+      });
+    },
+    onError: (error: Error) => {
+      showError(mapEntryError(error, t));
+    },
+  });
+
+  const cardLineUpdateMutation = useMutation({
+    mutationFn: async ({
+      entryId,
+      lineId,
+      body,
+    }: {
+      entryId: string;
+      lineId: string;
+      body: UpdateEntryCardLineBody;
+    }) => updateEntryCardLine(entryId, lineId, body),
     onSuccess: (entry) => {
       showSuccess(t("me.cardStatementSaved"));
       flashEntry(entry.id);
@@ -927,6 +956,9 @@ export function MePage() {
                         (cardLineAddMutation.isPending &&
                           cardLineAddMutation.variables?.entryId ===
                             entry.id) ||
+                        (cardLineUpdateMutation.isPending &&
+                          cardLineUpdateMutation.variables?.entryId ===
+                            entry.id) ||
                         (cardLineRemoveMutation.isPending &&
                           cardLineRemoveMutation.variables?.entryId ===
                             entry.id) ||
@@ -936,6 +968,13 @@ export function MePage() {
                       onAdd={(body) =>
                         cardLineAddMutation.mutateAsync({
                           entryId: entry.id,
+                          body,
+                        })
+                      }
+                      onUpdate={(lineId, body) =>
+                        cardLineUpdateMutation.mutateAsync({
+                          entryId: entry.id,
+                          lineId,
                           body,
                         })
                       }

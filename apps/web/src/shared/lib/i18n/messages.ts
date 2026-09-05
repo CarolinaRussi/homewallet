@@ -175,6 +175,7 @@ export const messages = {
     "me.cardDetailHint":
       "Anote só o que importa. O restante vira Outros automaticamente.",
     "me.cardLineAdd": "Adicionar item",
+    "me.cardLineEdit": "Editar",
     "me.cardInstallments": "Parcelas",
     "me.cardInstallmentsOnce": "À vista",
     "me.cardLineSchedule": "Tipo",
@@ -182,6 +183,12 @@ export const messages = {
     "me.cardLineRecurringBadge": "recorrente",
     "me.cardLineRecurringRemoveHint":
       "Remove esta assinatura de todas as faturas.",
+    "me.cardLineInstallmentEditTitle": "Editar parcela da fatura",
+    "me.cardLineInstallmentEditHint":
+      "Esta é a parcela {n}. Os meses anteriores não mudam.",
+    "me.cardLineRecurringEditTitle": "Editar item recorrente",
+    "me.cardLineRecurringEditHint":
+      "Os meses anteriores desta assinatura não mudam.",
     "me.cardLineRemove": "Remover",
     "me.cardOthers": "Outros",
     "me.cardOthersLeft": "Cabe até {amount} (Outros)",
@@ -543,6 +550,7 @@ export const messages = {
     "me.cardDetailHint":
       "Log only what matters. The rest becomes Others automatically.",
     "me.cardLineAdd": "Add line",
+    "me.cardLineEdit": "Edit",
     "me.cardInstallments": "Installments",
     "me.cardInstallmentsOnce": "One-time",
     "me.cardLineSchedule": "Schedule",
@@ -550,6 +558,12 @@ export const messages = {
     "me.cardLineRecurringBadge": "recurring",
     "me.cardLineRecurringRemoveHint":
       "Removes this subscription from all statements.",
+    "me.cardLineInstallmentEditTitle": "Edit statement installment",
+    "me.cardLineInstallmentEditHint":
+      "This is installment {n}. Earlier months stay unchanged.",
+    "me.cardLineRecurringEditTitle": "Edit recurring line",
+    "me.cardLineRecurringEditHint":
+      "Earlier months of this subscription stay unchanged.",
     "me.cardLineRemove": "Remove",
     "me.cardOthers": "Others",
     "me.cardOthersLeft": "Up to {amount} left (Others)",

@@ -4,6 +4,7 @@ import type {
   CreateEntryBody,
   EntrySummary,
   UpdateEntryBody,
+  UpdateEntryCardLineBody,
 } from "@homewallet/shared";
 import { api } from "../../shared/lib/api";
 
@@ -50,6 +51,17 @@ export function updateEntry(entryId: string, body: UpdateEntryBody) {
 export function addEntryCardLine(entryId: string, body: AddEntryCardLineBody) {
   return api<EntrySummary>(`/entries/${entryId}/card-lines`, {
     method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateEntryCardLine(
+  entryId: string,
+  lineId: string,
+  body: UpdateEntryCardLineBody
+) {
+  return api<EntrySummary>(`/entries/${entryId}/card-lines/${lineId}`, {
+    method: "PATCH",
     body: JSON.stringify(body),
   });
 }
