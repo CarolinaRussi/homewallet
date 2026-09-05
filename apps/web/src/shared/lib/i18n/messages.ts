@@ -253,9 +253,22 @@ export const messages = {
     "account.deleteConfirm":
       "Todos os seus lançamentos e dados pessoais serão removidos. Espaços vazios somem; se houver outros membros, outro vira dono.",
     "account.deleteSubmit": "Apagar conta definitivamente",
-    "spaces.title": "Seus espaços",
+    "spaces.title": "Espaço",
     "spaces.hint":
-      "Ao criar a conta, já abrimos um espaço pra você. Compartilhe o código ou o link pra convidar alguém.",
+      "Convide pessoas, ajuste privacidade e limites do espaço em que você está.",
+    "spaces.configureSpace": "Espaço a configurar",
+    "spaces.addSpace": "Criar ou entrar noutro espaço",
+    "spaces.empty":
+      "Ainda não fazes parte de nenhum espaço. Cria um ou entra com um código.",
+    "spaces.sectionPeople": "Pessoas",
+    "spaces.sectionPeopleHint":
+      "Quem está no espaço e como convidar alguém novo.",
+    "spaces.sectionRules": "Regras do espaço",
+    "spaces.sectionRulesHint":
+      "Só donos alteram estas opções. Valem para todo o espaço.",
+    "spaces.sectionCategories": "Detalhe por categoria",
+    "spaces.sectionCategoriesMore": "mostrar",
+    "spaces.categoriesEmpty": "Nenhuma categoria neste espaço.",
     "spaces.role": "papel",
     "spaces.joinCode": "Código de convite",
     "spaces.copyCode": "Copiar código",
@@ -593,9 +606,22 @@ export const messages = {
     "account.deleteConfirm":
       "All your entries and personal data will be removed. Empty spaces are deleted; if others remain, ownership transfers.",
     "account.deleteSubmit": "Delete account permanently",
-    "spaces.title": "Your spaces",
+    "spaces.title": "Space",
     "spaces.hint":
-      "We create a space when you register. Share the join code or link to invite someone.",
+      "Invite people, set privacy, and tune limits for the space you’re in.",
+    "spaces.configureSpace": "Space to configure",
+    "spaces.addSpace": "Create or join another space",
+    "spaces.empty":
+      "You’re not in a space yet. Create one or join with a code.",
+    "spaces.sectionPeople": "People",
+    "spaces.sectionPeopleHint":
+      "Who’s in the space and how to invite someone new.",
+    "spaces.sectionRules": "Space rules",
+    "spaces.sectionRulesHint":
+      "Only owners change these. They apply to the whole space.",
+    "spaces.sectionCategories": "Category line detail",
+    "spaces.sectionCategoriesMore": "show",
+    "spaces.categoriesEmpty": "No categories in this space.",
     "spaces.role": "role",
     "spaces.joinCode": "Join code",
     "spaces.copyCode": "Copy code",
