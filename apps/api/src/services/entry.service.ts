@@ -25,6 +25,8 @@ import { installmentPlanRepository } from "../repositories/installment-plan.repo
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurrenceSkipRepository } from "../repositories/recurrence-skip.repository.js";
 import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
+import type { MonthSnapshotService } from "./month-snapshot.service.js";
+import { monthKeyFromDate } from "./month-snapshot.build.js";
 import type { RecurringService } from "./recurring.service.js";
 import type { ReservePotService } from "./reserve-pot.service.js";
 
@@ -62,7 +64,8 @@ function cardLinesForwardFrom(
 export function createEntryService(
   dataSource: DataSource,
   recurringService: RecurringService,
-  reservePotService: ReservePotService
+  reservePotService: ReservePotService,
+  monthSnapshotService: MonthSnapshotService
 ) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
@@ -86,6 +89,14 @@ export function createEntryService(
       throw new HttpError(400, "Category not found in this space");
     }
     return category;
+  }
+
+  async function touchSnapshots(
+    userId: string,
+    spaceId: string,
+    ...months: string[]
+  ) {
+    await monthSnapshotService.touch(userId, spaceId, ...months);
   }
 
   async function resolveSavingCategory(spaceId: string) {
@@ -452,6 +463,17 @@ export function createEntryService(
           return outgoing;
         });
 
+        await touchSnapshots(
+          userId,
+          spaceId,
+          monthKeyFromDate(input.occurredOn)
+        );
+        await touchSnapshots(
+          peerUserId,
+          spaceId,
+          monthKeyFromDate(input.occurredOn)
+        );
+
         const loaded = await entryRepository.findById(
           outEntry.id,
           dataSource.manager
@@ -485,6 +507,11 @@ export function createEntryService(
           transferGroupId: null,
           counterpartyUserId: null,
         });
+        await touchSnapshots(
+          userId,
+          spaceId,
+          monthKeyFromDate(input.occurredOn)
+        );
         const loaded = await entryRepository.findById(
           entry.id,
           dataSource.manager
@@ -526,6 +553,7 @@ export function createEntryService(
         }
         return created;
       });
+      await touchSnapshots(userId, spaceId, monthKeyFromDate(input.occurredOn));
       const loaded = await entryRepository.findById(
         entry.id,
         dataSource.manager
@@ -552,6 +580,7 @@ export function createEntryService(
         throw new HttpError(403, "You can only edit your own entries");
       }
       await requireMember(userId, entry.spaceId);
+      const monthBefore = monthKeyFromDate(entry.occurredOn);
 
       const installmentScope = input.installmentScope ?? "one";
       const canForwardInstallment =
@@ -846,6 +875,12 @@ export function createEntryService(
       if (!summary) {
         throw new HttpError(500, "Failed to load entry");
       }
+      await touchSnapshots(
+        userId,
+        entry.spaceId,
+        monthBefore,
+        monthKeyFromDate(summary.occurredOn)
+      );
       return summary;
     },
 
@@ -982,6 +1017,11 @@ export function createEntryService(
       if (!summary) {
         throw new HttpError(500, "Failed to load entry");
       }
+      await touchSnapshots(
+        userId,
+        entry.spaceId,
+        monthKeyFromDate(entry.occurredOn)
+      );
       return summary;
     },
 
@@ -1067,6 +1107,11 @@ export function createEntryService(
       if (!summary) {
         throw new HttpError(500, "Failed to load entry");
       }
+      await touchSnapshots(
+        userId,
+        entry.spaceId,
+        monthKeyFromDate(entry.occurredOn)
+      );
       return summary;
     },
 
@@ -1156,7 +1201,15 @@ export function createEntryService(
       });
 
       // Statement may have been removed if it was seeded and emptied.
-      return loadEntrySummary(entryId);
+      const summary = await loadEntrySummary(entryId);
+      if (summary) {
+        await touchSnapshots(
+          userId,
+          entry.spaceId,
+          monthKeyFromDate(entry.occurredOn)
+        );
+      }
+      return summary;
     },
 
     async remove(
@@ -1172,6 +1225,7 @@ export function createEntryService(
         throw new HttpError(403, "You can only delete your own entries");
       }
       await requireMember(userId, entry.spaceId);
+      const removeMonth = monthKeyFromDate(entry.occurredOn);
 
       if (entry.transferGroupId) {
         const pair = await entryRepository.findByTransferGroup(
@@ -1180,6 +1234,11 @@ export function createEntryService(
         );
         for (const row of pair) {
           await entryRepository.remove(dataSource.manager, row);
+        }
+        await touchSnapshots(userId, entry.spaceId, removeMonth);
+        const peer = pair.find((row) => row.userId !== userId);
+        if (peer) {
+          await touchSnapshots(peer.userId, entry.spaceId, removeMonth);
         }
         return;
       }
@@ -1208,6 +1267,7 @@ export function createEntryService(
             await installmentPlanRepository.remove(dataSource.manager, plan);
           }
         }
+        await touchSnapshots(userId, entry.spaceId, removeMonth);
         return;
       }
 
@@ -1246,6 +1306,8 @@ export function createEntryService(
           }
         }
       }
+
+      await touchSnapshots(userId, entry.spaceId, removeMonth);
     },
   };
 }

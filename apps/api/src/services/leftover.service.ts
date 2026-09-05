@@ -3,41 +3,33 @@ import type {
   CreateLeftoverSeedBody,
   CreateReserveMovementBody,
   LeftoverSeedSummary,
-  MonthFlowBucket,
   MonthSummary,
   ReserveMovementSummary,
 } from "@homewallet/shared";
 import {
   allocateExpenseToCategories,
-  computeMonthSummary,
   layerTargets,
   progressToward,
 } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import { monthBounds } from "../lib/entry-mappers.js";
-import { LeftoverSeed } from "../db/entities/leftover-seed.entity.js";
-import { ReserveMovement } from "../db/entities/reserve-movement.entity.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { leftoverSeedRepository } from "../repositories/leftover-seed.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { reserveMovementRepository } from "../repositories/reserve-movement.repository.js";
 import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
+import type { MonthSnapshotService } from "./month-snapshot.service.js";
+import {
+  buildFlowBuckets,
+  computeSnapshotCore,
+  monthKeyFromDate,
+  toMovementSummary,
+  toSeedSummary,
+} from "./month-snapshot.build.js";
 import type { RecurringService } from "./recurring.service.js";
 import { buildPotSummaries } from "./reserve-pot.service.js";
 import type { ReservePotService } from "./reserve-pot.service.js";
-
-function toMovementSummary(movement: ReserveMovement): ReserveMovementSummary {
-  return {
-    id: movement.id,
-    type: movement.type,
-    amount: Number(movement.amount),
-    description: movement.description,
-    occurredOn: movement.occurredOn,
-    reservePotId: movement.reservePotId,
-    reservePotName: movement.reservePot?.name ?? null,
-  };
-}
 
 function withdrawEntryToMovementSummary(entry: {
   id: string;
@@ -58,19 +50,6 @@ function withdrawEntryToMovementSummary(entry: {
   };
 }
 
-function toSeedSummary(seed: LeftoverSeed): LeftoverSeedSummary {
-  return {
-    id: seed.id,
-    amount: Number(seed.amount),
-    description: seed.description,
-    occurredOn: seed.occurredOn,
-  };
-}
-
-function monthKey(occurredOn: string) {
-  return occurredOn.slice(0, 7);
-}
-
 function amountOrNull(value: string | null | undefined) {
   if (value == null || value === "") {
     return null;
@@ -78,64 +57,11 @@ function amountOrNull(value: string | null | undefined) {
   return Number(value);
 }
 
-function buildBuckets(
-  entries: { type: string; amount: string; occurredOn: string }[],
-  movements: ReserveMovement[],
-  seeds: LeftoverSeed[]
-): MonthFlowBucket[] {
-  const byMonth = new Map<string, MonthFlowBucket>();
-
-  function bucketFor(month: string) {
-    let bucket = byMonth.get(month);
-    if (!bucket) {
-      bucket = {
-        month,
-        income: 0,
-        expense: 0,
-        contributed: 0,
-        withdrawn: 0,
-        openingLeftover: 0,
-      };
-      byMonth.set(month, bucket);
-    }
-    return bucket;
-  }
-
-  for (const entry of entries) {
-    const bucket = bucketFor(monthKey(entry.occurredOn));
-    const amount = Number(entry.amount);
-    if (entry.type === "income" || entry.type === "transfer_in") {
-      bucket.income += amount;
-    } else if (entry.type === "expense" || entry.type === "transfer_out") {
-      bucket.expense += amount;
-    } else if (entry.type === "saving") {
-      bucket.contributed += amount;
-    } else if (entry.type === "reserve_withdraw") {
-      bucket.withdrawn += amount;
-    }
-  }
-
-  for (const movement of movements) {
-    const bucket = bucketFor(monthKey(movement.occurredOn));
-    const amount = Number(movement.amount);
-    if (movement.type === "contribute") {
-      bucket.contributed += amount;
-    } else if (movement.type === "withdraw") {
-      bucket.withdrawn += amount;
-    }
-  }
-
-  for (const seed of seeds) {
-    bucketFor(monthKey(seed.occurredOn)).openingLeftover += Number(seed.amount);
-  }
-
-  return [...byMonth.values()];
-}
-
 export function createLeftoverService(
   dataSource: DataSource,
   recurringService: RecurringService,
-  reservePotService: ReservePotService
+  reservePotService: ReservePotService,
+  monthSnapshotService: MonthSnapshotService
 ) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
@@ -158,13 +84,8 @@ export function createLeftoverService(
     const { start, end } = monthBounds(month);
     await reservePotService.ensureDefaults(userId, spaceId);
 
-    const [entries, movements, seeds, monthEntries, pots] = await Promise.all([
-      entryRepository.listMineThroughLight(
-        spaceId,
-        userId,
-        end,
-        dataSource.manager
-      ),
+    const [snapshotCore, movements, seeds, monthEntries] = await Promise.all([
+      monthSnapshotService.findCoreForMonth(spaceId, userId, month),
       reserveMovementRepository.listForUserThrough(
         spaceId,
         userId,
@@ -184,33 +105,58 @@ export function createLeftoverService(
         end,
         dataSource.manager
       ),
-      reservePotRepository.listForUser(spaceId, userId, dataSource.manager),
     ]);
 
-    const savingThroughTarget = entries.reduce((sum, entry) => {
-      if (entry.type === "saving") {
-        return sum + Number(entry.amount);
-      }
-      if (entry.type === "reserve_withdraw") {
-        return sum - Number(entry.amount);
-      }
-      return sum;
-    }, 0);
-    const potSummaries = buildPotSummaries(pots, entries, movements, end);
+    let core = snapshotCore;
+    if (!core) {
+      const [entries, allMovements, allSeeds, pots] = await Promise.all([
+        entryRepository.listMineThroughLight(
+          spaceId,
+          userId,
+          end,
+          dataSource.manager
+        ),
+        reserveMovementRepository.listForUserThrough(
+          spaceId,
+          userId,
+          end,
+          dataSource.manager
+        ),
+        leftoverSeedRepository.listForUserThrough(
+          spaceId,
+          userId,
+          end,
+          dataSource.manager
+        ),
+        reservePotRepository.listForUser(spaceId, userId, dataSource.manager),
+      ]);
+      const buckets = buildFlowBuckets(entries, allMovements, allSeeds);
+      const seedSummaries = allSeeds.map(toSeedSummary);
+      core = computeSnapshotCore(
+        month,
+        buckets,
+        allMovements,
+        seedSummaries,
+        entries,
+        pots
+      );
+      const backfillFrom = buckets.reduce(
+        (earliest, bucket) =>
+          bucket.month < earliest ? bucket.month : earliest,
+        month
+      );
+      await monthSnapshotService.rebuildFrom(userId, spaceId, backfillFrom);
+    }
 
-    const summary = computeMonthSummary(
-      month,
-      buildBuckets(entries, movements, seeds),
-      movements.map(toMovementSummary),
-      seeds.map(toSeedSummary),
-      savingThroughTarget,
-      potSummaries
-    );
-
+    const seedSummaries = seeds.map(toSeedSummary);
+    const legacyMovements = movements
+      .map(toMovementSummary)
+      .filter((movement) => monthKeyFromDate(movement.occurredOn) === month)
+      .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn));
     const entryWithdraws = monthEntries
       .filter((entry) => entry.type === "reserve_withdraw")
       .map(withdrawEntryToMovementSummary);
-    const monthMovements = [...summary.movements, ...entryWithdraws].sort(
+    const monthMovements = [...legacyMovements, ...entryWithdraws].sort(
       (left, right) => right.occurredOn.localeCompare(left.occurredOn)
     );
 
@@ -282,10 +228,10 @@ export function createLeftoverService(
           addToLayer(slice.amount, layerByCategoryId.get(slice.categoryId));
         }
       }
-      const targets = layerTargets(summary.income);
+      const targets = layerTargets(core.income);
       budgetLayers = {
         enabled: true as const,
-        income: summary.income,
+        income: core.income,
         byLayer: {
           essential: progressToward(spent.essential, targets.essential),
           personal: progressToward(spent.personal, targets.personal),
@@ -296,16 +242,27 @@ export function createLeftoverService(
     }
 
     return {
-      ...summary,
+      month: core.month,
+      income: core.income,
+      expense: core.expense,
+      contributed: core.contributed,
+      withdrawn: core.withdrawn,
+      carriedIn: core.carriedIn,
+      leftover: core.leftover,
+      reserveBalance: core.reserveBalance,
+      pots: core.pots,
       movements: monthMovements,
+      leftoverSeeds: seedSummaries
+        .filter((seed) => monthKeyFromDate(seed.occurredOn) === month)
+        .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn)),
       myLimits,
       personalLimit:
         myLimits.personalLimitEnabled && personalAmount != null
-          ? progressToward(summary.expense, personalAmount)
+          ? progressToward(core.expense, personalAmount)
           : null,
       leftoverTarget:
         myLimits.leftoverTargetEnabled && leftoverAmount != null
-          ? progressToward(summary.leftover, leftoverAmount)
+          ? progressToward(core.leftover, leftoverAmount)
           : null,
       budgetLayers,
     };
@@ -317,7 +274,14 @@ export function createLeftoverService(
       spaceId: string,
       month: string
     ): Promise<MonthSummary> {
-      await recurringService.ensureThrough(userId, spaceId, month);
+      const materialized = await recurringService.ensureThrough(
+        userId,
+        spaceId,
+        month
+      );
+      if (materialized) {
+        await monthSnapshotService.rebuildFrom(userId, spaceId, month);
+      }
       return loadSummary(userId, spaceId, month);
     },
 
@@ -380,6 +344,11 @@ export function createLeftoverService(
           transferGroupId: null,
           counterpartyUserId: null,
         });
+        await monthSnapshotService.touch(
+          userId,
+          spaceId,
+          monthKeyFromDate(input.occurredOn)
+        );
         const loaded = await entryRepository.findById(
           entry.id,
           dataSource.manager
@@ -401,6 +370,11 @@ export function createLeftoverService(
           occurredOn: input.occurredOn,
           reservePotId: input.reservePotId,
         }
+      );
+      await monthSnapshotService.touch(
+        userId,
+        spaceId,
+        monthKeyFromDate(input.occurredOn)
       );
       const loaded = await reserveMovementRepository.findById(
         movement.id,
@@ -426,6 +400,11 @@ export function createLeftoverService(
         }
         await requireMember(userId, movement.spaceId);
         await reserveMovementRepository.remove(dataSource.manager, movement);
+        await monthSnapshotService.touch(
+          userId,
+          movement.spaceId,
+          monthKeyFromDate(movement.occurredOn)
+        );
         return;
       }
 
@@ -444,6 +423,11 @@ export function createLeftoverService(
       }
       await requireMember(userId, entry.spaceId);
       await entryRepository.remove(dataSource.manager, entry);
+      await monthSnapshotService.touch(
+        userId,
+        entry.spaceId,
+        monthKeyFromDate(entry.occurredOn)
+      );
     },
 
     async createLeftoverSeed(
@@ -459,7 +443,17 @@ export function createLeftoverService(
         description: input.description,
         occurredOn: input.occurredOn,
       });
-      return toSeedSummary(seed);
+      await monthSnapshotService.touch(
+        userId,
+        spaceId,
+        monthKeyFromDate(input.occurredOn)
+      );
+      return {
+        id: seed.id,
+        amount: Number(seed.amount),
+        description: seed.description,
+        occurredOn: seed.occurredOn,
+      };
     },
 
     async removeLeftoverSeed(userId: string, seedId: string) {
@@ -478,6 +472,11 @@ export function createLeftoverService(
       }
       await requireMember(userId, seed.spaceId);
       await leftoverSeedRepository.remove(dataSource.manager, seed);
+      await monthSnapshotService.touch(
+        userId,
+        seed.spaceId,
+        monthKeyFromDate(seed.occurredOn)
+      );
     },
   };
 }

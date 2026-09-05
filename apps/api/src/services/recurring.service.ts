@@ -18,9 +18,10 @@ import { installmentPlanRepository } from "../repositories/installment-plan.repo
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
 import { ensureCardRecurringThrough } from "./card-recurring-generate.js";
+import type { MonthSnapshotService } from "./month-snapshot.service.js";
 import { ensureRecurringThrough } from "./recurrence-generate.js";
 
-const ensureThroughInflight = new Map<string, Promise<void>>();
+const ensureThroughInflight = new Map<string, Promise<boolean>>();
 
 function toRuleSummary(rule: RecurringRule): RecurringRuleSummary {
   return {
@@ -50,7 +51,10 @@ function toPlanSummary(plan: InstallmentPlan): InstallmentPlanSummary {
   };
 }
 
-export function createRecurringService(dataSource: DataSource) {
+export function createRecurringService(
+  dataSource: DataSource,
+  monthSnapshotService: MonthSnapshotService
+) {
   async function requireMember(userId: string, spaceId: string) {
     const membership = await membershipRepository.findMembership(
       userId,
@@ -75,31 +79,43 @@ export function createRecurringService(dataSource: DataSource) {
     return category;
   }
 
+  async function ensureThrough(
+    userId: string,
+    spaceId: string,
+    throughMonth: string
+  ): Promise<boolean> {
+    const key = `${spaceId}:${userId}:${throughMonth}`;
+    const inflight = ensureThroughInflight.get(key);
+    if (inflight) {
+      return inflight;
+    }
+
+    const run = (async () => {
+      const recurring = await ensureRecurringThrough(
+        dataSource,
+        spaceId,
+        userId,
+        throughMonth
+      );
+      const card = await ensureCardRecurringThrough(
+        dataSource,
+        spaceId,
+        userId,
+        throughMonth
+      );
+      return recurring || card;
+    })();
+
+    ensureThroughInflight.set(key, run);
+    try {
+      return await run;
+    } finally {
+      ensureThroughInflight.delete(key);
+    }
+  }
+
   return {
-    async ensureThrough(userId: string, spaceId: string, throughMonth: string) {
-      const key = `${spaceId}:${userId}:${throughMonth}`;
-      const inflight = ensureThroughInflight.get(key);
-      if (inflight) {
-        return inflight;
-      }
-
-      const run = (async () => {
-        await ensureRecurringThrough(dataSource, spaceId, userId, throughMonth);
-        await ensureCardRecurringThrough(
-          dataSource,
-          spaceId,
-          userId,
-          throughMonth
-        );
-      })();
-
-      ensureThroughInflight.set(key, run);
-      try {
-        await run;
-      } finally {
-        ensureThroughInflight.delete(key);
-      }
-    },
+    ensureThrough,
 
     async listRules(
       userId: string,
@@ -144,6 +160,8 @@ export function createRecurringService(dataSource: DataSource) {
       if (!loaded) {
         throw new HttpError(500, "Failed to load recurring rule");
       }
+      await ensureThrough(userId, spaceId, input.startMonth);
+      await monthSnapshotService.rebuildFrom(userId, spaceId, input.startMonth);
       return toRuleSummary(loaded);
     },
 
@@ -229,6 +247,7 @@ export function createRecurringService(dataSource: DataSource) {
       if (!loaded) {
         throw new HttpError(500, "Failed to load installment plan");
       }
+      await monthSnapshotService.rebuildFrom(userId, spaceId, input.startMonth);
       return toPlanSummary(loaded);
     },
 
@@ -249,6 +268,11 @@ export function createRecurringService(dataSource: DataSource) {
       await requireMember(userId, plan.spaceId);
       await entryRepository.removeByInstallmentPlan(planId, dataSource.manager);
       await installmentPlanRepository.remove(dataSource.manager, plan);
+      await monthSnapshotService.rebuildFrom(
+        userId,
+        plan.spaceId,
+        plan.startMonth
+      );
     },
   };
 }

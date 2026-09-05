@@ -20,6 +20,7 @@ import { Category } from "./db/entities/category.entity.js";
 import { Entry } from "./db/entities/entry.entity.js";
 import { InstallmentPlan } from "./db/entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./db/entities/leftover-seed.entity.js";
+import { MemberMonthSnapshot } from "./db/entities/member-month-snapshot.entity.js";
 import { Membership } from "./db/entities/membership.entity.js";
 import { PasswordResetToken } from "./db/entities/password-reset-token.entity.js";
 import { RecurrenceSkip } from "./db/entities/recurrence-skip.entity.js";
@@ -37,6 +38,7 @@ import { createAuthService } from "./services/auth.service.js";
 import { createCategoryService } from "./services/category.service.js";
 import { createEntryService } from "./services/entry.service.js";
 import { createLeftoverService } from "./services/leftover.service.js";
+import { createMonthSnapshotService } from "./services/month-snapshot.service.js";
 import { createMailService } from "./services/mail.service.js";
 import { createOverviewService } from "./services/overview.service.js";
 import { createRecurringService } from "./services/recurring.service.js";
@@ -64,6 +66,7 @@ InstallmentPlan.useDataSource(dataSource);
 RecurrenceSkip.useDataSource(dataSource);
 LeftoverSeed.useDataSource(dataSource);
 PasswordResetToken.useDataSource(dataSource);
+MemberMonthSnapshot.useDataSource(dataSource);
 
 const mailService = createMailService(config);
 const spaceService = createSpaceService(
@@ -78,17 +81,26 @@ const authService = createAuthService(
   mailService
 );
 const categoryService = createCategoryService(dataSource);
-const recurringService = createRecurringService(dataSource);
 const reservePotService = createReservePotService(dataSource);
+const monthSnapshotService = createMonthSnapshotService(
+  dataSource,
+  reservePotService
+);
+const recurringService = createRecurringService(
+  dataSource,
+  monthSnapshotService
+);
 const entryService = createEntryService(
   dataSource,
   recurringService,
-  reservePotService
+  reservePotService,
+  monthSnapshotService
 );
 const leftoverService = createLeftoverService(
   dataSource,
   recurringService,
-  reservePotService
+  reservePotService,
+  monthSnapshotService
 );
 const overviewService = createOverviewService(dataSource, recurringService);
 

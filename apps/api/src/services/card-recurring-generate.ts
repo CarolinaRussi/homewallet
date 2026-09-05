@@ -183,7 +183,8 @@ function buildRecurringGroups(
 async function dedupeRecurringGroupMonths(
   manager: EntityManager,
   groupId: string
-) {
+): Promise<boolean> {
+  let touched = false;
   const groupLines = await entryCardLineRepository.findByRecurringGroup(
     groupId,
     manager
@@ -211,6 +212,7 @@ async function dedupeRecurringGroupMonths(
       manager,
       extras.map((line) => line.id)
     );
+    touched = true;
     for (const extra of extras) {
       removedEntryIds.add(extra.entryId);
     }
@@ -227,6 +229,7 @@ async function dedupeRecurringGroupMonths(
     );
     if (remaining.length === 0 && entry.cardInstallmentSeeded) {
       await entryRepository.remove(manager, entry);
+      touched = true;
       continue;
     }
     if (entry.cardInstallmentSeeded) {
@@ -235,6 +238,7 @@ async function dedupeRecurringGroupMonths(
         entryId,
         remaining.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2)
       );
+      touched = true;
       continue;
     }
     const linesSum = remaining.reduce(
@@ -243,8 +247,11 @@ async function dedupeRecurringGroupMonths(
     );
     if (linesSum - Number(entry.amount) > 1e-9) {
       await entryRepository.updateAmount(manager, entryId, linesSum.toFixed(2));
+      touched = true;
     }
   }
+
+  return touched;
 }
 
 /** Materialize open-ended card-line subscriptions onto statements through a month. */
@@ -253,15 +260,17 @@ export async function ensureCardRecurringThrough(
   spaceId: string,
   userId: string,
   throughMonth: string
-) {
+): Promise<boolean> {
   const lines = await entryCardLineRepository.listRecurringForUser(
     spaceId,
     userId,
     dataSource.manager
   );
   if (lines.length === 0) {
-    return;
+    return false;
   }
+
+  let touched = false;
 
   const groups = buildRecurringGroups(lines);
   const skips = await entryCardRecurringSkipRepository.listForGroups(
@@ -274,7 +283,9 @@ export async function ensureCardRecurringThrough(
 
   await dataSource.transaction(async (manager) => {
     for (const group of groups) {
-      await dedupeRecurringGroupMonths(manager, group.recurringGroupId);
+      if (await dedupeRecurringGroupMonths(manager, group.recurringGroupId)) {
+        touched = true;
+      }
 
       // Rebuild months after dedupe so we don't skip a hole we just cleaned.
       const freshLines = await entryCardLineRepository.findByRecurringGroup(
@@ -325,7 +336,10 @@ export async function ensureCardRecurringThrough(
         });
         await afterLineOnStatement(manager, target, group.amount);
         group.monthsWithLine.add(month);
+        touched = true;
       }
     }
   });
+
+  return touched;
 }

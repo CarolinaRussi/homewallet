@@ -6,6 +6,7 @@ import { EntryCardRecurringSkip } from "./entities/entry-card-recurring-skip.ent
 import { InstallmentPlan } from "./entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./entities/leftover-seed.entity.js";
 import { Membership } from "./entities/membership.entity.js";
+import { MemberMonthSnapshot } from "./entities/member-month-snapshot.entity.js";
 import { PasswordResetToken } from "./entities/password-reset-token.entity.js";
 import { RecurrenceSkip } from "./entities/recurrence-skip.entity.js";
 import { RecurringRule } from "./entities/recurring-rule.entity.js";
@@ -30,6 +31,7 @@ import { CategoryLineDetail20260904150000 } from "./migrations/20260904150000-ca
 import { CardLineInstallments20260904160000 } from "./migrations/20260904160000-card-line-installments.js";
 import { CardLineRecurring20260904200000 } from "./migrations/20260904200000-card-line-recurring.js";
 import { CardLineRecurringSkips20260905010000 } from "./migrations/20260905010000-card-line-recurring-skips.js";
+import { MemberMonthSnapshots20260905030000 } from "./migrations/20260905030000-member-month-snapshots.js";
 import { RecurringRulesUserIndex20260905020000 } from "./migrations/20260905020000-recurring-rules-user-index.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
@@ -51,6 +53,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       RecurrenceSkip,
       LeftoverSeed,
       PasswordResetToken,
+      MemberMonthSnapshot,
     ],
     migrations: [
       InitialIdentity20260903180000,
@@ -71,6 +74,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       CardLineRecurring20260904200000,
       CardLineRecurringSkips20260905010000,
       RecurringRulesUserIndex20260905020000,
+      MemberMonthSnapshots20260905030000,
     ],
   });
 }

@@ -15,15 +15,17 @@ export async function ensureRecurringThrough(
   spaceId: string,
   userId: string,
   throughMonth: string
-) {
+): Promise<boolean> {
   const rules = await recurringRuleRepository.listForUser(
     spaceId,
     userId,
     dataSource.manager
   );
   if (rules.length === 0) {
-    return;
+    return false;
   }
+
+  let created = false;
 
   const skips = await recurrenceSkipRepository.listForRules(
     rules.map((rule) => rule.id),
@@ -81,6 +83,9 @@ export async function ensureRecurringThrough(
         installmentNumber: null,
       });
       existingKeys.add(`${rule.id}:${occurredOn}`);
+      created = true;
     }
   }
+
+  return created;
 }
