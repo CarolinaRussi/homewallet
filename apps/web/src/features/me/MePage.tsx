@@ -353,7 +353,7 @@ export function MePage() {
   const categoriesQuery = useQuery({
     queryKey: ["categories", spaceId],
     queryFn: () => fetchCategories(spaceId!),
-    enabled: Boolean(spaceId) && formDataActive,
+    enabled: Boolean(spaceId),
     staleTime: ME_FORM_STALE_MS,
   });
 
