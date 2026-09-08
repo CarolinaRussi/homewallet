@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
 import { ListRowsSkeleton, Skeleton } from "../../shared/ui/Skeleton";
@@ -62,7 +62,10 @@ export function SpacePage() {
     enabled: Boolean(spaceId),
   });
 
-  if (spacesQuery.isLoading) {
+  if (
+    spacesQuery.isLoading ||
+    (spaceId && membersQuery.isLoading && !membersQuery.data)
+  ) {
     return (
       <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
         <header>
@@ -82,6 +85,10 @@ export function SpacePage() {
         <p className="mt-3 text-muted">{t("me.noSpace")}</p>
       </main>
     );
+  }
+
+  if (membersQuery.isSuccess && !multiMember) {
+    return <Navigate to="/me" replace />;
   }
 
   const pageLoading =

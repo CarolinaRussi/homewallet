@@ -1,8 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
 import { APP_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { useTheme } from "../../shared/lib/theme/theme-context";
 import type { MessageKey } from "../../shared/lib/i18n/messages";
+import { fetchSpaceMembers } from "../spaces/space-api";
+import { useActiveSpace } from "../spaces/use-active-space";
 
 const navItems: { to: string; labelKey: MessageKey; end?: boolean }[] = [
   { to: "/overview", labelKey: "nav.overview" },
@@ -19,6 +22,16 @@ type SideNavProps = {
 export function SideNav({ onSignOut }: SideNavProps) {
   const { t, locale, setLocale } = useLocale();
   const { theme, toggleTheme } = useTheme();
+  const { spaceId } = useActiveSpace();
+  const membersQuery = useQuery({
+    queryKey: ["space-members", spaceId],
+    queryFn: () => fetchSpaceMembers(spaceId!),
+    enabled: Boolean(spaceId),
+  });
+  const showSpaceTab = (membersQuery.data?.length ?? 0) > 1;
+  const visibleNavItems = navItems.filter(
+    (item) => item.to !== "/space" || showSpaceTab
+  );
 
   return (
     <aside className="flex w-full flex-col gap-6 border-border bg-surface md:w-56 md:border-r md:px-4 md:py-6">
@@ -29,7 +42,7 @@ export function SideNav({ onSignOut }: SideNavProps) {
       </div>
 
       <nav className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-col md:overflow-visible md:px-0 md:py-0">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
