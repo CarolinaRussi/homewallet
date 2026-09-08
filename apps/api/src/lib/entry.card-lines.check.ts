@@ -72,6 +72,38 @@ assert(
   "manual future + installment: Outros preserved"
 );
 
+/** Manual statement with Outros 0: à vista line bumps total (same as installment parcel). */
+function manualAmountAfterOneOffWithNoOthers(
+  currentAmount: number,
+  lineAmounts: number[],
+  newLineAmount: number
+): number {
+  const othersBefore = cardOthersAmount(currentAmount, lineAmounts);
+  if (othersBefore > 0) {
+    return currentAmount;
+  }
+  const linesSum =
+    lineAmounts.reduce((sum, amount) => sum + Math.round(amount * 100), 0) +
+    Math.round(newLineAmount * 100);
+  return linesSum / 100;
+}
+
+assert(
+  manualAmountAfterOneOffWithNoOthers(1000, [400, 600], 120) === 1120,
+  "manual + à vista with Outros 0: bump total by new line"
+);
+assert(
+  manualAmountAfterOneOffWithNoOthers(1000, [900], 50) === 1000,
+  "manual + à vista with Outros left: total unchanged"
+);
+assert(
+  cardOthersAmount(
+    manualAmountAfterOneOffWithNoOthers(1000, [400, 600], 120),
+    [400, 600, 120]
+  ) === 0,
+  "after bump, Outros stays 0"
+);
+
 const schedule = remainingInstallmentSchedule("2026-01", 1, 3);
 assert(
   schedule.map((item) => `${item.number}:${item.month}`).join("|") ===

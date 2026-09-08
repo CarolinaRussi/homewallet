@@ -190,6 +190,8 @@ export function EntryCardLinesCollapse({
   }
 
   const formBusy = pending;
+  const oneOffBumpsTotal =
+    scheduleKind === "once" && remainingOthers <= 0 && lineCount > 0;
 
   return (
     <details className="rounded-md border border-dashed border-border px-3 py-2 text-sm">
@@ -343,7 +345,11 @@ export function EntryCardLinesCollapse({
               type="number"
               step="0.01"
               min="0.01"
-              max={remainingOthers > 0 ? remainingOthers : undefined}
+              max={
+                oneOffBumpsTotal || remainingOthers <= 0
+                  ? undefined
+                  : remainingOthers
+              }
               value={amount || ""}
               disabled={formBusy}
               onChange={(event) => setAmount(Number(event.target.value) || 0)}
@@ -418,7 +424,11 @@ export function EntryCardLinesCollapse({
               {t("me.cancel")}
             </button>
           </div>
-          {remainingOthers > 0 ? (
+          {oneOffBumpsTotal ? (
+            <p className="text-xs text-muted sm:col-span-full">
+              {t("me.cardLineBumpsTotal")}
+            </p>
+          ) : remainingOthers > 0 ? (
             <p className="text-xs text-muted sm:col-span-full">
               {t("me.cardOthersLeft").replace(
                 "{amount}",

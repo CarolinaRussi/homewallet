@@ -197,6 +197,7 @@ export const messages = {
     "me.cardLineRemove": "Remover",
     "me.cardOthers": "Outros",
     "me.cardOthersLeft": "Cabe até {amount} (Outros)",
+    "me.cardLineBumpsTotal": "O total da fatura vai aumentar.",
     "me.cardLinesOver": "A soma dos itens passa do total da fatura.",
     "me.cardInstallmentFutureFit":
       "Essa parcela não cabe no total de uma fatura futura já lançada na mão.",
@@ -611,6 +612,7 @@ export const messages = {
     "me.cardLineRemove": "Remove",
     "me.cardOthers": "Others",
     "me.cardOthersLeft": "Up to {amount} left (Others)",
+    "me.cardLineBumpsTotal": "The statement total will increase.",
     "me.cardLinesOver": "Lines exceed the statement total.",
     "me.cardInstallmentFutureFit":
       "This installment does not fit a future statement that was logged manually.",

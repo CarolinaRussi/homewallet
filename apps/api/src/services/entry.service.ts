@@ -945,13 +945,20 @@ export function createEntryService(
           categoryId: input.categoryId,
         },
       ];
-      // Seeded statements sync total to sum(lines); manual totals keep amount (Outros shrinks).
-      if (!entry.cardInstallmentSeeded) {
-        assertCardLinesFitAmount(Number(entry.amount), nextLines);
-      }
 
       const installmentCount = input.installmentCount;
       const isRecurring = input.recurring === true;
+      const isOneOff = installmentCount == null && !isRecurring;
+      const othersBefore = cardOthersAmount(
+        Number(entry.amount),
+        existingLines.map((line) => Number(line.amount))
+      );
+      const bumpManualTotal = isOneOff && othersBefore <= 0;
+
+      // Seeded: sync total to sum(lines). Manual: Outros shrinks, unless à vista with no Outros left.
+      if (!entry.cardInstallmentSeeded && !bumpManualTotal) {
+        assertCardLinesFitAmount(Number(entry.amount), nextLines);
+      }
       const installmentGroupId = installmentCount != null ? randomUUID() : null;
       const recurringGroupId = isRecurring ? randomUUID() : null;
       const startMonth = entry.occurredOn.slice(0, 7);
@@ -977,6 +984,8 @@ export function createEntryService(
             entry.id,
             lines.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2)
           );
+        } else if (bumpManualTotal) {
+          await reconcileStatementAmount(manager, entry.id);
         }
 
         if (installmentCount == null) {
