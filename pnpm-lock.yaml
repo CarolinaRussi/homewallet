@@ -80,6 +80,9 @@ importers:
       resend:
         specifier: ^6.26.0
         version: 6.26.0
+      tsx:
+        specifier: ^4.20.4
+        version: 4.23.13
       typeorm:
         specifier: ^0.3.26
         version: 0.3.31(pg@8.23.0)
@@ -90,9 +93,6 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.20.4
-        version: 4.23.13
       typescript:
         specifier: ^5.9.2
         version: 5.9.3

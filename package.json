@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.19.0",
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @homewallet/web --filter @homewallet/api dev",
+    "dev": "pnpm --filter @homewallet/shared build && pnpm -r --parallel --filter @homewallet/shared --filter @homewallet/web --filter @homewallet/api dev",
     "dev:web": "pnpm --filter @homewallet/web dev",
     "dev:api": "pnpm --filter @homewallet/api dev",
     "build": "pnpm -r --filter @homewallet/shared --filter @homewallet/api --filter @homewallet/web build",
