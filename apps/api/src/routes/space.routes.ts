@@ -9,7 +9,18 @@ export async function registerSpaceRoutes(
   app.addHook("preHandler", requireUser);
   app.get("/", (request) => controller.list(request));
   app.post("/", (request) => controller.create(request));
-  app.post("/join", (request) => controller.join(request));
+  app.post(
+    "/join",
+    {
+      config: {
+        rateLimit: {
+          max: 20,
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    (request) => controller.join(request)
+  );
   app.patch<{ Params: { id: string } }>("/:id", (request) =>
     controller.update(request)
   );

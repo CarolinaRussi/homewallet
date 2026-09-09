@@ -5,12 +5,22 @@ import {
   loginBodySchema,
   registerBodySchema,
   resetPasswordBodySchema,
+  verifyEmailBodySchema,
 } from "@homewallet/shared";
+import { User } from "../db/entities/user.entity.js";
+import { HttpError } from "../lib/http-error.js";
 import { SESSION_COOKIE, sessionCookieOptions } from "../lib/session-cookie.js";
 import type { AuthService } from "../services/auth.service.js";
 
 async function setSession(reply: FastifyReply, userId: string) {
-  const token = await reply.jwtSign({ sub: userId });
+  const user = await User.findOneBy({ id: userId });
+  if (!user) {
+    throw new HttpError(401, "Unauthorized");
+  }
+  const token = await reply.jwtSign({
+    sub: userId,
+    sv: user.sessionVersion,
+  });
   reply.setCookie(SESSION_COOKIE, token, sessionCookieOptions());
 }
 
@@ -37,6 +47,13 @@ export function createAuthController(authService: AuthService) {
       return result;
     },
 
+    async linkGoogle(request: FastifyRequest, reply: FastifyReply) {
+      const body = googleBodySchema.parse(request.body);
+      const user = await authService.linkGoogle(request.user.sub, body);
+      await setSession(reply, user.id);
+      return { user };
+    },
+
     async forgotPassword(request: FastifyRequest, reply: FastifyReply) {
       const body = forgotPasswordBodySchema.parse(request.body);
       await authService.forgotPassword(body);
@@ -50,13 +67,24 @@ export function createAuthController(authService: AuthService) {
     },
 
     async logout(_request: FastifyRequest, reply: FastifyReply) {
-      reply.clearCookie(SESSION_COOKIE, { path: "/" });
+      reply.clearCookie(SESSION_COOKIE, sessionCookieOptions());
       return reply.code(204).send();
     },
 
     async me(request: FastifyRequest) {
       const user = await authService.getById(request.user.sub);
       return { user };
+    },
+
+    async resendVerifyEmail(request: FastifyRequest, reply: FastifyReply) {
+      await authService.resendVerifyEmail(request.user.sub);
+      return reply.code(204).send();
+    },
+
+    async verifyEmail(request: FastifyRequest, reply: FastifyReply) {
+      const body = verifyEmailBodySchema.parse(request.body);
+      await authService.verifyEmail(body.token);
+      return reply.code(204).send();
     },
 
     async exportCsv(request: FastifyRequest, reply: FastifyReply) {
@@ -72,7 +100,7 @@ export function createAuthController(authService: AuthService) {
 
     async deleteAccount(request: FastifyRequest, reply: FastifyReply) {
       await authService.deleteAccount(request.user.sub);
-      reply.clearCookie(SESSION_COOKIE, { path: "/" });
+      reply.clearCookie(SESSION_COOKIE, sessionCookieOptions());
       return reply.code(204).send();
     },
   };

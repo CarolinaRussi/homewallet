@@ -25,6 +25,7 @@ export function AuthPage({ mode }: AuthPageProps) {
   const { t, locale, setLocale } = useLocale();
   const [errorMessage, setErrorMessage] = useState("");
   const nextPath = searchParams.get("next");
+  const safeNext = nextPath && /^\/(?!\/)/.test(nextPath) ? nextPath : null;
 
   function goToWelcome(spaceId: string, firstSpace: boolean) {
     clearStoredActiveSpace();
@@ -38,8 +39,8 @@ export function AuthPage({ mode }: AuthPageProps) {
       goToWelcome(options.spaceId, true);
       return;
     }
-    if (nextPath?.startsWith("/")) {
-      navigate(nextPath);
+    if (safeNext) {
+      navigate(safeNext);
       return;
     }
     navigate("/me");
@@ -96,8 +97,8 @@ export function AuthPage({ mode }: AuthPageProps) {
 
   const switchTo =
     mode === "login"
-      ? `/register${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`
-      : `/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+      ? `/register${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`
+      : `/login${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">

@@ -3,6 +3,8 @@ import { config as loadEnv } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import { APP_NAME } from "@homewallet/shared";
 import Fastify from "fastify";
 import { ZodError } from "zod";
@@ -19,6 +21,7 @@ import { createSpaceController } from "./controllers/space.controller.js";
 import { createDataSource } from "./db/data-source.js";
 import { Category } from "./db/entities/category.entity.js";
 import { Entry } from "./db/entities/entry.entity.js";
+import { EmailVerifyToken } from "./db/entities/email-verify-token.entity.js";
 import { InstallmentPlan } from "./db/entities/installment-plan.entity.js";
 import { LeftoverSeed } from "./db/entities/leftover-seed.entity.js";
 import { MemberMonthSnapshot } from "./db/entities/member-month-snapshot.entity.js";
@@ -55,7 +58,9 @@ loadEnv({
 const config = loadConfig();
 const dataSource = createDataSource(config.databaseUrl);
 await dataSource.initialize();
-await dataSource.runMigrations();
+if (config.runMigrations) {
+  await dataSource.runMigrations();
+}
 User.useDataSource(dataSource);
 Space.useDataSource(dataSource);
 Membership.useDataSource(dataSource);
@@ -68,6 +73,7 @@ InstallmentPlan.useDataSource(dataSource);
 RecurrenceSkip.useDataSource(dataSource);
 LeftoverSeed.useDataSource(dataSource);
 PasswordResetToken.useDataSource(dataSource);
+EmailVerifyToken.useDataSource(dataSource);
 MemberMonthSnapshot.useDataSource(dataSource);
 
 const mailService = createMailService(config);
@@ -112,8 +118,15 @@ const mePageService = createMePageService(
 );
 const overviewService = createOverviewService(dataSource, recurringService);
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, trustProxy: true });
 
+await app.register(helmet, {
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+});
+await app.register(rateLimit, {
+  global: false,
+});
 await app.register(cors, {
   origin: config.webOrigin,
   credentials: true,

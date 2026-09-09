@@ -13,6 +13,7 @@ import { RecurringRule } from "./entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./entities/reserve-movement.entity.js";
 import { ReservePot } from "./entities/reserve-pot.entity.js";
 import { Space } from "./entities/space.entity.js";
+import { EmailVerifyToken } from "./entities/email-verify-token.entity.js";
 import { User } from "./entities/user.entity.js";
 import { InitialIdentity20260903180000 } from "./migrations/20260903180000-initial-identity.js";
 import { EntriesAndCategories20260903200000 } from "./migrations/20260903200000-entries-categories.js";
@@ -33,6 +34,8 @@ import { CardLineRecurring20260904200000 } from "./migrations/20260904200000-car
 import { CardLineRecurringSkips20260905010000 } from "./migrations/20260905010000-card-line-recurring-skips.js";
 import { MemberMonthSnapshots20260905030000 } from "./migrations/20260905030000-member-month-snapshots.js";
 import { RecurringRulesUserIndex20260905020000 } from "./migrations/20260905020000-recurring-rules-user-index.js";
+import { UserSessionVersion20260909090000 } from "./migrations/20260909090000-user-session-version.js";
+import { UserEmailVerified20260909091000 } from "./migrations/20260909091000-user-email-verified.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -53,6 +56,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       RecurrenceSkip,
       LeftoverSeed,
       PasswordResetToken,
+      EmailVerifyToken,
       MemberMonthSnapshot,
     ],
     migrations: [
@@ -75,6 +79,8 @@ export function createDataSource(databaseUrl: string): DataSource {
       CardLineRecurringSkips20260905010000,
       RecurringRulesUserIndex20260905020000,
       MemberMonthSnapshots20260905030000,
+      UserSessionVersion20260909090000,
+      UserEmailVerified20260909091000,
     ],
   });
 }

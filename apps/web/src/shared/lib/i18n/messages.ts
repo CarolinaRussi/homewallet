@@ -48,11 +48,31 @@ export const messages = {
     "auth.errorNameRequired": "Informe o nome.",
     "auth.errorNameTooLong": "O nome é longo demais.",
     "auth.errorEmailTaken": "Este e-mail já está cadastrado.",
+    "auth.errorRegisterFailed":
+      "Não foi possível criar a conta. Tente de novo.",
     "auth.errorInvalidCredentials": "E-mail ou senha inválidos.",
+    "auth.errorPassMax": "A senha pode ter no máximo 128 caracteres.",
     "auth.errorGoogleUnavailable": "Entrar com Google não está disponível.",
     "auth.errorGoogleFailed": "Não foi possível entrar com Google.",
+    "auth.errorGoogleUnverified": "O e-mail do Google não está verificado.",
+    "auth.errorGoogleLinkRequired":
+      "Já existe uma conta com esse e-mail. Entre com a senha e ligue o Google em Conta.",
+    "auth.errorGoogleAlreadyLinked":
+      "Esta conta Google já está ligada a outro usuário.",
+    "auth.errorGoogleEmailMismatch":
+      "O e-mail do Google precisa ser o mesmo da sua conta.",
+    "auth.errorEmailVerifyRequired":
+      "Confirme seu e-mail para usar convites e exportação.",
     "auth.errorResetInvalid": "Link de redefinição inválido ou expirado.",
+    "auth.errorVerifyInvalid": "Link de confirmação inválido ou expirado.",
     "auth.errorGeneric": "Não foi possível concluir. Tente de novo.",
+    "auth.verifyTitle": "Confirmar e-mail",
+    "auth.verifyHint": "Toque no botão para confirmar o endereço deste link.",
+    "auth.verifySubmit": "Confirmar e-mail",
+    "auth.verifyConfirming": "Confirmando…",
+    "auth.verifyDone":
+      "E-mail confirmado. Você já pode usar convites e exportar.",
+    "auth.verifyInvalid": "Link de confirmação inválido ou incompleto.",
     "landing.headline": "Finanças pessoais e do espaço, sem bagunça.",
     "landing.support":
       "Acompanhe sua sobra, marque o que é compartilhado e veja o espaço junto — sem inventar dívida entre membros.",
@@ -303,6 +323,15 @@ export const messages = {
     "account.title": "Conta",
     "account.hint":
       "Exporte seus lançamentos ou apague a conta de forma permanente.",
+    "account.verifyTitle": "Confirme seu e-mail",
+    "account.verifyHint":
+      "Convites por e-mail e exportação CSV pedem e-mail confirmado.",
+    "account.verifyResend": "Reenviar e-mail de confirmação",
+    "account.verifySent": "Se ainda não confirmou, o e-mail já foi enviado.",
+    "account.googleTitle": "Ligar Google",
+    "account.googleHint":
+      "Use o mesmo e-mail da conta para entrar depois com Google.",
+    "account.googleLinked": "Google já está ligado a esta conta.",
     "account.exportCsv": "Exportar planilha (CSV)",
     "account.exporting": "Exportando…",
     "account.exportFailed": "Não foi possível exportar.",
@@ -464,11 +493,29 @@ export const messages = {
     "auth.errorNameRequired": "Enter your name.",
     "auth.errorNameTooLong": "Name is too long.",
     "auth.errorEmailTaken": "This email is already registered.",
+    "auth.errorRegisterFailed":
+      "Could not create the account. Please try again.",
     "auth.errorInvalidCredentials": "Invalid email or passcode.",
+    "auth.errorPassMax": "Passcode must be at most 128 characters.",
     "auth.errorGoogleUnavailable": "Google sign-in is not available.",
     "auth.errorGoogleFailed": "Google sign-in failed.",
+    "auth.errorGoogleUnverified": "Google email is not verified.",
+    "auth.errorGoogleLinkRequired":
+      "An account with this email already exists. Sign in with your passcode, then link Google in Account.",
+    "auth.errorGoogleAlreadyLinked": "This Google account is already linked.",
+    "auth.errorGoogleEmailMismatch":
+      "Google email must match your account email.",
+    "auth.errorEmailVerifyRequired":
+      "Confirm your email to use invites and export.",
     "auth.errorResetInvalid": "Invalid or expired reset link.",
+    "auth.errorVerifyInvalid": "Invalid or expired verify link.",
     "auth.errorGeneric": "Something went wrong. Please try again.",
+    "auth.verifyTitle": "Confirm email",
+    "auth.verifyHint": "Tap the button to confirm the address from this link.",
+    "auth.verifySubmit": "Confirm email",
+    "auth.verifyConfirming": "Confirming…",
+    "auth.verifyDone": "Email confirmed. You can use invites and export.",
+    "auth.verifyInvalid": "Invalid or incomplete verify link.",
     "landing.headline": "Personal and shared money, without the mess.",
     "landing.support":
       "Track leftover, mark what's shared, and see the space together — without inventing who owes whom.",
@@ -716,6 +763,16 @@ export const messages = {
     "settings.tabAccount": "Account",
     "account.title": "Account",
     "account.hint": "Export your entries or permanently delete your account.",
+    "account.verifyTitle": "Confirm your email",
+    "account.verifyHint":
+      "Email invites and CSV export need a confirmed email.",
+    "account.verifyResend": "Resend confirmation email",
+    "account.verifySent":
+      "If you still need to confirm, the email is on its way.",
+    "account.googleTitle": "Link Google",
+    "account.googleHint":
+      "Use the same email as this account to sign in with Google later.",
+    "account.googleLinked": "Google is already linked to this account.",
     "account.exportCsv": "Export spreadsheet (CSV)",
     "account.exporting": "Exporting…",
     "account.exportFailed": "Could not export.",

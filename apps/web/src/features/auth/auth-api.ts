@@ -33,6 +33,24 @@ export function loginWithGoogle(idToken: string) {
   );
 }
 
+export function linkGoogle(idToken: string) {
+  return api<{ user: SessionUser }>("/auth/link-google", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
+  });
+}
+
+export function verifyEmail(token: string) {
+  return api<void>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export function resendVerifyEmail() {
+  return api<void>("/auth/resend-verify-email", { method: "POST" });
+}
+
 export function logoutAccount() {
   return api<void>("/auth/logout", { method: "POST" });
 }

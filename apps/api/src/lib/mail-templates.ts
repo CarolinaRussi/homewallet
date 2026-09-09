@@ -79,6 +79,20 @@ export function passwordResetEmailHtml(input: {
   });
 }
 
+export function verifyEmailHtml(input: {
+  name: string;
+  verifyUrl: string;
+}): string {
+  return mailShell({
+    preview: `Confirm your ${APP_NAME} email`,
+    title: "Confirm your email",
+    bodyHtml: `<p style="margin:0 0 12px;">Hi ${escapeHtml(input.name)},</p>
+<p style="margin:0;">Confirm this email address to unlock invites and export. This link expires in 48 hours.</p>`,
+    ctaLabel: "Confirm email",
+    ctaUrl: input.verifyUrl,
+  });
+}
+
 export function spaceInviteEmailHtml(input: {
   inviterName: string;
   spaceName: string;

@@ -23,6 +23,12 @@ export class User extends BaseEntity {
   @Column({ type: "text" })
   name!: string;
 
+  @Column({ name: "session_version", type: "int", default: 1 })
+  sessionVersion!: number;
+
+  @Column({ name: "email_verified_at", type: "timestamptz", nullable: true })
+  emailVerifiedAt!: Date | null;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 }

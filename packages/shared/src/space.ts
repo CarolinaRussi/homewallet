@@ -63,7 +63,7 @@ export type SpaceSummary = {
   privacyMode: SpacePrivacyMode;
   entryDateMode: EntryDateMode;
   role: MembershipRole;
-  joinCode: string;
+  joinCode: string | null;
   spaceLimitEnabled: boolean;
   spaceLimitAmount: number | null;
   budgetLayersEnabled: boolean;

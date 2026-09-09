@@ -28,3 +28,7 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Audit (informational)
+        run: pnpm audit --prod || true
+        continue-on-error: true

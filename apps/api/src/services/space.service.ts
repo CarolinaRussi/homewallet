@@ -57,7 +57,7 @@ function toSummary(
     privacyMode: space.privacyMode,
     entryDateMode: space.entryDateMode,
     role,
-    joinCode: space.joinCode,
+    joinCode: role === "owner" ? space.joinCode : null,
     spaceLimitEnabled: space.spaceLimitEnabled,
     spaceLimitAmount: amountOrNull(space.spaceLimitAmount),
     budgetLayersEnabled: space.budgetLayersEnabled,
@@ -361,6 +361,9 @@ export function createSpaceService(
       const inviter = await userRepository.findById(userId, dataSource.manager);
       if (!inviter) {
         throw new HttpError(401, "Unauthorized");
+      }
+      if (!inviter.emailVerifiedAt) {
+        throw new HttpError(403, "Email verification required");
       }
 
       const joinUrl = `${webOrigin}/settings?join=${encodeURIComponent(membership.space.joinCode)}`;

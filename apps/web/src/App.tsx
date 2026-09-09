@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AuthPage } from "./features/auth/AuthPage";
 import { ForgotPasswordPage } from "./features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
+import { VerifyEmailPage } from "./features/auth/VerifyEmailPage";
 import { fetchSession } from "./features/auth/auth-api";
 import { LandingPage } from "./features/landing/LandingPage";
 import { MePage } from "./features/me/MePage";
@@ -42,6 +43,7 @@ export function App() {
       <Route path="/register" element={<AuthPage mode="register" />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
           <Route path="/me" element={<MePage />} />

@@ -172,29 +172,29 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
 
         <SpaceMembersSection space={space} onError={onError} />
 
-        <div className="rounded-md border border-border bg-bg/60 px-3 py-3">
-          <p className="text-xs font-medium text-muted">
-            {t("spaces.joinCode")}
-          </p>
-          <p className="mt-1 font-medium tabular-nums text-fg">
-            {space.joinCode}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-3 text-sm">
-            <button
-              type="button"
-              className="text-accent underline"
-              onClick={() => void copyText(space.joinCode)}
-            >
-              {t("spaces.copyCode")}
-            </button>
-            <button
-              type="button"
-              className="text-accent underline"
-              onClick={() => void copyText(inviteLink(space.joinCode))}
-            >
-              {t("spaces.copyLink")}
-            </button>
-            {isOwner ? (
+        {isOwner && space.joinCode ? (
+          <div className="rounded-md border border-border bg-bg/60 px-3 py-3">
+            <p className="text-xs font-medium text-muted">
+              {t("spaces.joinCode")}
+            </p>
+            <p className="mt-1 font-medium tabular-nums text-fg">
+              {space.joinCode}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3 text-sm">
+              <button
+                type="button"
+                className="text-accent underline"
+                onClick={() => void copyText(space.joinCode!)}
+              >
+                {t("spaces.copyCode")}
+              </button>
+              <button
+                type="button"
+                className="text-accent underline"
+                onClick={() => void copyText(inviteLink(space.joinCode!))}
+              >
+                {t("spaces.copyLink")}
+              </button>
               <button
                 type="button"
                 className="text-muted underline disabled:opacity-70"
@@ -207,12 +207,14 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
               >
                 {t("spaces.regenerateCode")}
               </button>
+            </div>
+            {copyFeedback ? (
+              <p className="mt-2 text-xs text-income-fg">
+                {t("spaces.copied")}
+              </p>
             ) : null}
           </div>
-          {copyFeedback ? (
-            <p className="mt-2 text-xs text-income-fg">{t("spaces.copied")}</p>
-          ) : null}
-        </div>
+        ) : null}
 
         {isOwner ? (
           <form

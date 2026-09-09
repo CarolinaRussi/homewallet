@@ -15,6 +15,11 @@ export function createMailService(config: AppConfig) {
   return {
     async send(input: SendMailInput): Promise<void> {
       if (!resend || !config.resendFrom) {
+        if (config.isProduction) {
+          throw new Error(
+            "Email is not configured (RESEND_API_KEY / RESEND_FROM)"
+          );
+        }
         console.info(
           `[mail] skip Resend — to=${input.to} subject=${input.subject}` +
             (input.debugLink ? ` link=${input.debugLink}` : "")
