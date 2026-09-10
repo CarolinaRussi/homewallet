@@ -281,3 +281,20 @@
 .hw-landing-device {
   animation: hw-landing-rise 0.7s ease-out 0.12s both;
 }
+
+@keyframes hw-boot-bar {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.hw-boot {
+  animation: hw-landing-rise 0.45s ease-out both;
+}
+
+.hw-boot-bar-fill {
+  animation: hw-boot-bar 1.1s ease-in-out infinite;
+}

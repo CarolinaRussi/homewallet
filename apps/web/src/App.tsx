@@ -15,11 +15,10 @@ import { AppShell } from "./features/shell/AppShell";
 import { NotFoundPage } from "./features/shell/NotFoundPage";
 import { SpacePage } from "./features/space/SpacePage";
 import { SpacesPanel } from "./features/spaces/SpacesPanel";
-import { useLocale } from "./shared/lib/i18n/locale-context";
+import { AppBootScreen } from "./shared/ui/AppBootScreen";
 import { RequireSession } from "./shared/ui/RequireSession";
 
 export function App() {
-  const { t } = useLocale();
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: fetchSession,
@@ -34,7 +33,7 @@ export function App() {
           sessionQuery.isSuccess ? (
             <Navigate to="/me" replace />
           ) : sessionQuery.isLoading ? (
-            <p className="p-8 text-muted">{t("app.loading")}</p>
+            <AppBootScreen />
           ) : (
             <LandingPage />
           )
