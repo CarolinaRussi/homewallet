@@ -34,7 +34,7 @@ export function SideNav({ onSignOut }: SideNavProps) {
   );
 
   return (
-    <aside className="flex w-full flex-col gap-6 border-border bg-surface md:w-56 md:border-r md:px-4 md:py-6">
+    <aside className="flex w-full flex-col gap-6 border-border bg-surface md:sticky md:top-0 md:h-dvh md:w-56 md:shrink-0 md:self-start md:overflow-y-auto md:border-r md:px-4 md:py-6">
       <div className="hidden md:block">
         <p className="text-sm font-semibold tracking-wide text-accent">
           {APP_NAME}
