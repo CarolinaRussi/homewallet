@@ -282,6 +282,14 @@
   animation: hw-landing-rise 0.7s ease-out 0.12s both;
 }
 
+.hw-landing-features {
+  animation: hw-landing-rise 0.6s ease-out 0.18s both;
+}
+
+.hw-landing-closing {
+  animation: hw-landing-rise 0.55s ease-out 0.28s both;
+}
+
 @keyframes hw-boot-bar {
   0% {
     transform: translateX(-120%);

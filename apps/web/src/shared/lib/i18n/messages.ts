@@ -79,9 +79,33 @@ export const messages = {
     "auth.verifyInvalid": "Link de confirmação inválido ou incompleto.",
     "landing.headline": "Finanças pessoais e do espaço, sem bagunça.",
     "landing.support":
-      "Acompanhe sua sobra, marque o que é compartilhado e veja o espaço junto — sem inventar dívida entre membros.",
+      "Acompanhe sua sobra, marque o que é compartilhado e veja o espaço junto, sem inventar dívida entre membros.",
     "landing.ctaCreate": "Criar conta",
     "landing.ctaSignIn": "Entrar",
+    "landing.featuresTitle": "O que você encontra",
+    "landing.featuresIntro":
+      "Beta pública e gratuita pra organizar o mês sozinho ou em espaço.",
+    "landing.feature.space.title": "Espaço solo ou compartilhado",
+    "landing.feature.space.body":
+      "Use sozinho ou convide quem mora com você. Cada pessoa registra o que pagou; o compartilhado aparece na visão do espaço, sem acerto de contas entre vocês.",
+    "landing.feature.month.title": "Seu mês e a sobra",
+    "landing.feature.month.body":
+      "Receitas, despesas e a sobra que carrega pro mês seguinte. Marque o que é pessoal ou compartilhado e, se quiser, acompanhe limites.",
+    "landing.feature.card.title": "Cartão, parcelas e contas fixas",
+    "landing.feature.card.body":
+      "Lance a fatura do cartão e detalhe as linhas depois. Parcelas e recorrentes ficam separados, cada um no modelo certo.",
+    "landing.feature.reserve.title": "Poupancinha",
+    "landing.feature.reserve.body":
+      "Guarde parte da sobra em caixinhas com nome. Quando usar, o valor volta pra sobra do mês.",
+    "landing.feature.overview.title": "Visão geral",
+    "landing.feature.overview.body":
+      "Tendência mês a mês e gastos por categoria. Filtre por você, pelo espaço ou por cada membro no modo transparente.",
+    "landing.feature.privacy.title": "Privacidade no seu ritmo",
+    "landing.feature.privacy.body":
+      "Por padrão o pessoal fica privado: o espaço vê o compartilhado e os totais. Se quiserem ver tudo, ativam o modo transparente.",
+    "landing.closingTitle": "Pronto pra organizar o mês?",
+    "landing.closingSupport":
+      "Crie uma conta grátis e monte seu espaço em poucos minutos.",
     "landing.mockShared": "Mercado do mês",
     "landing.mockCategory": "Compartilhado · Casa",
     "landing.mockPersonal": "Salário",
@@ -526,9 +550,33 @@ export const messages = {
     "auth.verifyInvalid": "Invalid or incomplete verify link.",
     "landing.headline": "Personal and shared money, without the mess.",
     "landing.support":
-      "Track leftover, mark what's shared, and see the space together — without inventing who owes whom.",
+      "Track leftover, mark what's shared, and see the space together, without inventing who owes whom.",
     "landing.ctaCreate": "Create account",
     "landing.ctaSignIn": "Sign in",
+    "landing.featuresTitle": "What's inside",
+    "landing.featuresIntro":
+      "A free public beta for your month, solo or shared.",
+    "landing.feature.space.title": "Solo or shared space",
+    "landing.feature.space.body":
+      "Use it alone or invite housemates. Each person logs what they paid; shared items show in the space view, with no settlement between you.",
+    "landing.feature.month.title": "Your month and leftover",
+    "landing.feature.month.body":
+      "Income, expenses, and leftover that carries into next month. Mark entries as personal or shared, and optionally track limits.",
+    "landing.feature.card.title": "Cards, installments, and bills",
+    "landing.feature.card.body":
+      "Log the credit-card statement total, then break down lines later. Installments and recurring bills stay as separate models.",
+    "landing.feature.reserve.title": "Reserve",
+    "landing.feature.reserve.body":
+      "Move leftover into named pots. When you withdraw, it returns to this month’s leftover.",
+    "landing.feature.overview.title": "Overview",
+    "landing.feature.overview.body":
+      "Month-to-month trends and spending by category. Filter by you, the space, or each member in transparent mode.",
+    "landing.feature.privacy.title": "Privacy at your pace",
+    "landing.feature.privacy.body":
+      "Personal stays private by default: the space sees shared entries and totals. Turn on transparent mode if you want everything visible.",
+    "landing.closingTitle": "Ready to organize the month?",
+    "landing.closingSupport":
+      "Create a free account and set up your space in a few minutes.",
     "landing.mockShared": "Monthly groceries",
     "landing.mockCategory": "Shared · Home",
     "landing.mockPersonal": "Salary",
