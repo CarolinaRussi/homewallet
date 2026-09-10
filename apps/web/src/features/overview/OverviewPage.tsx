@@ -117,6 +117,9 @@ export function OverviewPage() {
     setMemberUserId(nextScope === "member" ? nextMemberUserId : undefined);
   }
 
+  /** Side-by-side filters until the scope pill row gets crowded. */
+  const stackFilterControls = members.length >= 10;
+
   if (spacesQuery.isLoading) {
     return (
       <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
@@ -149,55 +152,73 @@ export function OverviewPage() {
         <p className="mt-1 text-sm text-muted">{t("overview.hint")}</p>
       </header>
 
-      <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 md:p-5">
-        {multiMember ? (
-          <OverviewScopeFilter
-            transparent={transparent}
-            scope={scope}
-            memberUserId={memberUserId}
-            peers={peers}
-            onScopeChange={onScopeChange}
-          />
-        ) : null}
-
+      <section className="rounded-lg border border-border bg-surface p-4 md:p-5">
         <div
-          className={`flex flex-wrap gap-4 ${multiMember ? "border-t border-border pt-4" : ""}`}
+          className={
+            multiMember
+              ? stackFilterControls
+                ? "flex flex-col gap-4"
+                : "flex flex-wrap items-start gap-x-6 gap-y-4"
+              : "flex flex-wrap gap-4"
+          }
         >
-          {spaces.length > 1 ? (
-            <SelectField
-              label={t("overview.space")}
-              value={spaceId}
-              onChange={(event) => selectSpace(event.target.value)}
+          {multiMember ? (
+            <div
+              className={
+                stackFilterControls ? "w-full" : "min-w-0 flex-1 basis-64"
+              }
             >
-              {spaces.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
+              <OverviewScopeFilter
+                transparent={transparent}
+                scope={scope}
+                memberUserId={memberUserId}
+                peers={peers}
+                onScopeChange={onScopeChange}
+              />
+            </div>
+          ) : null}
+
+          <div
+            className={`flex flex-wrap gap-4 ${
+              multiMember && !stackFilterControls ? "shrink-0" : ""
+            }`}
+          >
+            {spaces.length > 1 ? (
+              <SelectField
+                label={t("overview.space")}
+                value={spaceId}
+                onChange={(event) => selectSpace(event.target.value)}
+              >
+                {spaces.map((space) => (
+                  <option key={space.id} value={space.id}>
+                    {space.name}
+                  </option>
+                ))}
+              </SelectField>
+            ) : null}
+            <SelectField
+              label={t("overview.range")}
+              value={range}
+              onChange={(event) =>
+                setRange(event.target.value as OverviewRangePreset)
+              }
+            >
+              {RANGE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t(
+                    (
+                      {
+                        "3": "overview.range.3",
+                        "6": "overview.range.6",
+                        "12": "overview.range.12",
+                        ytd: "overview.range.ytd",
+                      } as const
+                    )[option]
+                  )}
                 </option>
               ))}
             </SelectField>
-          ) : null}
-          <SelectField
-            label={t("overview.range")}
-            value={range}
-            onChange={(event) =>
-              setRange(event.target.value as OverviewRangePreset)
-            }
-          >
-            {RANGE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {t(
-                  (
-                    {
-                      "3": "overview.range.3",
-                      "6": "overview.range.6",
-                      "12": "overview.range.12",
-                      ytd: "overview.range.ytd",
-                    } as const
-                  )[option]
-                )}
-              </option>
-            ))}
-          </SelectField>
+          </div>
         </div>
       </section>
 
