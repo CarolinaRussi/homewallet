@@ -5,6 +5,10 @@ export const LOCALES: Locale[] = ["pt-BR", "en"];
 export const messages = {
   "pt-BR": {
     "app.loading": "Carregando…",
+    "notFound.code": "404",
+    "notFound.title": "Essa página não existe",
+    "notFound.support": "O endereço pode estar errado ou a página foi movida.",
+    "notFound.home": "Ir para o início",
     "nav.overview": "Visão geral",
     "nav.me": "Eu",
     "nav.reserve": "Poupancinha",
@@ -450,6 +454,10 @@ export const messages = {
   },
   en: {
     "app.loading": "Loading…",
+    "notFound.code": "404",
+    "notFound.title": "This page doesn't exist",
+    "notFound.support": "The address may be wrong, or the page was moved.",
+    "notFound.home": "Go to home",
     "nav.overview": "Overview",
     "nav.me": "Me",
     "nav.reserve": "Reserve",

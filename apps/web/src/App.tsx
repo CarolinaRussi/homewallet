@@ -12,6 +12,7 @@ import { OverviewPage } from "./features/overview/OverviewPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AccountPanel } from "./features/settings/AccountPanel";
 import { AppShell } from "./features/shell/AppShell";
+import { NotFoundPage } from "./features/shell/NotFoundPage";
 import { SpacePage } from "./features/space/SpacePage";
 import { SpacesPanel } from "./features/spaces/SpacesPanel";
 import { useLocale } from "./shared/lib/i18n/locale-context";
@@ -57,6 +58,7 @@ export function App() {
           <Route path="/spaces" element={<Navigate to="/settings" replace />} />
         </Route>
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
