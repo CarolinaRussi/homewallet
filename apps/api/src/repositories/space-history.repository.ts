@@ -1,0 +1,134 @@
+import type { EntityManager } from "typeorm";
+import { Entry } from "../db/entities/entry.entity.js";
+import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
+import { ReserveMovement } from "../db/entities/reserve-movement.entity.js";
+import { SpaceHistoryMove } from "../db/entities/space-history-move.entity.js";
+
+function toMonth(value: unknown): string | null {
+  if (value == null) {
+    return null;
+  }
+  const text =
+    value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
+  return text.slice(0, 7);
+}
+
+export const spaceHistoryRepository = {
+  findImportMove(
+    userId: string,
+    sourceSpaceId: string,
+    targetSpaceId: string,
+    manager: EntityManager
+  ) {
+    return manager.findOne(SpaceHistoryMove, {
+      where: {
+        userId,
+        sourceSpaceId,
+        targetSpaceId,
+        direction: "import",
+      },
+    });
+  },
+
+  listImportMovesForTarget(
+    userId: string,
+    targetSpaceId: string,
+    manager: EntityManager
+  ) {
+    return manager.find(SpaceHistoryMove, {
+      where: { userId, targetSpaceId, direction: "import" },
+    });
+  },
+
+  async entryStats(spaceId: string, userId: string, manager: EntityManager) {
+    const row = await manager
+      .createQueryBuilder(Entry, "entryRow")
+      .select("COUNT(*)", "entryCount")
+      .addSelect("MIN(entryRow.occurredOn)", "monthFrom")
+      .addSelect("MAX(entryRow.occurredOn)", "monthTo")
+      .where("entryRow.spaceId = :spaceId AND entryRow.userId = :userId", {
+        spaceId,
+        userId,
+      })
+      .getRawOne<{
+        entryCount: string;
+        monthFrom: unknown;
+        monthTo: unknown;
+      }>();
+    return {
+      entryCount: Number(row?.entryCount ?? 0),
+      monthFrom: toMonth(row?.monthFrom),
+      monthTo: toMonth(row?.monthTo),
+    };
+  },
+
+  async usedCategoryIds(
+    spaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
+    const fromEntries = await manager
+      .createQueryBuilder(Entry, "entryRow")
+      .select("DISTINCT entryRow.categoryId", "categoryId")
+      .where("entryRow.spaceId = :spaceId AND entryRow.userId = :userId", {
+        spaceId,
+        userId,
+      })
+      .andWhere("entryRow.categoryId IS NOT NULL")
+      .getRawMany<{ categoryId: string }>();
+    const fromLines = await manager
+      .createQueryBuilder(EntryCardLine, "lineRow")
+      .innerJoin(Entry, "entryRow", "entryRow.id = lineRow.entryId")
+      .select("DISTINCT lineRow.categoryId", "categoryId")
+      .where("entryRow.spaceId = :spaceId AND entryRow.userId = :userId", {
+        spaceId,
+        userId,
+      })
+      .getRawMany<{ categoryId: string }>();
+    return new Set(
+      [...fromEntries, ...fromLines]
+        .map((row) => row.categoryId)
+        .filter(Boolean)
+    );
+  },
+
+  async transferCounterparties(
+    spaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
+    const rows = await manager
+      .createQueryBuilder(Entry, "entryRow")
+      .select("DISTINCT entryRow.counterpartyUserId", "counterpartyUserId")
+      .where("entryRow.spaceId = :spaceId AND entryRow.userId = :userId", {
+        spaceId,
+        userId,
+      })
+      .andWhere("entryRow.type IN (:...types)", {
+        types: ["transfer_out", "transfer_in"],
+      })
+      .andWhere("entryRow.counterpartyUserId IS NOT NULL")
+      .getRawMany<{ counterpartyUserId: string }>();
+    return rows.map((row) => row.counterpartyUserId);
+  },
+
+  async reserveBalance(
+    spaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
+    const movements = await manager.find(ReserveMovement, {
+      where: { spaceId, userId },
+    });
+    let balance = 0;
+    for (const movement of movements) {
+      const amount = Number(movement.amount);
+      if (movement.type === "withdraw") {
+        balance -= amount;
+      } else {
+        balance += amount;
+      }
+    }
+    return balance;
+  },
+};

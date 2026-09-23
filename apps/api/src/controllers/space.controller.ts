@@ -1,12 +1,14 @@
 import type { FastifyRequest } from "fastify";
 import {
   createSpaceBodySchema,
+  historyImportPreviewBodySchema,
   inviteSpaceEmailBodySchema,
   joinSpaceBodySchema,
   monthQuerySchema,
   updateMyLimitsBodySchema,
   updateSpaceBodySchema,
 } from "@homewallet/shared";
+import type { SpaceHistoryService } from "../services/space-history.service.js";
 import type { SpaceService } from "../services/space.service.js";
 
 type SpaceParams = { id: string };
@@ -21,7 +23,10 @@ function resolveMonth(query: MonthQuery) {
   return `${now.getFullYear()}-${month}`;
 }
 
-export function createSpaceController(spaceService: SpaceService) {
+export function createSpaceController(
+  spaceService: SpaceService,
+  spaceHistoryService: SpaceHistoryService
+) {
   return {
     list(request: FastifyRequest) {
       return spaceService.listForUser(request.user.sub);
@@ -105,6 +110,22 @@ export function createSpaceController(spaceService: SpaceService) {
         request.user.sub,
         request.params.id,
         resolveMonth(request.query)
+      );
+    },
+
+    listHistoryImportSources(request: FastifyRequest<{ Params: SpaceParams }>) {
+      return spaceHistoryService.listEligibleSources(
+        request.user.sub,
+        request.params.id
+      );
+    },
+
+    previewHistoryImport(request: FastifyRequest<{ Params: SpaceParams }>) {
+      const body = historyImportPreviewBodySchema.parse(request.body);
+      return spaceHistoryService.previewImport(
+        request.user.sub,
+        request.params.id,
+        body.sourceSpaceId
       );
     },
   };

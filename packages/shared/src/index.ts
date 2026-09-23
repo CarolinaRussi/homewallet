@@ -12,3 +12,4 @@ export * from "./recurring.js";
 export * from "./limits.js";
 export * from "./reserve.js";
 export * from "./overview.js";
+export * from "./space-history.js";

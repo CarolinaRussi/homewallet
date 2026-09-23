@@ -32,6 +32,7 @@ import { RecurringRule } from "./db/entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./db/entities/reserve-movement.entity.js";
 import { ReservePot } from "./db/entities/reserve-pot.entity.js";
 import { Space } from "./db/entities/space.entity.js";
+import { SpaceHistoryMove } from "./db/entities/space-history-move.entity.js";
 import { User } from "./db/entities/user.entity.js";
 import { HttpError } from "./lib/http-error.js";
 import { registerAuth } from "./plugins/auth.js";
@@ -48,6 +49,7 @@ import { createMailService } from "./services/mail.service.js";
 import { createOverviewService } from "./services/overview.service.js";
 import { createRecurringService } from "./services/recurring.service.js";
 import { createReservePotService } from "./services/reserve-pot.service.js";
+import { createSpaceHistoryService } from "./services/space-history.service.js";
 import { createSpaceService } from "./services/space.service.js";
 
 loadEnv({
@@ -75,12 +77,17 @@ LeftoverSeed.useDataSource(dataSource);
 PasswordResetToken.useDataSource(dataSource);
 EmailVerifyToken.useDataSource(dataSource);
 MemberMonthSnapshot.useDataSource(dataSource);
+SpaceHistoryMove.useDataSource(dataSource);
 
 const mailService = createMailService(config);
 const spaceService = createSpaceService(
   dataSource,
   mailService,
   config.webOrigin
+);
+const spaceHistoryService = createSpaceHistoryService(
+  dataSource,
+  config.jwtSecret
 );
 const authService = createAuthService(
   dataSource,
@@ -186,7 +193,10 @@ await app.register(
 );
 await app.register(
   async (scoped) =>
-    registerSpaceRoutes(scoped, createSpaceController(spaceService)),
+    registerSpaceRoutes(
+      scoped,
+      createSpaceController(spaceService, spaceHistoryService)
+    ),
   { prefix: "/spaces" }
 );
 await app.register(async (scoped) =>

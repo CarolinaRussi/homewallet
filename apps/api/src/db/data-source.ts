@@ -13,6 +13,7 @@ import { RecurringRule } from "./entities/recurring-rule.entity.js";
 import { ReserveMovement } from "./entities/reserve-movement.entity.js";
 import { ReservePot } from "./entities/reserve-pot.entity.js";
 import { Space } from "./entities/space.entity.js";
+import { SpaceHistoryMove } from "./entities/space-history-move.entity.js";
 import { EmailVerifyToken } from "./entities/email-verify-token.entity.js";
 import { User } from "./entities/user.entity.js";
 import { InitialIdentity20260903180000 } from "./migrations/20260903180000-initial-identity.js";
@@ -36,6 +37,7 @@ import { MemberMonthSnapshots20260905030000 } from "./migrations/20260905030000-
 import { RecurringRulesUserIndex20260905020000 } from "./migrations/20260905020000-recurring-rules-user-index.js";
 import { UserSessionVersion20260909090000 } from "./migrations/20260909090000-user-session-version.js";
 import { UserEmailVerified20260909091000 } from "./migrations/20260909091000-user-email-verified.js";
+import { SpaceHistoryMoves20260923180000 } from "./migrations/20260923180000-space-history-moves.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -58,6 +60,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       PasswordResetToken,
       EmailVerifyToken,
       MemberMonthSnapshot,
+      SpaceHistoryMove,
     ],
     migrations: [
       InitialIdentity20260903180000,
@@ -81,6 +84,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       MemberMonthSnapshots20260905030000,
       UserSessionVersion20260909090000,
       UserEmailVerified20260909091000,
+      SpaceHistoryMoves20260923180000,
     ],
   });
 }

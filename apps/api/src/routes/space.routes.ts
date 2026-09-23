@@ -54,4 +54,20 @@ export async function registerSpaceRoutes(
     "/:id/space-month",
     (request) => controller.spaceMonth(request)
   );
+  app.get<{ Params: { id: string } }>(
+    "/:id/history-import/eligible-sources",
+    (request) => controller.listHistoryImportSources(request)
+  );
+  app.post<{ Params: { id: string } }>(
+    "/:id/history-import/preview",
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    (request) => controller.previewHistoryImport(request)
+  );
 }
