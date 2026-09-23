@@ -10,6 +10,7 @@ const AUTH_ERROR_KEYS: Record<string, MessageKey> = {
   "Email already registered": "auth.errorEmailTaken",
   "Could not complete registration": "auth.errorRegisterFailed",
   "Invalid email or passcode": "auth.errorInvalidCredentials",
+  "Use Google sign-in": "auth.errorUseGoogle",
   "Google sign-in is not configured": "auth.errorGoogleUnavailable",
   "Google sign-in failed": "auth.errorGoogleFailed",
   "Google email is not verified": "auth.errorGoogleUnverified",

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SpaceSummary } from "@homewallet/shared";
 import { fetchSpaces } from "./space-api";
+import { isHistorySoloSpace, pickHomeSpaceId } from "./space-kind";
 
 const STORAGE_KEY = "hw_active_space";
 
@@ -37,15 +38,21 @@ export function useActiveSpace() {
       }
       return;
     }
-    const stillValid = spaceId && spaces.some((space) => space.id === spaceId);
-    if (!stillValid) {
-      const nextId = spaces[0]?.id;
-      if (nextId) {
-        setSpaceId(nextId);
-        writeActiveSpaceId(nextId);
-      }
+    const current = spaceId
+      ? spaces.find((space) => space.id === spaceId)
+      : undefined;
+    if (!current && spaceId && spacesQuery.isFetching) {
+      return;
     }
-  }, [spacesQuery.data, spaceId]);
+    if (current && !isHistorySoloSpace(current, spaces)) {
+      return;
+    }
+    const nextId = pickHomeSpaceId(spaces);
+    if (nextId && nextId !== spaceId) {
+      setSpaceId(nextId);
+      writeActiveSpaceId(nextId);
+    }
+  }, [spacesQuery.data, spacesQuery.isFetching, spaceId]);
 
   function selectSpace(nextId: string) {
     setSpaceId(nextId);

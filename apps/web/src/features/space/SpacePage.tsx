@@ -17,8 +17,7 @@ import { SpaceMonthHero } from "./SpaceMonthHero";
 
 export function SpacePage() {
   const { t } = useLocale();
-  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
-    useActiveSpace();
+  const { spacesQuery, activeSpace, spaceId } = useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
   const transparent = activeSpace?.privacyMode === "transparent";
 
@@ -108,23 +107,10 @@ export function SpacePage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-fg">{t("space.title")}</h1>
+          <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
           <p className="mt-1 text-sm text-muted">{t("space.panelHint")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {spaces.length > 1 ? (
-            <select
-              className="hw-select"
-              value={spaceId}
-              onChange={(event) => selectSpace(event.target.value)}
-              aria-label={t("overview.space")}
-            >
-              {spaces.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
           <button
             type="button"
             className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"

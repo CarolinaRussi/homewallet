@@ -53,10 +53,14 @@ export const messages = {
     "auth.errorPassRequired": "Informe a senha.",
     "auth.errorNameRequired": "Informe o nome.",
     "auth.errorNameTooLong": "O nome é longo demais.",
-    "auth.errorEmailTaken": "Este e-mail já está cadastrado.",
+    "auth.errorEmailTaken":
+      "Este e-mail já está cadastrado. Entre ou use Esqueci a senha.",
     "auth.errorRegisterFailed":
       "Não foi possível criar a conta. Tente de novo.",
-    "auth.errorInvalidCredentials": "E-mail ou senha inválidos.",
+    "auth.errorInvalidCredentials":
+      "E-mail ou senha não conferem. Se esqueceu, use Esqueci a senha.",
+    "auth.errorUseGoogle":
+      "Esta conta entra com Google. Use o botão Entrar com Google.",
     "auth.errorPassMax": "A senha pode ter no máximo 128 caracteres.",
     "auth.errorGoogleUnavailable": "Entrar com Google não está disponível.",
     "auth.errorGoogleFailed": "Não foi possível entrar com Google.",
@@ -376,7 +380,12 @@ export const messages = {
     "spaces.title": "Espaço",
     "spaces.hint":
       "Convide pessoas, ajuste privacidade e limites do espaço em que você está.",
-    "spaces.configureSpace": "Espaço a configurar",
+    "spaces.switchHint":
+      "O Me, a reserva e a visão geral usam o espaço ativo. Troque só aqui.",
+    "spaces.historySoloLabel": "histórico pessoal",
+    "spaces.historySoloHint":
+      "Este espaço é só seu. O dia a dia fica na casa compartilhada. Em breve dá para trazer este histórico para lá.",
+    "spaces.configureSpace": "Espaço ativo",
     "spaces.addSpace": "Criar ou entrar noutro espaço",
     "spaces.empty":
       "Ainda não fazes parte de nenhum espaço. Cria um ou entra com um código.",
@@ -401,7 +410,8 @@ export const messages = {
     "spaces.invitePlaceholder": "email@exemplo.com",
     "spaces.inviteSubmit": "Enviar convite",
     "spaces.inviteSending": "Enviando…",
-    "spaces.inviteSent": "Convite enviado.",
+    "spaces.inviteSent":
+      "Convite enviado. A pessoa ainda precisa entrar com o código — o e-mail sozinho não adiciona.",
     "spaces.create": "Criar espaço",
     "spaces.createName": "Nome do espaço",
     "spaces.createSubmit": "Criar",
@@ -528,10 +538,13 @@ export const messages = {
     "auth.errorPassRequired": "Enter your passcode.",
     "auth.errorNameRequired": "Enter your name.",
     "auth.errorNameTooLong": "Name is too long.",
-    "auth.errorEmailTaken": "This email is already registered.",
+    "auth.errorEmailTaken":
+      "This email is already registered. Sign in or reset your passcode.",
     "auth.errorRegisterFailed":
       "Could not create the account. Please try again.",
-    "auth.errorInvalidCredentials": "Invalid email or passcode.",
+    "auth.errorInvalidCredentials":
+      "Email or passcode do not match. If you forgot it, use Forgot passcode.",
+    "auth.errorUseGoogle": "This account uses Google. Use Sign in with Google.",
     "auth.errorPassMax": "Passcode must be at most 128 characters.",
     "auth.errorGoogleUnavailable": "Google sign-in is not available.",
     "auth.errorGoogleFailed": "Google sign-in failed.",
@@ -847,7 +860,12 @@ export const messages = {
     "spaces.title": "Space",
     "spaces.hint":
       "Invite people, set privacy, and tune limits for the space you’re in.",
-    "spaces.configureSpace": "Space to configure",
+    "spaces.switchHint":
+      "Me, Reserve, and Overview use the active space. Switch only here.",
+    "spaces.historySoloLabel": "personal history",
+    "spaces.historySoloHint":
+      "This space is only yours. Daily life lives in the household space. You’ll be able to bring this history there soon.",
+    "spaces.configureSpace": "Active space",
     "spaces.addSpace": "Create or join another space",
     "spaces.empty":
       "You’re not in a space yet. Create one or join with a code.",
@@ -872,7 +890,8 @@ export const messages = {
     "spaces.invitePlaceholder": "email@example.com",
     "spaces.inviteSubmit": "Send invite",
     "spaces.inviteSending": "Sending…",
-    "spaces.inviteSent": "Invite sent.",
+    "spaces.inviteSent":
+      "Invite sent. They still need to join with the code — the email alone does not add them.",
     "spaces.create": "Create space",
     "spaces.createName": "Space name",
     "spaces.createSubmit": "Create",

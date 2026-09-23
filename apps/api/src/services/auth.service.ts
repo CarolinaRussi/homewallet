@@ -115,11 +115,14 @@ export function createAuthService(
       return dataSource
         .transaction(async (manager) => {
           const existing = await userRepository.findByEmail(
-            input.email,
+            input.email.toLowerCase(),
             manager
           );
           if (existing) {
-            throw new HttpError(409, "Could not complete registration");
+            if (existing.googleSub && !existing.passwordHash) {
+              throw new HttpError(409, "Use Google sign-in");
+            }
+            throw new HttpError(409, "Email already registered");
           }
 
           const user = await userRepository.create(manager, {
@@ -154,8 +157,11 @@ export function createAuthService(
         input.email.toLowerCase(),
         dataSource.manager
       );
-      if (!user?.passwordHash) {
+      if (!user) {
         throw new HttpError(401, "Invalid email or passcode");
+      }
+      if (!user.passwordHash) {
+        throw new HttpError(401, "Use Google sign-in");
       }
 
       const matches = await verifyPassword(input.password, user.passwordHash);

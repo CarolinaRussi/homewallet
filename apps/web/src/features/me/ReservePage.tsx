@@ -34,8 +34,7 @@ import {
 export function ReservePage() {
   const { t, locale } = useLocale();
   const queryClient = useQueryClient();
-  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
-    useActiveSpace();
+  const { spacesQuery, activeSpace, spaceId } = useActiveSpace();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [deletePotId, setDeletePotId] = useState<string | null>(null);
@@ -256,23 +255,11 @@ export function ReservePage() {
           <h1 className="text-3xl font-semibold text-fg">
             {t("reserve.title")}
           </h1>
+          <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             {t("reserve.hint")}
           </p>
         </div>
-        {spaces.length > 1 ? (
-          <select
-            className="hw-select"
-            value={spaceId}
-            onChange={(event) => selectSpace(event.target.value)}
-          >
-            {spaces.map((space) => (
-              <option key={space.id} value={space.id}>
-                {space.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
       </header>
 
       {errorMessage ? (

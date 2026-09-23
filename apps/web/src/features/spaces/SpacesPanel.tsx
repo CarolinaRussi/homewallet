@@ -1,15 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import type { SpaceSummary } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { SpaceCardsSkeleton } from "../../shared/ui/Skeleton";
 import { Spinner } from "../../shared/ui/Spinner";
 import { setWelcomeIntent } from "../me/welcome-intent";
 import { createSpace, joinSpace } from "./space-api";
+import { isHistorySoloSpace } from "./space-kind";
 import { SpaceSettingsCard } from "./SpaceSettingsCard";
 import { useActiveSpace, setStoredActiveSpace } from "./use-active-space";
+
+const ALREADY_MEMBER = "Already a member of this space";
 
 export function SpacesPanel() {
   const { t } = useLocale();
@@ -19,8 +23,13 @@ export function SpacesPanel() {
   const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
     useActiveSpace();
   const [errorMessage, setErrorMessage] = useState("");
+  const [configureId, setConfigureId] = useState<string | null>(null);
   const joinPrefill = searchParams.get("join") ?? "";
   const showAddOpen = Boolean(joinPrefill) || spaces.length === 0;
+  const triedJoinPrefill = useRef(false);
+  const viewingId = configureId ?? spaceId;
+  const viewingSpace =
+    spaces.find((space) => space.id === viewingId) ?? activeSpace;
 
   const createMutation = useMutation({
     mutationFn: createSpace,
@@ -36,13 +45,39 @@ export function SpacesPanel() {
 
   const joinMutation = useMutation({
     mutationFn: joinSpace,
-    onSuccess: async (space) => {
-      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+    onSuccess: (space) => {
+      queryClient.setQueryData(
+        ["spaces"],
+        (current: SpaceSummary[] | undefined) => {
+          if (!current) return [space];
+          if (current.some((item) => item.id === space.id)) {
+            return current.map((item) => (item.id === space.id ? space : item));
+          }
+          return [...current, space];
+        }
+      );
       setStoredActiveSpace(space.id);
       selectSpace(space.id);
+      void queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      navigate("/me");
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error: Error) => {
+      if (error.message === ALREADY_MEMBER) {
+        void queryClient.invalidateQueries({ queryKey: ["spaces"] });
+        navigate("/me");
+        return;
+      }
+      setErrorMessage(error.message);
+    },
   });
+
+  useEffect(() => {
+    if (!joinPrefill || triedJoinPrefill.current) {
+      return;
+    }
+    triedJoinPrefill.current = true;
+    joinMutation.mutate(joinPrefill);
+  }, [joinPrefill, joinMutation]);
 
   function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,6 +100,9 @@ export function SpacesPanel() {
       <div>
         <h2 className="text-xl font-semibold text-fg">{t("spaces.title")}</h2>
         <p className="mt-2 text-sm text-muted">{t("spaces.hint")}</p>
+        {spaces.length > 1 ? (
+          <p className="mt-2 text-sm text-muted">{t("spaces.switchHint")}</p>
+        ) : null}
       </div>
 
       {errorMessage ? (
@@ -75,28 +113,34 @@ export function SpacesPanel() {
         <SpaceCardsSkeleton />
       ) : (
         <>
-          {spaces.length > 1 && spaceId ? (
+          {spaces.length > 1 && viewingId ? (
             <label className="flex max-w-sm flex-col gap-1 text-sm text-muted">
               {t("spaces.configureSpace")}
               <select
                 className="hw-select-field"
-                value={spaceId}
-                onChange={(event) => selectSpace(event.target.value)}
+                value={viewingId}
+                onChange={(event) => setConfigureId(event.target.value)}
                 aria-label={t("spaces.configureSpace")}
               >
                 {spaces.map((space) => (
                   <option key={space.id} value={space.id}>
-                    {space.name}
+                    {isHistorySoloSpace(space, spaces)
+                      ? `${space.name} — ${t("spaces.historySoloLabel")}`
+                      : space.name}
                   </option>
                 ))}
               </select>
             </label>
           ) : null}
 
-          {activeSpace ? (
+          {viewingSpace && isHistorySoloSpace(viewingSpace, spaces) ? (
+            <p className="text-sm text-muted">{t("spaces.historySoloHint")}</p>
+          ) : null}
+
+          {viewingSpace ? (
             <SpaceSettingsCard
-              key={activeSpace.id}
-              space={activeSpace}
+              key={viewingSpace.id}
+              space={viewingSpace}
               onError={setErrorMessage}
             />
           ) : spaces.length === 0 ? (

@@ -213,8 +213,7 @@ export function MePage() {
   const { t, locale } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
-    useActiveSpace();
+  const { spacesQuery, activeSpace, spaceId } = useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -754,20 +753,6 @@ export function MePage() {
           <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {spaces.length > 1 ? (
-            <select
-              className="hw-select"
-              value={spaceId}
-              onChange={(event) => selectSpace(event.target.value)}
-              aria-label={t("me.activeSpace")}
-            >
-              {spaces.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
           <button
             type="button"
             className="rounded-md border border-border px-2 py-1.5 text-sm text-fg"

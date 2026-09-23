@@ -68,4 +68,5 @@ export type SpaceSummary = {
   spaceLimitAmount: number | null;
   budgetLayersEnabled: boolean;
   myLimits: MyLimitSettings;
+  memberCount: number;
 };

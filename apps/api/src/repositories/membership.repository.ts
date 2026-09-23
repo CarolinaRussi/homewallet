@@ -25,6 +25,28 @@ export const membershipRepository = {
     });
   },
 
+  countForSpace(spaceId: string, manager: EntityManager) {
+    return manager.count(Membership, { where: { spaceId } });
+  },
+
+  async countBySpaceIds(spaceIds: string[], manager: EntityManager) {
+    const counts = new Map<string, number>();
+    if (spaceIds.length === 0) {
+      return counts;
+    }
+    const rows = await manager
+      .createQueryBuilder(Membership, "membershipRow")
+      .select("membershipRow.spaceId", "spaceId")
+      .addSelect("COUNT(*)", "memberCount")
+      .where("membershipRow.spaceId IN (:...spaceIds)", { spaceIds })
+      .groupBy("membershipRow.spaceId")
+      .getRawMany<{ spaceId: string; memberCount: string }>();
+    for (const row of rows) {
+      counts.set(row.spaceId, Number(row.memberCount));
+    }
+    return counts;
+  },
+
   countOwners(spaceId: string, manager: EntityManager) {
     return manager.count(Membership, {
       where: { spaceId, role: "owner" },

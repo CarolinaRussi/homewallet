@@ -1,7 +1,7 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { APP_NAME } from "@homewallet/shared";
-import { fetchSession, logoutAccount } from "../auth/auth-api";
+import { logoutAccount } from "../auth/auth-api";
 import { clearClientSession } from "../auth/clear-client-session";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { useTheme } from "../../shared/lib/theme/theme-context";
@@ -12,11 +12,6 @@ export function AppShell() {
   const queryClient = useQueryClient();
   const { t, locale, setLocale } = useLocale();
   const { theme, toggleTheme } = useTheme();
-  const sessionQuery = useQuery({
-    queryKey: ["session"],
-    queryFn: fetchSession,
-  });
-  const needsVerify = sessionQuery.data?.user.emailVerified === false;
 
   async function onSignOut() {
     try {
@@ -63,14 +58,6 @@ export function AppShell() {
       <SideNav onSignOut={onSignOut} />
 
       <div className="min-w-0 flex-1">
-        {needsVerify ? (
-          <div className="border-b border-border bg-income px-4 py-2 text-sm text-income-fg md:px-6">
-            {t("account.verifyHint")}{" "}
-            <Link to="/settings/account" className="font-medium underline">
-              {t("settings.tabAccount")}
-            </Link>
-          </div>
-        ) : null}
         <Outlet />
       </div>
     </div>

@@ -48,7 +48,8 @@ function myLimitsFrom(membership: Membership): MyLimitSettings {
 function toSummary(
   space: Membership["space"],
   role: Membership["role"],
-  myLimits: MyLimitSettings = EMPTY_MY_LIMITS
+  myLimits: MyLimitSettings = EMPTY_MY_LIMITS,
+  memberCount = 1
 ): SpaceSummary {
   return {
     id: space.id,
@@ -62,6 +63,7 @@ function toSummary(
     spaceLimitAmount: amountOrNull(space.spaceLimitAmount),
     budgetLayersEnabled: space.budgetLayersEnabled,
     myLimits,
+    memberCount,
   };
 }
 
@@ -96,8 +98,17 @@ export function createSpaceService(
         userId,
         dataSource.manager
       );
-      return memberships.map((membership) =>
-        toSummary(membership.space, membership.role, myLimitsFrom(membership))
+      const memberCounts = await membershipRepository.countBySpaceIds(
+        memberships.map((membershipRow) => membershipRow.spaceId),
+        dataSource.manager
+      );
+      return memberships.map((membershipRow) =>
+        toSummary(
+          membershipRow.space,
+          membershipRow.role,
+          myLimitsFrom(membershipRow),
+          memberCounts.get(membershipRow.spaceId) ?? 1
+        )
       );
     },
 
@@ -113,7 +124,11 @@ export function createSpaceService(
       return toSummary(
         membership.space,
         membership.role,
-        myLimitsFrom(membership)
+        myLimitsFrom(membership),
+        await membershipRepository.countForSpace(
+          membership.spaceId,
+          dataSource.manager
+        )
       );
     },
 
@@ -194,7 +209,12 @@ export function createSpaceService(
         userId,
         dataSource.manager
       );
-      return toSummary(space, "member");
+      return toSummary(
+        space,
+        "member",
+        EMPTY_MY_LIMITS,
+        await membershipRepository.countForSpace(space.id, dataSource.manager)
+      );
     },
 
     async updateSettings(
@@ -248,7 +268,11 @@ export function createSpaceService(
       return toSummary(
         membership.space,
         membership.role,
-        myLimitsFrom(membership)
+        myLimitsFrom(membership),
+        await membershipRepository.countForSpace(
+          membership.spaceId,
+          dataSource.manager
+        )
       );
     },
 
@@ -337,7 +361,11 @@ export function createSpaceService(
       return toSummary(
         membership.space,
         membership.role,
-        myLimitsFrom(membership)
+        myLimitsFrom(membership),
+        await membershipRepository.countForSpace(
+          membership.spaceId,
+          dataSource.manager
+        )
       );
     },
 
@@ -486,7 +514,11 @@ export function createSpaceService(
       return toSummary(
         membership.space,
         membership.role,
-        myLimitsFrom(membership)
+        myLimitsFrom(membership),
+        await membershipRepository.countForSpace(
+          membership.spaceId,
+          dataSource.manager
+        )
       );
     },
 

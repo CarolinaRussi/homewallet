@@ -18,8 +18,7 @@ const RANGE_OPTIONS: OverviewRangePreset[] = ["3", "6", "12", "ytd"];
 
 export function OverviewPage() {
   const { t } = useLocale();
-  const { spacesQuery, spaces, activeSpace, spaceId, selectSpace } =
-    useActiveSpace();
+  const { spacesQuery, activeSpace, spaceId } = useActiveSpace();
   const [range, setRange] = useState<OverviewRangePreset>("6");
   const [scope, setScope] = useState<OverviewScope>("me");
   const [memberUserId, setMemberUserId] = useState<string | undefined>();
@@ -149,6 +148,7 @@ export function OverviewPage() {
         <h1 className="text-3xl font-semibold text-fg">
           {t("overview.title")}
         </h1>
+        <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
         <p className="mt-1 text-sm text-muted">{t("overview.hint")}</p>
       </header>
 
@@ -183,19 +183,6 @@ export function OverviewPage() {
               multiMember && !stackFilterControls ? "shrink-0" : ""
             }`}
           >
-            {spaces.length > 1 ? (
-              <SelectField
-                label={t("overview.space")}
-                value={spaceId}
-                onChange={(event) => selectSpace(event.target.value)}
-              >
-                {spaces.map((space) => (
-                  <option key={space.id} value={space.id}>
-                    {space.name}
-                  </option>
-                ))}
-              </SelectField>
-            ) : null}
             <SelectField
               label={t("overview.range")}
               value={range}
