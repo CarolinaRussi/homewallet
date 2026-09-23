@@ -1,6 +1,9 @@
 import type {
   BudgetLayer,
   EntryDateMode,
+  HistoryImportExecuteResult,
+  HistoryImportPreview,
+  HistoryImportSourceSummary,
   SpaceMemberSummary,
   SpaceMonthSummary,
   SpaceSummary,
@@ -74,6 +77,42 @@ export function inviteSpaceEmail(spaceId: string, email: string) {
     method: "POST",
     body: JSON.stringify({ email }),
   });
+}
+
+export function fetchHistoryImportSources(targetSpaceId: string) {
+  return api<HistoryImportSourceSummary[]>(
+    `/spaces/${targetSpaceId}/history-import/eligible-sources`
+  );
+}
+
+export function previewHistoryImport(
+  targetSpaceId: string,
+  sourceSpaceId: string
+) {
+  return api<HistoryImportPreview>(
+    `/spaces/${targetSpaceId}/history-import/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify({ sourceSpaceId }),
+    }
+  );
+}
+
+export function executeHistoryImport(
+  targetSpaceId: string,
+  body: {
+    sourceSpaceId: string;
+    previewToken: string;
+    categoryMap?: Record<string, string>;
+  }
+) {
+  return api<HistoryImportExecuteResult>(
+    `/spaces/${targetSpaceId}/history-import/execute`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
 }
 
 export function leaveSpace(spaceId: string) {

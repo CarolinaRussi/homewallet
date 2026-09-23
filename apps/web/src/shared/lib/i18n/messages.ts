@@ -384,7 +384,30 @@ export const messages = {
       "O Me, a reserva e a visão geral usam o espaço ativo. Troque só aqui.",
     "spaces.historySoloLabel": "histórico pessoal",
     "spaces.historySoloHint":
-      "Este espaço é só seu. O dia a dia fica na casa compartilhada. Em breve dá para trazer este histórico para lá.",
+      "Este espaço é só seu. O dia a dia fica na casa compartilhada. Dá para trazer este histórico para lá.",
+    "spaces.historyImport.offerTitle": "Trazer histórico pessoal?",
+    "spaces.historyImport.offerHint":
+      "Os lançamentos do seu espaço solo passam para esta casa. O espaço vazio some depois.",
+    "spaces.historyImport.skip": "Agora não",
+    "spaces.historyImport.action": "Trazer meu histórico pessoal",
+    "spaces.historyImport.settingsHint":
+      "Traz os lançamentos do seu espaço só seu para esta casa.",
+    "spaces.historyImport.entries": "{n} lançamentos",
+    "spaces.historyImport.months": "{from} a {to}",
+    "spaces.historyImport.reserve": "Reserva",
+    "spaces.historyImport.recurring": "{n} recorrentes",
+    "spaces.historyImport.installments": "{n} planos de parcelas",
+    "spaces.historyImport.dateModeNote":
+      "As datas antigas ficam como estavam. Lançamentos novos seguem o modo desta casa.",
+    "spaces.historyImport.transferBlock":
+      "Tem transferência para alguém que não está nesta casa. Resolva isso antes de trazer.",
+    "spaces.historyImport.mapHint":
+      "Algumas categorias não existem aqui. Escolha uma ou crie com o mesmo nome.",
+    "spaces.historyImport.mapCreate": "Criar “{name}” nesta casa",
+    "spaces.historyImport.confirm": "Trazer para esta casa",
+    "spaces.historyImport.bringing": "Trazendo…",
+    "spaces.historyImport.success":
+      "Histórico trazido. Os totais podem atualizar em alguns segundos.",
     "spaces.configureSpace": "Espaço ativo",
     "spaces.addSpace": "Criar ou entrar noutro espaço",
     "spaces.empty":
@@ -864,7 +887,30 @@ export const messages = {
       "Me, Reserve, and Overview use the active space. Switch only here.",
     "spaces.historySoloLabel": "personal history",
     "spaces.historySoloHint":
-      "This space is only yours. Daily life lives in the household space. You’ll be able to bring this history there soon.",
+      "This space is only yours. Daily life lives in the household space. You can bring this history there.",
+    "spaces.historyImport.offerTitle": "Bring personal history?",
+    "spaces.historyImport.offerHint":
+      "Entries from your solo space move into this household. The empty space is then removed.",
+    "spaces.historyImport.skip": "Not now",
+    "spaces.historyImport.action": "Bring my personal history",
+    "spaces.historyImport.settingsHint":
+      "Moves entries from your solo space into this household.",
+    "spaces.historyImport.entries": "{n} entries",
+    "spaces.historyImport.months": "{from} to {to}",
+    "spaces.historyImport.reserve": "Reserve",
+    "spaces.historyImport.recurring": "{n} recurring rules",
+    "spaces.historyImport.installments": "{n} installment plans",
+    "spaces.historyImport.dateModeNote":
+      "Past dates stay as they were. New entries follow this household’s date mode.",
+    "spaces.historyImport.transferBlock":
+      "There are transfers to someone who is not in this household. Resolve those first.",
+    "spaces.historyImport.mapHint":
+      "Some categories are missing here. Pick one or create it with the same name.",
+    "spaces.historyImport.mapCreate": "Create “{name}” in this household",
+    "spaces.historyImport.confirm": "Bring into this household",
+    "spaces.historyImport.bringing": "Bringing…",
+    "spaces.historyImport.success":
+      "History imported. Totals may update in a few seconds.",
     "spaces.configureSpace": "Active space",
     "spaces.addSpace": "Create or join another space",
     "spaces.empty":

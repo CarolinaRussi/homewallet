@@ -8,6 +8,7 @@ import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
 import { SpaceCardsSkeleton } from "../../shared/ui/Skeleton";
 import { Spinner } from "../../shared/ui/Spinner";
 import { setWelcomeIntent } from "../me/welcome-intent";
+import { setHistoryImportOffer } from "./history-import-intent";
 import { createSpace, joinSpace } from "./space-api";
 import { isHistorySoloSpace } from "./space-kind";
 import { SpaceSettingsCard } from "./SpaceSettingsCard";
@@ -58,6 +59,7 @@ export function SpacesPanel() {
       );
       setStoredActiveSpace(space.id);
       selectSpace(space.id);
+      setHistoryImportOffer(space.id);
       void queryClient.invalidateQueries({ queryKey: ["spaces"] });
       navigate("/me");
     },

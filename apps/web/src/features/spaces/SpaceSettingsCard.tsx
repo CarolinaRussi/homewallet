@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import type { BudgetLayer, SpaceSummary } from "@homewallet/shared";
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { Spinner } from "../../shared/ui/Spinner";
 import { fetchCategories } from "../entries/entry-api";
+import { HistoryImportSheet } from "./HistoryImportSheet";
+import { setHistoryImportDone } from "./history-import-intent";
 import {
+  fetchHistoryImportSources,
   fetchSpaceMembers,
   inviteSpaceEmail,
   leaveSpace,
@@ -30,10 +34,18 @@ type SpaceSettingsCardProps = {
 
 export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
   const { t } = useLocale();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const importSourcesQuery = useQuery({
+    queryKey: ["history-import-sources", space.id],
+    queryFn: () => fetchHistoryImportSources(space.id),
+    enabled: space.memberCount >= 2,
+  });
+  const canImport = (importSourcesQuery.data?.length ?? 0) > 0;
 
   const settingsMutation = useMutation({
     mutationFn: (body: Parameters<typeof updateSpace>[1]) =>
@@ -462,6 +474,24 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
         </div>
       </details>
 
+      {canImport ? (
+        <section className="border-b border-border px-5 py-5 md:px-6">
+          <h3 className="text-sm font-semibold text-fg">
+            {t("spaces.historyImport.action")}
+          </h3>
+          <p className="mt-1 max-w-2xl text-xs text-muted">
+            {t("spaces.historyImport.settingsHint")}
+          </p>
+          <button
+            type="button"
+            className="mt-3 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-fg"
+            onClick={() => setImportOpen(true)}
+          >
+            {t("spaces.historyImport.action")}
+          </button>
+        </section>
+      ) : null}
+
       <footer className="px-5 py-4 md:px-6">
         <button
           type="button"
@@ -475,6 +505,18 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
           {t("spaces.leave")}
         </button>
       </footer>
+
+      <HistoryImportSheet
+        targetSpaceId={space.id}
+        currency={space.currency}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          setImportOpen(false);
+          setHistoryImportDone();
+          navigate("/me");
+        }}
+      />
 
       <ConfirmSheet
         open={leaveOpen}

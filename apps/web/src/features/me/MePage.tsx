@@ -33,6 +33,12 @@ import {
   updateEntryCardLine,
 } from "../entries/entry-api";
 import { mapEntryError } from "../entries/entry-errors";
+import { HistoryImportSheet } from "../spaces/HistoryImportSheet";
+import {
+  clearHistoryImportOffer,
+  peekHistoryImportOffer,
+  takeHistoryImportDone,
+} from "../spaces/history-import-intent";
 import { fetchSpaceMembers } from "../spaces/space-api";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
@@ -227,6 +233,7 @@ export function MePage() {
     entry: EntrySummary;
     body: UpdateEntryBody;
   } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [welcome, setWelcome] = useState<WelcomeSpaceState | null>(() => {
     const intent = peekWelcomeIntent();
     if (!intent) {
@@ -306,6 +313,23 @@ export function MePage() {
     // Context change: stale success/error must not stick across months/spaces.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only month/space
   }, [month, spaceId]);
+
+  useEffect(() => {
+    if (takeHistoryImportDone()) {
+      showSuccess(t("spaces.historyImport.success"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount
+  }, []);
+
+  useEffect(() => {
+    if (!spaceId) {
+      return;
+    }
+    if (peekHistoryImportOffer() === spaceId) {
+      clearHistoryImportOffer();
+      setImportOpen(true);
+    }
+  }, [spaceId]);
 
   function flashEntry(entryId: string) {
     setHighlightEntryId(entryId);
@@ -772,6 +796,19 @@ export function MePage() {
           </button>
         </div>
       </header>
+
+      {spaceId && activeSpace ? (
+        <HistoryImportSheet
+          targetSpaceId={spaceId}
+          currency={activeSpace.currency}
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            setImportOpen(false);
+            showSuccess(t("spaces.historyImport.success"));
+          }}
+        />
+      ) : null}
 
       <LeftoverReserveSection
         spaceId={spaceId}

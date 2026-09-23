@@ -100,7 +100,7 @@ export function LeftoverReserveSection({
 
   return (
     <section className="flex flex-col gap-4">
-      {summaryRefreshing ? (
+      {summaryRefreshing || summary?.stale ? (
         <p className="inline-flex items-center gap-1.5 text-xs text-muted">
           <Spinner />
           {t("me.updating")}
