@@ -3,6 +3,7 @@ import {
   createSpaceBodySchema,
   historyImportExecuteBodySchema,
   historyImportPreviewBodySchema,
+  historyLeaveExportExecuteBodySchema,
   inviteSpaceEmailBodySchema,
   joinSpaceBodySchema,
   monthQuerySchema,
@@ -136,6 +137,22 @@ export function createSpaceController(
         request.user.sub,
         request.params.id,
         body
+      );
+    },
+
+    previewLeaveExport(request: FastifyRequest<{ Params: SpaceParams }>) {
+      return spaceHistoryService.previewLeaveExport(
+        request.user.sub,
+        request.params.id
+      );
+    },
+
+    executeLeaveExport(request: FastifyRequest<{ Params: SpaceParams }>) {
+      const body = historyLeaveExportExecuteBodySchema.parse(request.body);
+      return spaceHistoryService.executeLeaveExport(
+        request.user.sub,
+        request.params.id,
+        body.previewToken
       );
     },
   };

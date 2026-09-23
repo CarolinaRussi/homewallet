@@ -138,6 +138,39 @@ export const spaceHistoryRepository = {
     return balance;
   },
 
+  listActorEntries(spaceId: string, userId: string, manager: EntityManager) {
+    return manager.find(Entry, {
+      where: { spaceId, userId },
+      select: {
+        id: true,
+        type: true,
+        visibility: true,
+        categoryId: true,
+        occurredOn: true,
+        counterpartyUserId: true,
+        reservePotId: true,
+      },
+    });
+  },
+
+  async usedCategoryIdsForEntries(entryIds: string[], manager: EntityManager) {
+    const ids = new Set<string>();
+    if (entryIds.length === 0) {
+      return ids;
+    }
+    const fromLines = await manager
+      .createQueryBuilder(EntryCardLine, "lineRow")
+      .select("DISTINCT lineRow.categoryId", "categoryId")
+      .where("lineRow.entryId IN (:...entryIds)", { entryIds })
+      .getRawMany<{ categoryId: string }>();
+    for (const row of fromLines) {
+      if (row.categoryId) {
+        ids.add(row.categoryId);
+      }
+    }
+    return ids;
+  },
+
   lockActorEntries(spaceId: string, userId: string, manager: EntityManager) {
     return manager
       .createQueryBuilder(Entry, "entryRow")
@@ -237,6 +270,124 @@ export const spaceHistoryRepository = {
       { spaceId: sourceSpaceId, userId },
       { spaceId: targetSpaceId }
     );
+    await manager.update(
+      RecurringRule,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      InstallmentPlan,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      RecurrenceSkip,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      ReserveMovement,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      LeftoverSeed,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      ReservePot,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+  },
+
+  async applyCategoryRemapToEntries(
+    entryIds: string[],
+    sourceSpaceId: string,
+    userId: string,
+    categoryRemap: Record<string, string>,
+    manager: EntityManager
+  ) {
+    if (entryIds.length === 0) {
+      return;
+    }
+    for (const [sourceCategoryId, targetCategoryId] of Object.entries(
+      categoryRemap
+    )) {
+      await manager
+        .createQueryBuilder()
+        .update(Entry)
+        .set({ categoryId: targetCategoryId })
+        .where("id IN (:...entryIds)", { entryIds })
+        .andWhere("category_id = :sourceCategoryId", { sourceCategoryId })
+        .execute();
+      const lineIds = await manager
+        .createQueryBuilder(EntryCardLine, "lineRow")
+        .select("lineRow.id", "id")
+        .where("lineRow.entryId IN (:...entryIds)", { entryIds })
+        .andWhere("lineRow.categoryId = :sourceCategoryId", {
+          sourceCategoryId,
+        })
+        .getRawMany<{ id: string }>();
+      if (lineIds.length > 0) {
+        await manager.update(
+          EntryCardLine,
+          { id: In(lineIds.map((row) => row.id)) },
+          { categoryId: targetCategoryId }
+        );
+      }
+      await manager.update(
+        RecurringRule,
+        { spaceId: sourceSpaceId, userId, categoryId: sourceCategoryId },
+        { categoryId: targetCategoryId }
+      );
+      await manager.update(
+        InstallmentPlan,
+        { spaceId: sourceSpaceId, userId, categoryId: sourceCategoryId },
+        { categoryId: targetCategoryId }
+      );
+    }
+  },
+
+  async detachStayEntries(stayIds: string[], manager: EntityManager) {
+    if (stayIds.length === 0) {
+      return;
+    }
+    await manager
+      .createQueryBuilder()
+      .update(Entry)
+      .set({
+        recurringRuleId: null,
+        installmentPlanId: null,
+        reservePotId: null,
+      })
+      .where("id IN (:...stayIds)", { stayIds })
+      .execute();
+  },
+
+  async moveEntriesByIds(
+    entryIds: string[],
+    targetSpaceId: string,
+    manager: EntityManager
+  ) {
+    if (entryIds.length === 0) {
+      return;
+    }
+    await manager
+      .createQueryBuilder()
+      .update(Entry)
+      .set({ spaceId: targetSpaceId })
+      .where("id IN (:...entryIds)", { entryIds })
+      .execute();
+  },
+
+  async moveSupportRowsToSpace(
+    sourceSpaceId: string,
+    targetSpaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
     await manager.update(
       RecurringRule,
       { spaceId: sourceSpaceId, userId },

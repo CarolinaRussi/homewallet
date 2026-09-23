@@ -55,6 +55,43 @@ export type HistoryImportWarning = {
   blocking: boolean;
 };
 
+export const historyLeaveExportExecuteBodySchema = z.object({
+  previewToken: z.string().min(1),
+});
+
+export type HistoryLeaveExportExecuteBody = z.infer<
+  typeof historyLeaveExportExecuteBodySchema
+>;
+
+export const HISTORY_LEAVE_WARNING_CODES = ["orphan_transfer"] as const;
+export type HistoryLeaveWarningCode =
+  (typeof HISTORY_LEAVE_WARNING_CODES)[number];
+
+export type HistoryLeaveWarning = {
+  code: HistoryLeaveWarningCode;
+  blocking: boolean;
+};
+
+export type HistoryLeaveExportPreview = {
+  spaceId: string;
+  spaceName: string;
+  moveEntryCount: number;
+  stayEntryCount: number;
+  monthFrom: string | null;
+  monthTo: string | null;
+  reserveBalance: number;
+  recurringRuleCount: number;
+  installmentPlanCount: number;
+  orphanTransferCount: number;
+  warnings: HistoryLeaveWarning[];
+  previewToken: string;
+};
+
+export type HistoryLeaveExportExecuteResult = {
+  newSoloSpaceId: string;
+  movedEntryCount: number;
+};
+
 export type HistoryImportPreview = {
   sourceSpaceId: string;
   targetSpaceId: string;

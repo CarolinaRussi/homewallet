@@ -4,6 +4,8 @@ import type {
   HistoryImportPreview,
   HistoryImportSourceSummary,
   HistoryImportWarning,
+  HistoryLeaveExportExecuteResult,
+  HistoryLeaveExportPreview,
 } from "@homewallet/shared";
 import { HttpError } from "../lib/http-error.js";
 import {
@@ -23,13 +25,23 @@ import { recurringRuleRepository } from "../repositories/recurring-rule.reposito
 import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
 import { spaceHistoryRepository } from "../repositories/space-history.repository.js";
 import { spaceRepository } from "../repositories/space.repository.js";
+import {
+  classifyLeaveEntry,
+  entryMonth,
+  isLeaveExportEligible,
+  soloSpaceNameFrom,
+} from "../lib/history-leave-export.js";
 import { currentMonthKey } from "./month-snapshot.build.js";
 import type { MonthSnapshotService } from "./month-snapshot.service.js";
+import type { SpaceService } from "./space.service.js";
+
+const LEAVE_EXPORT_MAP_HASH = "leave-export";
 
 export function createSpaceHistoryService(
   dataSource: DataSource,
   jwtSecret: string,
-  monthSnapshotService: MonthSnapshotService
+  monthSnapshotService: MonthSnapshotService,
+  spaceService: SpaceService
 ) {
   async function requireTargetMembership(
     userId: string,
@@ -452,6 +464,303 @@ export function createSpaceHistoryService(
         targetSpaceId: result.targetSpaceId,
         sourceDeleted: result.sourceDeleted,
         entryCount: result.entryCount,
+      };
+    },
+
+    async previewLeaveExport(
+      userId: string,
+      spaceId: string
+    ): Promise<HistoryLeaveExportPreview> {
+      const membership = await membershipRepository.findMembership(
+        userId,
+        spaceId,
+        dataSource.manager
+      );
+      if (!membership) {
+        throw new HttpError(404, "Space not found");
+      }
+      const members = await membershipRepository.listForSpace(
+        spaceId,
+        dataSource.manager
+      );
+      if (!isLeaveExportEligible(members.length)) {
+        throw new HttpError(
+          400,
+          "Cannot take data when leaving the last membership"
+        );
+      }
+      const staying = new Set(
+        members
+          .filter((member) => member.userId !== userId)
+          .map((member) => member.userId)
+      );
+      const entries = await spaceHistoryRepository.listActorEntries(
+        spaceId,
+        userId,
+        dataSource.manager
+      );
+      let moveEntryCount = 0;
+      let stayEntryCount = 0;
+      let orphanTransferCount = 0;
+      let monthFrom: string | null = null;
+      let monthTo: string | null = null;
+      for (const entry of entries) {
+        const result = classifyLeaveEntry(entry, staying);
+        if (result.move) {
+          moveEntryCount += 1;
+          if (result.orphanTransfer) {
+            orphanTransferCount += 1;
+          }
+          const month = entryMonth(entry.occurredOn);
+          if (!monthFrom || month < monthFrom) {
+            monthFrom = month;
+          }
+          if (!monthTo || month > monthTo) {
+            monthTo = month;
+          }
+        } else {
+          stayEntryCount += 1;
+        }
+      }
+      const [reserveBalance, recurringRules, installmentPlans] =
+        await Promise.all([
+          spaceHistoryRepository.reserveBalance(
+            spaceId,
+            userId,
+            dataSource.manager
+          ),
+          recurringRuleRepository.listForUser(
+            spaceId,
+            userId,
+            dataSource.manager
+          ),
+          installmentPlanRepository.listForUser(
+            spaceId,
+            userId,
+            dataSource.manager
+          ),
+        ]);
+      return {
+        spaceId,
+        spaceName: membership.space.name,
+        moveEntryCount,
+        stayEntryCount,
+        monthFrom,
+        monthTo,
+        reserveBalance,
+        recurringRuleCount: recurringRules.length,
+        installmentPlanCount: installmentPlans.length,
+        orphanTransferCount,
+        warnings:
+          orphanTransferCount > 0
+            ? [{ code: "orphan_transfer", blocking: false }]
+            : [],
+        previewToken: signHistoryPreviewToken(
+          {
+            userId,
+            sourceSpaceId: spaceId,
+            targetSpaceId: spaceId,
+            mapHash: LEAVE_EXPORT_MAP_HASH,
+          },
+          jwtSecret
+        ),
+      };
+    },
+
+    async executeLeaveExport(
+      userId: string,
+      spaceId: string,
+      previewToken: string
+    ): Promise<HistoryLeaveExportExecuteResult> {
+      let claims;
+      try {
+        claims = verifyHistoryPreviewToken(previewToken, jwtSecret);
+      } catch {
+        throw new HttpError(400, "Invalid or expired preview token");
+      }
+      if (
+        claims.userId !== userId ||
+        claims.sourceSpaceId !== spaceId ||
+        claims.targetSpaceId !== spaceId ||
+        claims.mapHash !== LEAVE_EXPORT_MAP_HASH
+      ) {
+        throw new HttpError(400, "Invalid or expired preview token");
+      }
+
+      const result = await dataSource.transaction(async (manager) => {
+        const membership = await membershipRepository.findMembership(
+          userId,
+          spaceId,
+          manager
+        );
+        if (!membership) {
+          throw new HttpError(404, "Space not found");
+        }
+        const members = await membershipRepository.listForSpace(
+          spaceId,
+          manager
+        );
+        const remaining = members.filter((member) => member.userId !== userId);
+        if (!isLeaveExportEligible(members.length)) {
+          throw new HttpError(
+            400,
+            "Cannot take data when leaving the last membership"
+          );
+        }
+        await spaceHistoryRepository.lockActorEntries(spaceId, userId, manager);
+        const staying = new Set(remaining.map((member) => member.userId));
+        const entries = await spaceHistoryRepository.listActorEntries(
+          spaceId,
+          userId,
+          manager
+        );
+        const moveIds: string[] = [];
+        const stayIds: string[] = [];
+        const moveCategoryIds = new Set<string>();
+        let monthFrom: string | null = null;
+        for (const entry of entries) {
+          const classified = classifyLeaveEntry(entry, staying);
+          if (classified.move) {
+            moveIds.push(entry.id);
+            if (entry.categoryId) {
+              moveCategoryIds.add(entry.categoryId);
+            }
+            const month = entryMonth(entry.occurredOn);
+            if (!monthFrom || month < monthFrom) {
+              monthFrom = month;
+            }
+          } else {
+            stayIds.push(entry.id);
+          }
+        }
+        const lineCategoryIds =
+          await spaceHistoryRepository.usedCategoryIdsForEntries(
+            moveIds,
+            manager
+          );
+        for (const categoryId of lineCategoryIds) {
+          moveCategoryIds.add(categoryId);
+        }
+
+        const [recurringRules, installmentPlans, sourceCategories] =
+          await Promise.all([
+            recurringRuleRepository.listForUser(spaceId, userId, manager),
+            installmentPlanRepository.listForUser(spaceId, userId, manager),
+            categoryRepository.listForSpace(spaceId, manager),
+          ]);
+        for (const rule of recurringRules) {
+          moveCategoryIds.add(rule.categoryId);
+        }
+        for (const plan of installmentPlans) {
+          moveCategoryIds.add(plan.categoryId);
+        }
+
+        const solo = await spaceService.createForOwner(
+          userId,
+          {
+            name: soloSpaceNameFrom(membership.space.name),
+            currency: membership.space.currency,
+            entryDateMode: membership.space.entryDateMode,
+          },
+          manager
+        );
+        const targetCategories = await categoryRepository.listForSpace(
+          solo.id,
+          manager
+        );
+        const usedSource = sourceCategories.filter((category) =>
+          moveCategoryIds.has(category.id)
+        );
+        const resolved = resolveImportCategoryRemap(
+          mapSourceCategories(usedSource, targetCategories),
+          {}
+        );
+        const categoryRemap = { ...resolved.remap };
+        for (const item of resolved.createNames) {
+          const sourceCategory = usedSource.find(
+            (category) => category.id === item.sourceCategoryId
+          );
+          const existing = await categoryRepository.findByName(
+            solo.id,
+            item.name,
+            manager
+          );
+          if (existing) {
+            categoryRemap[item.sourceCategoryId] = existing.id;
+            continue;
+          }
+          const created = await categoryRepository.create(manager, {
+            spaceId: solo.id,
+            name: item.name,
+            isDefault: false,
+            budgetLayer: sourceCategory?.budgetLayer ?? null,
+            lineDetailEnabled: sourceCategory?.lineDetailEnabled ?? false,
+          });
+          categoryRemap[item.sourceCategoryId] = created.id;
+        }
+
+        const [sourcePots, targetPots] = await Promise.all([
+          reservePotRepository.listForUser(spaceId, userId, manager),
+          reservePotRepository.listForUser(solo.id, userId, manager),
+        ]);
+        const { potRemap } = mergePotsByName(sourcePots, targetPots);
+
+        await spaceHistoryRepository.detachStayEntries(stayIds, manager);
+        await spaceHistoryRepository.applyCategoryRemapToEntries(
+          moveIds,
+          spaceId,
+          userId,
+          categoryRemap,
+          manager
+        );
+        await spaceHistoryRepository.applyPotRemap(potRemap, manager);
+        await spaceHistoryRepository.moveEntriesByIds(
+          moveIds,
+          solo.id,
+          manager
+        );
+        await spaceHistoryRepository.moveSupportRowsToSpace(
+          spaceId,
+          solo.id,
+          userId,
+          manager
+        );
+        await spaceHistoryRepository.createMove(manager, {
+          userId,
+          sourceSpaceId: spaceId,
+          targetSpaceId: solo.id,
+          direction: "leave_export",
+          entryCount: moveIds.length,
+          movedAt: new Date(),
+          previewHash: LEAVE_EXPORT_MAP_HASH,
+        });
+
+        if (membership.role === "owner") {
+          const otherOwners = remaining.filter(
+            (member) => member.role === "owner"
+          );
+          if (otherOwners.length === 0) {
+            const earliest = remaining[0]!;
+            earliest.role = "owner";
+            await membershipRepository.save(manager, earliest);
+          }
+        }
+        await membershipRepository.remove(manager, membership);
+        return {
+          newSoloSpaceId: solo.id,
+          movedEntryCount: moveIds.length,
+          monthFrom,
+        };
+      });
+
+      monthSnapshotService.touch(
+        userId,
+        result.newSoloSpaceId,
+        result.monthFrom ?? currentMonthKey()
+      );
+      return {
+        newSoloSpaceId: result.newSoloSpaceId,
+        movedEntryCount: result.movedEntryCount,
       };
     },
   };

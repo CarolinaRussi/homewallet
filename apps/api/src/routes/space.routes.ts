@@ -82,4 +82,19 @@ export async function registerSpaceRoutes(
     },
     (request) => controller.executeHistoryImport(request)
   );
+  app.post<{ Params: { id: string } }>("/:id/leave-export/preview", (request) =>
+    controller.previewLeaveExport(request)
+  );
+  app.post<{ Params: { id: string } }>(
+    "/:id/leave-export/execute",
+    {
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: "1 hour",
+        },
+      },
+    },
+    (request) => controller.executeLeaveExport(request)
+  );
 }

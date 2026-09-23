@@ -100,7 +100,8 @@ const monthSnapshotService = createMonthSnapshotService(
 const spaceHistoryService = createSpaceHistoryService(
   dataSource,
   config.jwtSecret,
-  monthSnapshotService
+  monthSnapshotService,
+  spaceService
 );
 const recurringService = createRecurringService(
   dataSource,
