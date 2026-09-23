@@ -70,4 +70,16 @@ export async function registerSpaceRoutes(
     },
     (request) => controller.previewHistoryImport(request)
   );
+  app.post<{ Params: { id: string } }>(
+    "/:id/history-import/execute",
+    {
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: "1 hour",
+        },
+      },
+    },
+    (request) => controller.executeHistoryImport(request)
+  );
 }

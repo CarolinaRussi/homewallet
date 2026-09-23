@@ -19,7 +19,8 @@
     "check:month-snapshots": "tsx src/lib/month-snapshot.check.ts",
     "check:session-version": "tsx src/lib/session-version.check.ts",
     "check:mail": "tsx src/services/mail.service.check.ts",
-    "check:history-import-preview": "tsx src/lib/history-import.check.ts"
+    "check:history-import-preview": "tsx src/lib/history-import.check.ts",
+    "check:history-import-execute": "tsx src/lib/history-import-execute.check.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

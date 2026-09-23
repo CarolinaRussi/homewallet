@@ -1,5 +1,6 @@
 import type { DataSource } from "typeorm";
 import type {
+  HistoryImportExecuteResult,
   HistoryImportPreview,
   HistoryImportSourceSummary,
   HistoryImportWarning,
@@ -9,18 +10,26 @@ import {
   hashCategoryMap,
   isEligibleSoloSource,
   mapSourceCategories,
+  mergePotsByName,
+  resolveImportCategoryRemap,
   signHistoryPreviewToken,
   transferImportWarnings,
+  verifyHistoryPreviewToken,
 } from "../lib/history-import.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { installmentPlanRepository } from "../repositories/installment-plan.repository.js";
 import { membershipRepository } from "../repositories/membership.repository.js";
 import { recurringRuleRepository } from "../repositories/recurring-rule.repository.js";
+import { reservePotRepository } from "../repositories/reserve-pot.repository.js";
 import { spaceHistoryRepository } from "../repositories/space-history.repository.js";
+import { spaceRepository } from "../repositories/space.repository.js";
+import { currentMonthKey } from "./month-snapshot.build.js";
+import type { MonthSnapshotService } from "./month-snapshot.service.js";
 
 export function createSpaceHistoryService(
   dataSource: DataSource,
-  jwtSecret: string
+  jwtSecret: string,
+  monthSnapshotService: MonthSnapshotService
 ) {
   async function requireTargetMembership(
     userId: string,
@@ -215,6 +224,234 @@ export function createSpaceHistoryService(
         categories,
         warnings,
         previewToken,
+      };
+    },
+
+    async executeImport(
+      userId: string,
+      targetSpaceId: string,
+      input: {
+        sourceSpaceId: string;
+        previewToken: string;
+        categoryMap: Record<string, string>;
+      }
+    ): Promise<HistoryImportExecuteResult> {
+      let claims;
+      try {
+        claims = verifyHistoryPreviewToken(input.previewToken, jwtSecret);
+      } catch {
+        throw new HttpError(400, "Invalid or expired preview token");
+      }
+      if (
+        claims.userId !== userId ||
+        claims.sourceSpaceId !== input.sourceSpaceId ||
+        claims.targetSpaceId !== targetSpaceId
+      ) {
+        throw new HttpError(400, "Invalid or expired preview token");
+      }
+
+      const result = await dataSource.transaction(async (manager) => {
+        const targetMembership = await membershipRepository.findMembership(
+          userId,
+          targetSpaceId,
+          manager
+        );
+        const sourceMembership = await membershipRepository.findMembership(
+          userId,
+          input.sourceSpaceId,
+          manager
+        );
+        if (!targetMembership || !sourceMembership) {
+          throw new HttpError(404, "Space not found");
+        }
+        const alreadyImported = await spaceHistoryRepository.findImportMove(
+          userId,
+          input.sourceSpaceId,
+          targetSpaceId,
+          manager
+        );
+        if (alreadyImported) {
+          throw new HttpError(409, "History already imported from this space");
+        }
+        const sourceCount = await membershipRepository.countForSpace(
+          input.sourceSpaceId,
+          manager
+        );
+        if (
+          !isEligibleSoloSource({
+            sourceSpaceId: input.sourceSpaceId,
+            targetSpaceId,
+            sourceMemberCount: sourceCount,
+            sourceRole: sourceMembership.role,
+            sourceCurrency: sourceMembership.space.currency,
+            targetCurrency: targetMembership.space.currency,
+            alreadyImported: false,
+          })
+        ) {
+          throw new HttpError(400, "Source is not eligible for import");
+        }
+
+        await spaceHistoryRepository.lockActorEntries(
+          input.sourceSpaceId,
+          userId,
+          manager
+        );
+
+        const [
+          stats,
+          usedCategoryIds,
+          counterparties,
+          recurringRules,
+          installmentPlans,
+          sourceCategories,
+          targetCategories,
+          targetMembers,
+          sourcePots,
+          targetPots,
+        ] = await Promise.all([
+          spaceHistoryRepository.entryStats(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          spaceHistoryRepository.usedCategoryIds(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          spaceHistoryRepository.transferCounterparties(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          recurringRuleRepository.listForUser(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          installmentPlanRepository.listForUser(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          categoryRepository.listForSpace(input.sourceSpaceId, manager),
+          categoryRepository.listForSpace(targetSpaceId, manager),
+          membershipRepository.listForSpace(targetSpaceId, manager),
+          reservePotRepository.listForUser(
+            input.sourceSpaceId,
+            userId,
+            manager
+          ),
+          reservePotRepository.listForUser(targetSpaceId, userId, manager),
+        ]);
+        for (const rule of recurringRules) {
+          usedCategoryIds.add(rule.categoryId);
+        }
+        for (const plan of installmentPlans) {
+          usedCategoryIds.add(plan.categoryId);
+        }
+
+        const transferBlock = transferImportWarnings(
+          counterparties,
+          new Set(targetMembers.map((member) => member.userId)),
+          userId
+        );
+        if (transferBlock.length > 0) {
+          throw new HttpError(
+            400,
+            "Import blocked: transfers to someone not in this space"
+          );
+        }
+
+        const targetCategoryIds = new Set(
+          targetCategories.map((category) => category.id)
+        );
+        for (const targetCategoryId of Object.values(input.categoryMap)) {
+          if (!targetCategoryIds.has(targetCategoryId)) {
+            throw new HttpError(400, "Invalid category mapping");
+          }
+        }
+
+        const usedSource = sourceCategories.filter((category) =>
+          usedCategoryIds.has(category.id)
+        );
+        const autoRows = mapSourceCategories(usedSource, targetCategories);
+        const resolved = resolveImportCategoryRemap(
+          autoRows,
+          input.categoryMap
+        );
+        const categoryRemap = { ...resolved.remap };
+        for (const item of resolved.createNames) {
+          const sourceCategory = usedSource.find(
+            (category) => category.id === item.sourceCategoryId
+          );
+          const existing = await categoryRepository.findByName(
+            targetSpaceId,
+            item.name,
+            manager
+          );
+          if (existing) {
+            categoryRemap[item.sourceCategoryId] = existing.id;
+            continue;
+          }
+          const created = await categoryRepository.create(manager, {
+            spaceId: targetSpaceId,
+            name: item.name,
+            isDefault: false,
+            budgetLayer: sourceCategory?.budgetLayer ?? null,
+            lineDetailEnabled: sourceCategory?.lineDetailEnabled ?? false,
+          });
+          categoryRemap[item.sourceCategoryId] = created.id;
+        }
+
+        const { potRemap } = mergePotsByName(sourcePots, targetPots);
+        await spaceHistoryRepository.applyCategoryRemap(
+          input.sourceSpaceId,
+          userId,
+          categoryRemap,
+          manager
+        );
+        await spaceHistoryRepository.applyPotRemap(potRemap, manager);
+        await spaceHistoryRepository.moveActorRowsToSpace(
+          input.sourceSpaceId,
+          targetSpaceId,
+          userId,
+          manager
+        );
+        await spaceHistoryRepository.createMove(manager, {
+          userId,
+          sourceSpaceId: input.sourceSpaceId,
+          targetSpaceId,
+          direction: "import",
+          entryCount: stats.entryCount,
+          movedAt: new Date(),
+          previewHash: hashCategoryMap(
+            Object.entries(categoryRemap).map(
+              ([sourceCategoryId, targetCategoryId]) => ({
+                sourceCategoryId,
+                targetCategoryId,
+              })
+            )
+          ),
+        });
+        await spaceRepository.remove(manager, sourceMembership.space);
+        return {
+          targetSpaceId,
+          sourceDeleted: true,
+          entryCount: stats.entryCount,
+          monthFrom: stats.monthFrom,
+        };
+      });
+
+      monthSnapshotService.touch(
+        userId,
+        targetSpaceId,
+        result.monthFrom ?? currentMonthKey()
+      );
+      return {
+        targetSpaceId: result.targetSpaceId,
+        sourceDeleted: result.sourceDeleted,
+        entryCount: result.entryCount,
       };
     },
   };

@@ -1,7 +1,13 @@
 import type { EntityManager } from "typeorm";
+import { In } from "typeorm";
 import { Entry } from "../db/entities/entry.entity.js";
 import { EntryCardLine } from "../db/entities/entry-card-line.entity.js";
+import { InstallmentPlan } from "../db/entities/installment-plan.entity.js";
+import { LeftoverSeed } from "../db/entities/leftover-seed.entity.js";
+import { RecurrenceSkip } from "../db/entities/recurrence-skip.entity.js";
+import { RecurringRule } from "../db/entities/recurring-rule.entity.js";
 import { ReserveMovement } from "../db/entities/reserve-movement.entity.js";
+import { ReservePot } from "../db/entities/reserve-pot.entity.js";
 import { SpaceHistoryMove } from "../db/entities/space-history-move.entity.js";
 
 function toMonth(value: unknown): string | null {
@@ -130,5 +136,136 @@ export const spaceHistoryRepository = {
       }
     }
     return balance;
+  },
+
+  lockActorEntries(spaceId: string, userId: string, manager: EntityManager) {
+    return manager
+      .createQueryBuilder(Entry, "entryRow")
+      .setLock("pessimistic_write")
+      .where("entryRow.spaceId = :spaceId AND entryRow.userId = :userId", {
+        spaceId,
+        userId,
+      })
+      .getMany();
+  },
+
+  createMove(manager: EntityManager, fields: Partial<SpaceHistoryMove>) {
+    return manager.save(manager.create(SpaceHistoryMove, fields));
+  },
+
+  async applyCategoryRemap(
+    sourceSpaceId: string,
+    userId: string,
+    categoryRemap: Record<string, string>,
+    manager: EntityManager
+  ) {
+    for (const [sourceCategoryId, targetCategoryId] of Object.entries(
+      categoryRemap
+    )) {
+      await manager.update(
+        Entry,
+        { spaceId: sourceSpaceId, userId, categoryId: sourceCategoryId },
+        { categoryId: targetCategoryId }
+      );
+      await manager.update(
+        RecurringRule,
+        { spaceId: sourceSpaceId, userId, categoryId: sourceCategoryId },
+        { categoryId: targetCategoryId }
+      );
+      await manager.update(
+        InstallmentPlan,
+        { spaceId: sourceSpaceId, userId, categoryId: sourceCategoryId },
+        { categoryId: targetCategoryId }
+      );
+      const lineIds = await manager
+        .createQueryBuilder(EntryCardLine, "lineRow")
+        .innerJoin(Entry, "entryRow", "entryRow.id = lineRow.entryId")
+        .select("lineRow.id", "id")
+        .where(
+          "entryRow.spaceId = :sourceSpaceId AND entryRow.userId = :userId",
+          { sourceSpaceId, userId }
+        )
+        .andWhere("lineRow.categoryId = :sourceCategoryId", {
+          sourceCategoryId,
+        })
+        .getRawMany<{ id: string }>();
+      if (lineIds.length > 0) {
+        await manager.update(
+          EntryCardLine,
+          { id: In(lineIds.map((row) => row.id)) },
+          { categoryId: targetCategoryId }
+        );
+      }
+    }
+  },
+
+  async applyPotRemap(
+    potRemap: Record<string, string>,
+    manager: EntityManager
+  ) {
+    for (const [sourcePotId, targetPotId] of Object.entries(potRemap)) {
+      if (sourcePotId === targetPotId) {
+        continue;
+      }
+      await manager.update(
+        Entry,
+        { reservePotId: sourcePotId },
+        { reservePotId: targetPotId }
+      );
+      await manager.update(
+        ReserveMovement,
+        { reservePotId: sourcePotId },
+        { reservePotId: targetPotId }
+      );
+      const sourcePot = await manager.findOne(ReservePot, {
+        where: { id: sourcePotId },
+      });
+      if (sourcePot) {
+        await manager.remove(sourcePot);
+      }
+    }
+  },
+
+  async moveActorRowsToSpace(
+    sourceSpaceId: string,
+    targetSpaceId: string,
+    userId: string,
+    manager: EntityManager
+  ) {
+    await manager.update(
+      Entry,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      RecurringRule,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      InstallmentPlan,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      RecurrenceSkip,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      ReserveMovement,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      LeftoverSeed,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
+    await manager.update(
+      ReservePot,
+      { spaceId: sourceSpaceId, userId },
+      { spaceId: targetSpaceId }
+    );
   },
 };

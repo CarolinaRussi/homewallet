@@ -85,10 +85,6 @@ const spaceService = createSpaceService(
   mailService,
   config.webOrigin
 );
-const spaceHistoryService = createSpaceHistoryService(
-  dataSource,
-  config.jwtSecret
-);
 const authService = createAuthService(
   dataSource,
   spaceService,
@@ -100,6 +96,11 @@ const reservePotService = createReservePotService(dataSource);
 const monthSnapshotService = createMonthSnapshotService(
   dataSource,
   reservePotService
+);
+const spaceHistoryService = createSpaceHistoryService(
+  dataSource,
+  config.jwtSecret,
+  monthSnapshotService
 );
 const recurringService = createRecurringService(
   dataSource,

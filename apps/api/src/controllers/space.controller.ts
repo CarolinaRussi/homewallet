@@ -1,6 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import {
   createSpaceBodySchema,
+  historyImportExecuteBodySchema,
   historyImportPreviewBodySchema,
   inviteSpaceEmailBodySchema,
   joinSpaceBodySchema,
@@ -126,6 +127,15 @@ export function createSpaceController(
         request.user.sub,
         request.params.id,
         body.sourceSpaceId
+      );
+    },
+
+    executeHistoryImport(request: FastifyRequest<{ Params: SpaceParams }>) {
+      const body = historyImportExecuteBodySchema.parse(request.body);
+      return spaceHistoryService.executeImport(
+        request.user.sub,
+        request.params.id,
+        body
       );
     },
   };

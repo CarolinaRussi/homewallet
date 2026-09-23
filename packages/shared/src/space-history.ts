@@ -12,6 +12,22 @@ export type HistoryImportPreviewBody = z.infer<
   typeof historyImportPreviewBodySchema
 >;
 
+export const historyImportExecuteBodySchema = z.object({
+  sourceSpaceId: z.string().uuid(),
+  previewToken: z.string().min(1),
+  categoryMap: z.record(z.string().uuid(), z.string().uuid()).default({}),
+});
+
+export type HistoryImportExecuteBody = z.input<
+  typeof historyImportExecuteBodySchema
+>;
+
+export type HistoryImportExecuteResult = {
+  targetSpaceId: string;
+  sourceDeleted: boolean;
+  entryCount: number;
+};
+
 export type HistoryImportSourceSummary = {
   id: string;
   name: string;

@@ -67,6 +67,48 @@ export function isEligibleSoloSource(input: {
   );
 }
 
+export function resolveImportCategoryRemap(
+  autoRows: {
+    sourceCategoryId: string;
+    sourceName: string;
+    targetCategoryId: string | null;
+  }[],
+  submitted: Record<string, string>
+) {
+  const remap: Record<string, string> = {};
+  const createNames: { sourceCategoryId: string; name: string }[] = [];
+  for (const row of autoRows) {
+    const chosen = submitted[row.sourceCategoryId] ?? row.targetCategoryId;
+    if (chosen) {
+      remap[row.sourceCategoryId] = chosen;
+    } else {
+      createNames.push({
+        sourceCategoryId: row.sourceCategoryId,
+        name: row.sourceName,
+      });
+    }
+  }
+  return { remap, createNames };
+}
+
+export function mergePotsByName(
+  source: { id: string; name: string }[],
+  target: { id: string; name: string }[]
+) {
+  const targetByName = new Map(target.map((pot) => [pot.name, pot.id]));
+  const potRemap: Record<string, string> = {};
+  const createPots: { sourceId: string; name: string }[] = [];
+  for (const pot of source) {
+    const existingId = targetByName.get(pot.name);
+    if (existingId) {
+      potRemap[pot.id] = existingId;
+    } else {
+      createPots.push({ sourceId: pot.id, name: pot.name });
+    }
+  }
+  return { potRemap, createPots };
+}
+
 export function transferImportWarnings(
   counterparties: string[],
   targetMemberIds: ReadonlySet<string>,
