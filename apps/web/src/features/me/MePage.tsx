@@ -39,6 +39,7 @@ import {
   peekHistoryImportOffer,
   takeHistoryImportDone,
 } from "../spaces/history-import-intent";
+import { takeLeaveExportDone } from "../spaces/leave-export-intent";
 import { fetchSpaceMembers } from "../spaces/space-api";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
@@ -317,6 +318,8 @@ export function MePage() {
   useEffect(() => {
     if (takeHistoryImportDone()) {
       showSuccess(t("spaces.historyImport.success"));
+    } else if (takeLeaveExportDone()) {
+      showSuccess(t("spaces.leaveTake.success"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount
   }, []);

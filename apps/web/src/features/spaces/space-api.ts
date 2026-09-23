@@ -4,6 +4,8 @@ import type {
   HistoryImportExecuteResult,
   HistoryImportPreview,
   HistoryImportSourceSummary,
+  HistoryLeaveExportExecuteResult,
+  HistoryLeaveExportPreview,
   SpaceMemberSummary,
   SpaceMonthSummary,
   SpaceSummary,
@@ -111,6 +113,23 @@ export function executeHistoryImport(
     {
       method: "POST",
       body: JSON.stringify(body),
+    }
+  );
+}
+
+export function previewLeaveExport(spaceId: string) {
+  return api<HistoryLeaveExportPreview>(
+    `/spaces/${spaceId}/leave-export/preview`,
+    { method: "POST" }
+  );
+}
+
+export function executeLeaveExport(spaceId: string, previewToken: string) {
+  return api<HistoryLeaveExportExecuteResult>(
+    `/spaces/${spaceId}/leave-export/execute`,
+    {
+      method: "POST",
+      body: JSON.stringify({ previewToken }),
     }
   );
 }

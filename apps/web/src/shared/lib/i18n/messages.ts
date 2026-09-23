@@ -455,8 +455,26 @@ export const messages = {
     "spaces.leave": "Sair do espaço",
     "spaces.leaveTitle": "Sair deste espaço?",
     "spaces.leaveConfirm":
-      "Se fores o último dono, outro membro vira dono. Se o espaço ficar vazio, ele some.",
+      "Se você for o último dono, outra pessoa vira dono. Se o espaço ficar vazio, ele some.",
     "spaces.leaveSubmit": "Sair",
+    "spaces.leaveTake.chooseTitle": "Como você quer sair?",
+    "spaces.leaveTake.chooseHint":
+      "O que era compartilhado fica na casa. Você escolhe se leva o que era só seu.",
+    "spaces.leaveTake.take": "Sair levando meus lançamentos pessoais",
+    "spaces.leaveTake.leaveOnly": "Sair sem levar",
+    "spaces.leaveTake.leaving": "Saindo…",
+    "spaces.leaveTake.previewTitle": "O que vai com você",
+    "spaces.leaveTake.previewHint":
+      "Um espaço só seu é criado com o que for pessoal. A casa guarda o resto.",
+    "spaces.leaveTake.moveEntries": "{n} lançamentos pessoais vêm com você",
+    "spaces.leaveTake.stayEntries": "{n} ficam na casa",
+    "spaces.leaveTake.orphan":
+      "Tem transferência com alguém que já saiu — essa parte vai com você.",
+    "spaces.leaveTake.confirmTake": "Sair e levar",
+    "spaces.leaveTake.taking": "Saindo…",
+    "spaces.leaveTake.previewFailed": "Não deu para montar o resumo.",
+    "spaces.leaveTake.success":
+      "Você saiu. Seus lançamentos pessoais estão no novo espaço.",
     "spaces.entryDateMode": "Datas nos lançamentos",
     "spaces.dateModeMonth": "Só o mês (como na planilha)",
     "spaces.dateModeDay": "Dia completo",
@@ -960,6 +978,24 @@ export const messages = {
     "spaces.leaveConfirm":
       "If you are the last owner, another member becomes owner. If it becomes empty, the space is deleted.",
     "spaces.leaveSubmit": "Leave",
+    "spaces.leaveTake.chooseTitle": "How do you want to leave?",
+    "spaces.leaveTake.chooseHint":
+      "Shared items stay in the household. You choose whether to take what was only yours.",
+    "spaces.leaveTake.take": "Leave and take my personal entries",
+    "spaces.leaveTake.leaveOnly": "Leave without taking them",
+    "spaces.leaveTake.leaving": "Leaving…",
+    "spaces.leaveTake.previewTitle": "What comes with you",
+    "spaces.leaveTake.previewHint":
+      "A space just for you is created with personal items. The household keeps the rest.",
+    "spaces.leaveTake.moveEntries": "{n} personal entries come with you",
+    "spaces.leaveTake.stayEntries": "{n} stay in the household",
+    "spaces.leaveTake.orphan":
+      "There is a transfer with someone who already left — that part comes with you.",
+    "spaces.leaveTake.confirmTake": "Leave and take",
+    "spaces.leaveTake.taking": "Leaving…",
+    "spaces.leaveTake.previewFailed": "Could not build the summary.",
+    "spaces.leaveTake.success":
+      "You left. Your personal entries are in the new space.",
     "spaces.entryDateMode": "Entry dates",
     "spaces.dateModeMonth": "Month only (spreadsheet style)",
     "spaces.dateModeDay": "Full day",

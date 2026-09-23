@@ -10,6 +10,9 @@ import { Spinner } from "../../shared/ui/Spinner";
 import { fetchCategories } from "../entries/entry-api";
 import { HistoryImportSheet } from "./HistoryImportSheet";
 import { setHistoryImportDone } from "./history-import-intent";
+import { LeaveExportSheet } from "./LeaveExportSheet";
+import { setLeaveExportDone } from "./leave-export-intent";
+import { setStoredActiveSpace, useActiveSpace } from "./use-active-space";
 import {
   fetchHistoryImportSources,
   fetchSpaceMembers,
@@ -36,6 +39,7 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
   const { t } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { selectSpace } = useActiveSpace();
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -102,11 +106,11 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
 
   const leaveMutation = useMutation({
     mutationFn: () => leaveSpace(space.id),
-    onSuccess: async () => {
+    onSuccess: () => {
       setLeaveOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
-      await queryClient.invalidateQueries({ queryKey: ["month-summary"] });
-      await queryClient.invalidateQueries({ queryKey: ["entries-shared"] });
+      void queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      void queryClient.invalidateQueries({ queryKey: ["month-summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["entries-shared"] });
     },
     onError: (error: Error) => onError(error.message),
   });
@@ -518,21 +522,43 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
         }}
       />
 
-      <ConfirmSheet
-        open={leaveOpen}
-        title={t("spaces.leaveTitle")}
-        description={t("spaces.leaveConfirm")}
-        confirmLabel={t("spaces.leaveSubmit")}
-        cancelLabel={t("me.cancel")}
-        danger
-        pending={leaveMutation.isPending}
-        onClose={() => {
-          if (!leaveMutation.isPending) {
+      {space.memberCount >= 2 ? (
+        <LeaveExportSheet
+          spaceId={space.id}
+          currency={space.currency}
+          open={leaveOpen}
+          leavePending={leaveMutation.isPending}
+          onClose={() => {
+            if (!leaveMutation.isPending) {
+              setLeaveOpen(false);
+            }
+          }}
+          onLeaveWithout={() => leaveMutation.mutate()}
+          onExported={(soloSpaceId) => {
             setLeaveOpen(false);
-          }
-        }}
-        onConfirm={() => leaveMutation.mutate()}
-      />
+            setStoredActiveSpace(soloSpaceId);
+            selectSpace(soloSpaceId);
+            setLeaveExportDone();
+            navigate("/me");
+          }}
+        />
+      ) : (
+        <ConfirmSheet
+          open={leaveOpen}
+          title={t("spaces.leaveTitle")}
+          description={t("spaces.leaveConfirm")}
+          confirmLabel={t("spaces.leaveSubmit")}
+          cancelLabel={t("me.cancel")}
+          danger
+          pending={leaveMutation.isPending}
+          onClose={() => {
+            if (!leaveMutation.isPending) {
+              setLeaveOpen(false);
+            }
+          }}
+          onConfirm={() => leaveMutation.mutate()}
+        />
+      )}
     </article>
   );
 }
