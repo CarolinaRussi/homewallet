@@ -15,27 +15,31 @@ export function createMailService(config: AppConfig) {
   return {
     async send(input: SendMailInput): Promise<void> {
       if (!resend || !config.resendFrom) {
-        if (config.isProduction) {
-          throw new Error(
-            "Email is not configured (RESEND_API_KEY / RESEND_FROM)"
-          );
-        }
         console.info(
           `[mail] skip Resend — to=${input.to} subject=${input.subject}` +
             (input.debugLink ? ` link=${input.debugLink}` : "")
         );
+        if (config.isProduction) {
+          console.error(
+            "[mail] Email is not configured (RESEND_API_KEY / RESEND_FROM)"
+          );
+        }
         return;
       }
 
-      const result = await resend.emails.send({
-        from: config.resendFrom,
-        to: input.to,
-        subject: input.subject,
-        html: input.html,
-      });
+      try {
+        const result = await resend.emails.send({
+          from: config.resendFrom,
+          to: input.to,
+          subject: input.subject,
+          html: input.html,
+        });
 
-      if (result.error) {
-        throw new Error(result.error.message);
+        if (result.error) {
+          console.error(`[mail] Resend rejected: ${result.error.message}`);
+        }
+      } catch (error) {
+        console.error("[mail] Resend request failed", error);
       }
     },
   };

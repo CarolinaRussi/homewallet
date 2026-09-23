@@ -13,9 +13,8 @@ import {
   resendVerifyEmail,
 } from "../auth/auth-api";
 import { mapAuthError } from "../auth/auth-errors";
+import { clearClientSession } from "../auth/clear-client-session";
 import { GoogleSignIn } from "../auth/GoogleSignIn";
-import { clearWelcomeIntent } from "../me/welcome-intent";
-import { clearStoredActiveSpace } from "../spaces/use-active-space";
 
 export function AccountPanel() {
   const { t } = useLocale();
@@ -36,10 +35,8 @@ export function AccountPanel() {
     mutationFn: deleteAccount,
     onSuccess: async () => {
       setConfirmOpen(false);
-      clearWelcomeIntent();
-      clearStoredActiveSpace();
-      await queryClient.clear();
-      navigate("/");
+      await clearClientSession(queryClient);
+      navigate("/", { replace: true });
     },
     onError: (error: Error) => setErrorMessage(error.message),
   });

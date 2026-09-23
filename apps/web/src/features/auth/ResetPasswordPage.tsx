@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { APP_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
+import { PasswordField } from "../../shared/ui/PasswordField";
 import { Spinner } from "../../shared/ui/Spinner";
 import { resetPassword } from "./auth-api";
 import { mapAuthError } from "./auth-errors";
@@ -64,26 +65,20 @@ export function ResetPasswordPage() {
         <p className="text-sm text-income-fg">{t("auth.resetDone")}</p>
       ) : (
         <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("auth.newPass")}
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t("auth.confirmPass")}
-            <input
-              name="confirm"
-              type="password"
-              required
-              minLength={8}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
-            />
-          </label>
+          <PasswordField
+            label={t("auth.newPass")}
+            name="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
+          <PasswordField
+            label={t("auth.confirmPass")}
+            name="confirm"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
           {errorMessage ? (
             <p
               role="alert"

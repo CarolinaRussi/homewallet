@@ -268,12 +268,16 @@ export function createAuthService(
       });
 
       const resetUrl = `${config.webOrigin}/reset-password?token=${encodeURIComponent(rawToken)}`;
-      await mailService.send({
-        to: user.email,
-        subject: `Reset your ${APP_NAME} password`,
-        html: passwordResetEmailHtml({ name: user.name, resetUrl }),
-        debugLink: resetUrl,
-      });
+      try {
+        await mailService.send({
+          to: user.email,
+          subject: `Reset your ${APP_NAME} password`,
+          html: passwordResetEmailHtml({ name: user.name, resetUrl }),
+          debugLink: resetUrl,
+        });
+      } catch (error) {
+        console.error("[mail] password reset delivery failed", error);
+      }
     },
 
     async resetPassword(input: ResetPasswordBody): Promise<void> {

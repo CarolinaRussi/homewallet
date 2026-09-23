@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, Outlet } from "react-router-dom";
 import { fetchSession } from "../../features/auth/auth-api";
+import { authedRouteState } from "../../features/auth/session-gate";
 import { AppBootScreen } from "./AppBootScreen";
 
 export function RequireSession() {
@@ -8,12 +9,17 @@ export function RequireSession() {
     queryKey: ["session"],
     queryFn: fetchSession,
   });
+  const routeState = authedRouteState({
+    user: sessionQuery.data?.user,
+    isPending: sessionQuery.isPending,
+    isFetching: sessionQuery.isFetching,
+  });
 
-  if (sessionQuery.isLoading) {
+  if (routeState === "boot") {
     return <AppBootScreen />;
   }
 
-  if (sessionQuery.isError) {
+  if (routeState === "anon") {
     return <Navigate to="/" replace />;
   }
 

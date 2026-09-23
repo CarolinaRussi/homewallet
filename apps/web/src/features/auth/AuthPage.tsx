@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { APP_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
+import { PasswordField } from "../../shared/ui/PasswordField";
 import { Spinner } from "../../shared/ui/Spinner";
 import { loginAccount, loginWithGoogle, registerAccount } from "./auth-api";
 import { mapAuthError } from "./auth-errors";
@@ -147,16 +148,15 @@ export function AuthPage({ mode }: AuthPageProps) {
             className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-muted">
-          {t("auth.passLabel")}
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={mode === "register" ? 8 : undefined}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-fg"
-          />
-        </label>
+        <PasswordField
+          label={t("auth.passLabel")}
+          name="password"
+          required
+          autoComplete={
+            mode === "register" ? "new-password" : "current-password"
+          }
+          minLength={mode === "register" ? 8 : undefined}
+        />
         {errorMessage ? (
           <p
             role="alert"

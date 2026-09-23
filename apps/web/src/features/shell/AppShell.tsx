@@ -2,8 +2,7 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { APP_NAME } from "@homewallet/shared";
 import { fetchSession, logoutAccount } from "../auth/auth-api";
-import { clearWelcomeIntent } from "../me/welcome-intent";
-import { clearStoredActiveSpace } from "../spaces/use-active-space";
+import { clearClientSession } from "../auth/clear-client-session";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { useTheme } from "../../shared/lib/theme/theme-context";
 import { SideNav } from "./SideNav";
@@ -20,11 +19,12 @@ export function AppShell() {
   const needsVerify = sessionQuery.data?.user.emailVerified === false;
 
   async function onSignOut() {
-    await logoutAccount();
-    clearWelcomeIntent();
-    clearStoredActiveSpace();
-    await queryClient.clear();
-    navigate("/");
+    try {
+      await logoutAccount();
+    } finally {
+      await clearClientSession(queryClient);
+      navigate("/", { replace: true });
+    }
   }
 
   return (

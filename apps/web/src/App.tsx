@@ -15,6 +15,7 @@ import { AppShell } from "./features/shell/AppShell";
 import { NotFoundPage } from "./features/shell/NotFoundPage";
 import { SpacePage } from "./features/space/SpacePage";
 import { SpacesPanel } from "./features/spaces/SpacesPanel";
+import { publicHomeState } from "./features/auth/session-gate";
 import { AppBootScreen } from "./shared/ui/AppBootScreen";
 import { RequireSession } from "./shared/ui/RequireSession";
 
@@ -24,15 +25,20 @@ export function App() {
     queryFn: fetchSession,
     retry: false,
   });
+  const homeState = publicHomeState({
+    user: sessionQuery.data?.user,
+    isPending: sessionQuery.isPending,
+    isFetching: sessionQuery.isFetching,
+  });
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          sessionQuery.isSuccess ? (
+          homeState === "me" ? (
             <Navigate to="/me" replace />
-          ) : sessionQuery.isLoading ? (
+          ) : homeState === "boot" ? (
             <AppBootScreen />
           ) : (
             <LandingPage />
