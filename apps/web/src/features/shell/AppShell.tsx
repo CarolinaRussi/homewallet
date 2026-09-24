@@ -1,4 +1,5 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { APP_NAME } from "@homewallet/shared";
 import { logoutAccount } from "../auth/auth-api";
@@ -9,9 +10,14 @@ import { SideNav } from "./SideNav";
 
 export function AppShell() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const { t, locale, setLocale } = useLocale();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   async function onSignOut() {
     try {
