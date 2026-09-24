@@ -7,7 +7,6 @@ import type {
   CategorySummary,
   CreateEntryBody,
   EntrySummary,
-  EntryVisibility,
   MePagePayload,
   UpdateEntryBody,
   UpdateEntryCardLineBody,
@@ -20,6 +19,7 @@ import {
   monthToOccurredOn,
   shiftMonth,
 } from "../../shared/lib/money";
+import { SpaceSettingsLink } from "../spaces/SpaceSettingsLink";
 import { useActiveSpace } from "../spaces/use-active-space";
 import { fetchSession } from "../auth/auth-api";
 import {
@@ -145,7 +145,7 @@ function readEntryBody(
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
-    visibility: String(data.get("visibility")) as EntryVisibility,
+    visibility: "personal" as const,
     occurredOn,
   };
 }
@@ -208,7 +208,7 @@ function readSharedFields(form: HTMLFormElement) {
     amount: Number(data.get("amount")),
     categoryId: String(data.get("categoryId")),
     description: String(data.get("description") ?? ""),
-    visibility: String(data.get("visibility")) as EntryVisibility,
+    visibility: "personal" as const,
     startMonth: String(data.get("startMonth") ?? ""),
     endMonth: String(data.get("endMonth") ?? "").trim(),
     installmentCount: Number(data.get("installmentCount") ?? 0),
@@ -775,9 +775,9 @@ export function MePage() {
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-3xl font-semibold text-fg">{t("me.title")}</h1>
-          <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
+          {activeSpace.memberCount < 2 ? <SpaceSettingsLink /> : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -936,16 +936,6 @@ export function MePage() {
                                   : t("me.expense")}
                         {entry.type === "saving" && entry.reservePotName
                           ? ` · ${entry.reservePotName}`
-                          : ""}
-                        {entry.type !== "saving" &&
-                        entry.type !== "reserve_withdraw" &&
-                        entry.type !== "transfer_out" &&
-                        entry.type !== "transfer_in"
-                          ? ` · ${
-                              entry.visibility === "shared"
-                                ? t("me.shared")
-                                : t("me.personal")
-                            }`
                           : ""}
                         {entry.categoryName &&
                         (entry.type === "transfer_out" ||

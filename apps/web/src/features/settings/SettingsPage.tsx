@@ -1,14 +1,32 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  NavLink,
+  Outlet,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import type { MessageKey } from "../../shared/lib/i18n/messages";
 
 const tabs: { to: string; labelKey: MessageKey; end?: boolean }[] = [
-  { to: "/settings", labelKey: "settings.tabSpaces", end: true },
+  { to: "/settings", labelKey: "settings.tabMe", end: true },
   { to: "/settings/account", labelKey: "settings.tabAccount" },
 ];
 
 export function SettingsPage() {
   const { t } = useLocale();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const joinPrefill = searchParams.get("join");
+
+  useEffect(() => {
+    if (!joinPrefill) {
+      return;
+    }
+    navigate(`/space/settings?join=${encodeURIComponent(joinPrefill)}`, {
+      replace: true,
+    });
+  }, [joinPrefill, navigate]);
 
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">

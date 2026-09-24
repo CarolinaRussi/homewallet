@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import type { BudgetLayer, SpaceSummary } from "@homewallet/shared";
+import type { SpaceSummary } from "@homewallet/shared";
 import { SAVING_CATEGORY_NAME } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { ConfirmSheet } from "../../shared/ui/ConfirmSheet";
 import { Spinner } from "../../shared/ui/Spinner";
 import { fetchCategories } from "../entries/entry-api";
+import { CategoryLayerMapper } from "./CategoryLayerMapper";
 import { HistoryImportSheet } from "./HistoryImportSheet";
 import { setHistoryImportDone } from "./history-import-intent";
 import { LeaveExportSheet } from "./LeaveExportSheet";
@@ -21,13 +22,11 @@ import {
   promoteSpaceMember,
   regenerateJoinCode,
   updateCategory,
-  updateCategoryLayer,
-  updateMyLimits,
   updateSpace,
 } from "./space-api";
 
 function inviteLink(joinCode: string) {
-  return `${window.location.origin}/settings?join=${encodeURIComponent(joinCode)}`;
+  return `${window.location.origin}/space/settings?join=${encodeURIComponent(joinCode)}`;
 }
 
 type SpaceSettingsCardProps = {
@@ -63,21 +62,6 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
       });
       await queryClient.invalidateQueries({ queryKey: ["month-summary"] });
       await queryClient.invalidateQueries({ queryKey: ["entries-shared"] });
-    },
-    onError: (error: Error) => onError(error.message),
-  });
-
-  const myLimitsMutation = useMutation({
-    mutationFn: (body: Parameters<typeof updateMyLimits>[1]) =>
-      updateMyLimits(space.id, body),
-    onSuccess: async (updated) => {
-      queryClient.setQueryData<SpaceSummary[]>(["spaces"], (current) => {
-        if (!current) {
-          return current;
-        }
-        return current.map((item) => (item.id === updated.id ? updated : item));
-      });
-      await queryClient.invalidateQueries({ queryKey: ["month-summary"] });
     },
     onError: (error: Error) => onError(error.message),
   });
@@ -137,22 +121,6 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
     });
   }
 
-  function onMyLimitsSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const personalEnabled = data.get("personalLimitEnabled") === "on";
-    const leftoverEnabled = data.get("leftoverTargetEnabled") === "on";
-    const personalRaw = String(data.get("personalLimitAmount") ?? "").trim();
-    const leftoverRaw = String(data.get("leftoverTargetAmount") ?? "").trim();
-    onError("");
-    myLimitsMutation.mutate({
-      personalLimitEnabled: personalEnabled,
-      personalLimitAmount: personalEnabled ? Number(personalRaw) : null,
-      leftoverTargetEnabled: leftoverEnabled,
-      leftoverTargetAmount: leftoverEnabled ? Number(leftoverRaw) : null,
-    });
-  }
-
   const isOwner = space.role === "owner";
 
   return (
@@ -160,19 +128,7 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
       <header className="flex flex-col gap-1 border-b border-border px-5 py-5 md:px-6">
         <h2 className="text-xl font-semibold text-fg">{space.name}</h2>
         <p className="text-sm text-muted">
-          {isOwner ? t("spaces.owner") : t("spaces.member")} · {space.currency}{" "}
-          ·{" "}
-          <span
-            className={
-              space.privacyMode === "transparent"
-                ? "font-medium text-accent"
-                : undefined
-            }
-          >
-            {space.privacyMode === "private"
-              ? t("spaces.private")
-              : t("spaces.transparent")}
-          </span>
+          {isOwner ? t("spaces.owner") : t("spaces.member")} · {space.currency}
         </p>
       </header>
 
@@ -283,30 +239,38 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
             </p>
           </div>
 
-          <div>
-            <p className="text-sm font-medium text-fg">{t("spaces.privacy")}</p>
-            <p className="mt-1 max-w-2xl text-xs text-muted">
-              {t("spaces.privacyHint")}
-            </p>
-            <select
-              className="hw-select-field mt-2 max-w-md disabled:opacity-70"
-              value={space.privacyMode}
+          <form
+            className="flex max-w-md flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const data = new FormData(event.currentTarget);
+              onError("");
+              settingsMutation.mutate({
+                name: String(data.get("name") ?? ""),
+              });
+            }}
+          >
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              {t("spaces.rename")}
+              <input
+                name="name"
+                required
+                maxLength={80}
+                defaultValue={space.name}
+                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+              />
+            </label>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-border px-3 py-1.5 text-sm font-medium text-fg disabled:opacity-70"
               disabled={settingsMutation.isPending}
-              onChange={(event) =>
-                settingsMutation.mutate({
-                  privacyMode:
-                    event.target.value === "transparent"
-                      ? "transparent"
-                      : "private",
-                })
-              }
             >
-              <option value="private">{t("spaces.privacyPrivate")}</option>
-              <option value="transparent">
-                {t("spaces.privacyTransparent")}
-              </option>
-            </select>
-          </div>
+              {settingsMutation.isPending ? <Spinner /> : null}
+              {settingsMutation.isPending
+                ? t("spaces.renameSaving")
+                : t("spaces.renameSubmit")}
+            </button>
+          </form>
 
           <label className="flex max-w-md flex-col gap-1 text-sm text-muted">
             {t("spaces.entryDateMode")}
@@ -377,7 +341,7 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
                 {t("limits.layersToggle")}
               </label>
               <p className="mt-1 max-w-2xl text-xs text-muted">
-                {t("limits.layersExplain")}
+                {t("limits.layersExplainSpace")}
               </p>
             </div>
             {space.budgetLayersEnabled ? (
@@ -395,71 +359,6 @@ export function SpaceSettingsCard({ space, onError }: SpaceSettingsCardProps) {
           </p>
         </section>
       )}
-
-      <section className="flex flex-col gap-3 border-b border-border px-5 py-5 md:px-6">
-        <div>
-          <h3 className="text-sm font-semibold text-fg">
-            {t("limits.myLimits")}
-          </h3>
-          <p className="mt-1 max-w-2xl text-xs text-muted">
-            {t("limits.myLimitsHint")}
-          </p>
-        </div>
-        <form
-          key={`my-limits-${space.id}-${space.myLimits.personalLimitEnabled}-${space.myLimits.leftoverTargetEnabled}-${space.myLimits.personalLimitAmount}-${space.myLimits.leftoverTargetAmount}`}
-          className="flex flex-col gap-3"
-          onSubmit={onMyLimitsSubmit}
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              <span className="flex items-center gap-2 text-fg">
-                <input
-                  name="personalLimitEnabled"
-                  type="checkbox"
-                  defaultChecked={space.myLimits.personalLimitEnabled}
-                />
-                {t("limits.personal")}
-              </span>
-              <input
-                name="personalLimitAmount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                defaultValue={space.myLimits.personalLimitAmount ?? ""}
-                placeholder={t("limits.amount")}
-                className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              <span className="flex items-center gap-2 text-fg">
-                <input
-                  name="leftoverTargetEnabled"
-                  type="checkbox"
-                  defaultChecked={space.myLimits.leftoverTargetEnabled}
-                />
-                {t("limits.leftoverTarget")}
-              </span>
-              <input
-                name="leftoverTargetAmount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                defaultValue={space.myLimits.leftoverTargetAmount ?? ""}
-                placeholder={t("limits.amount")}
-                className="rounded-md border border-border bg-bg px-2 py-1.5 text-fg"
-              />
-            </label>
-          </div>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 self-start rounded-md border border-border px-3 py-1.5 text-sm text-fg disabled:opacity-70"
-            disabled={myLimitsMutation.isPending}
-          >
-            {myLimitsMutation.isPending ? <Spinner /> : null}
-            {t("limits.save")}
-          </button>
-        </form>
-      </section>
 
       <details className="group border-b border-border px-5 py-4 md:px-6">
         <summary className="cursor-pointer list-none text-sm font-semibold text-fg marker:content-none [&::-webkit-details-marker]:hidden">
@@ -668,73 +567,6 @@ function CategoryLineDetailMapper({ spaceId }: { spaceId: string }) {
           <span className="text-fg">{category.name}</span>
         </label>
       ))}
-    </div>
-  );
-}
-
-function CategoryLayerMapper({ spaceId }: { spaceId: string }) {
-  const { t } = useLocale();
-  const queryClient = useQueryClient();
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", spaceId],
-    queryFn: () => fetchCategories(spaceId),
-  });
-
-  const layerMutation = useMutation({
-    mutationFn: ({
-      categoryId,
-      budgetLayer,
-    }: {
-      categoryId: string;
-      budgetLayer: BudgetLayer | null;
-    }) => updateCategoryLayer(spaceId, categoryId, budgetLayer),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["categories", spaceId],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["month-summary"] });
-    },
-  });
-
-  if (!categoriesQuery.data?.length) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-3">
-      <p className="text-xs text-muted">{t("limits.layersMapHint")}</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {categoriesQuery.data.map((category) => (
-          <label
-            key={category.id}
-            className="flex items-center justify-between gap-2 text-sm text-muted"
-          >
-            <span className="text-fg">{category.name}</span>
-            <select
-              className="hw-select-field py-1 text-sm disabled:opacity-70"
-              value={category.budgetLayer ?? ""}
-              disabled={layerMutation.isPending}
-              onChange={(event) => {
-                const value = event.target.value;
-                layerMutation.mutate({
-                  categoryId: category.id,
-                  budgetLayer:
-                    value === "essential" ||
-                    value === "personal" ||
-                    value === "future"
-                      ? value
-                      : null,
-                });
-              }}
-            >
-              <option value="">{t("limits.layerNone")}</option>
-              <option value="essential">{t("limits.layerEssential")}</option>
-              <option value="personal">{t("limits.layerPersonal")}</option>
-              <option value="future">{t("limits.layerFuture")}</option>
-            </select>
-          </label>
-        ))}
-      </div>
     </div>
   );
 }

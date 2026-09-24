@@ -11,10 +11,11 @@ import { ReservePage } from "./features/me/ReservePage";
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AccountPanel } from "./features/settings/AccountPanel";
+import { MeSettingsPanel } from "./features/me/MeSettingsPanel";
 import { AppShell } from "./features/shell/AppShell";
 import { NotFoundPage } from "./features/shell/NotFoundPage";
 import { SpacePage } from "./features/space/SpacePage";
-import { SpacesPanel } from "./features/spaces/SpacesPanel";
+import { SpaceSettingsPage } from "./features/space/SpaceSettingsPage";
 import { publicHomeState } from "./features/auth/session-gate";
 import { AppBootScreen } from "./shared/ui/AppBootScreen";
 import { RequireSession } from "./shared/ui/RequireSession";
@@ -55,9 +56,10 @@ export function App() {
           <Route path="/me" element={<MePage />} />
           <Route path="/reserve" element={<ReservePage />} />
           <Route path="/space" element={<SpacePage />} />
+          <Route path="/space/settings" element={<SpaceSettingsPage />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/settings" element={<SettingsPage />}>
-            <Route index element={<SpacesPanel />} />
+            <Route index element={<MeSettingsPanel />} />
             <Route path="account" element={<AccountPanel />} />
           </Route>
           <Route path="/spaces" element={<Navigate to="/settings" replace />} />
