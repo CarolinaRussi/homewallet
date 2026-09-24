@@ -4,22 +4,23 @@ import { Link, Navigate } from "react-router-dom";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { currentMonthValue, shiftMonth } from "../../shared/lib/money";
 import { ListRowsSkeleton, Skeleton } from "../../shared/ui/Skeleton";
+import { Spinner } from "../../shared/ui/Spinner";
 import { fetchSession } from "../auth/auth-api";
 import { fetchSharedEntries } from "../entries/entry-api";
 import { fetchOverviewBreakdown } from "../overview/overview-api";
 import { fetchSpaceMembers, fetchSpaceMonth } from "../spaces/space-api";
+import { SpaceSettingsLink } from "../spaces/SpaceSettingsLink";
 import { useActiveSpace } from "../spaces/use-active-space";
 import { spaceDashboardScope } from "./space-dashboard-scope";
 import { SpaceCategoryBars } from "./SpaceCategoryBars";
-import { SpaceEntryList } from "./SpaceEntryList";
 import { SpaceLimitCard } from "./SpaceLimitCard";
+import { SpaceMemberCategoryTable } from "./SpaceMemberCategoryTable";
 import { SpaceMonthHero } from "./SpaceMonthHero";
 
 export function SpacePage() {
   const { t } = useLocale();
   const { spacesQuery, activeSpace, spaceId } = useActiveSpace();
   const [month, setMonth] = useState(currentMonthValue);
-  const transparent = activeSpace?.privacyMode === "transparent";
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -35,9 +36,7 @@ export function SpacePage() {
   const members = membersQuery.data ?? [];
   const multiMember = members.length > 1;
   const myUserId = sessionQuery.data?.user.id;
-  const dashboardScope = activeSpace
-    ? spaceDashboardScope(activeSpace.privacyMode, multiMember)
-    : "me";
+  const dashboardScope = spaceDashboardScope(multiMember);
 
   const breakdownQuery = useQuery({
     queryKey: ["space-breakdown", spaceId, month, dashboardScope],
@@ -50,7 +49,7 @@ export function SpacePage() {
   });
 
   const sharedQuery = useQuery({
-    queryKey: ["entries-shared", spaceId, month, activeSpace?.privacyMode],
+    queryKey: ["entries-shared", spaceId, month],
     queryFn: () => fetchSharedEntries(spaceId!, month),
     enabled: Boolean(spaceId),
   });
@@ -96,17 +95,26 @@ export function SpacePage() {
     spaceMonthQuery.isLoading;
   const pageRefreshing =
     (breakdownQuery.isFetching && !breakdownQuery.isLoading) ||
-    (sharedQuery.isFetching && !sharedQuery.isLoading);
+    (sharedQuery.isFetching && !sharedQuery.isLoading) ||
+    (spaceMonthQuery.isFetching && !spaceMonthQuery.isLoading);
 
-  const heroHint = transparent
-    ? t("space.heroHintTransparent")
-    : t("space.heroHintShared");
+  const heroHint = t("space.heroHintTransparent");
 
   return (
     <main className="flex flex-col gap-8 px-6 py-8 md:px-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-fg">{t("space.title")}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold text-fg">
+              {t("space.title")}
+            </h1>
+            {pageRefreshing ? (
+              <span role="status" aria-label={t("me.updating")}>
+                <Spinner className="text-muted" />
+              </span>
+            ) : null}
+            <SpaceSettingsLink />
+          </div>
           <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
           <p className="mt-1 text-sm text-muted">{t("space.panelHint")}</p>
         </div>
@@ -133,10 +141,6 @@ export function SpacePage() {
         </div>
       </header>
 
-      {pageRefreshing ? (
-        <p className="text-sm text-muted">{t("me.updating")}</p>
-      ) : null}
-
       {pageLoading ? (
         <>
           <Skeleton className="h-32 w-full rounded-lg" />
@@ -145,12 +149,6 @@ export function SpacePage() {
         </>
       ) : (
         <>
-          {transparent ? (
-            <p className="rounded-md border border-accent/40 bg-income px-3 py-2 text-sm text-income-fg">
-              {t("space.transparentBanner")}
-            </p>
-          ) : null}
-
           <SpaceMonthHero
             totalExpense={breakdownQuery.data?.totalExpense ?? 0}
             month={month}
@@ -179,12 +177,10 @@ export function SpacePage() {
             </Link>
           </p>
 
-          <SpaceEntryList
+          <SpaceMemberCategoryTable
             entries={sharedQuery.data ?? []}
             members={members}
             myUserId={myUserId}
-            multiMember={multiMember}
-            transparent={transparent}
             currency={activeSpace.currency}
             entryDateMode={activeSpace.entryDateMode}
           />
