@@ -444,22 +444,7 @@ export function EntryFormModal({
             </>
           ) : null}
 
-          {!isSaving && !isTransfer ? (
-            <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
-              {t("me.visibility")}
-              <select
-                name="visibility"
-                required
-                defaultValue={editing?.visibility ?? "personal"}
-                className="hw-select-field"
-              >
-                <option value="personal">{t("me.personal")}</option>
-                <option value="shared">{t("me.shared")}</option>
-              </select>
-            </label>
-          ) : (
-            <input type="hidden" name="visibility" value="personal" />
-          )}
+          <input type="hidden" name="visibility" value="personal" />
 
           <label className="flex flex-col gap-1 text-sm text-muted sm:col-span-2">
             {t("me.description")}

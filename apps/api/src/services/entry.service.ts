@@ -402,22 +402,14 @@ export function createEntryService(
       spaceId: string,
       month: string
     ): Promise<EntrySummary[]> {
-      const membership = await requireMember(userId, spaceId);
+      await requireMember(userId, spaceId);
       const { start, end } = monthBounds(month);
-      const entries =
-        membership.space.privacyMode === "transparent"
-          ? await entryRepository.listAllForMonth(
-              spaceId,
-              start,
-              end,
-              dataSource.manager
-            )
-          : await entryRepository.listSharedForMonth(
-              spaceId,
-              start,
-              end,
-              dataSource.manager
-            );
+      const entries = await entryRepository.listAllForMonth(
+        spaceId,
+        start,
+        end,
+        dataSource.manager
+      );
       return entries.map(toEntrySummary);
     },
 

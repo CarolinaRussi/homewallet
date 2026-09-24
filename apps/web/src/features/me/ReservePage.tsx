@@ -255,7 +255,6 @@ export function ReservePage() {
           <h1 className="text-3xl font-semibold text-fg">
             {t("reserve.title")}
           </h1>
-          <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             {t("reserve.hint")}
           </p>

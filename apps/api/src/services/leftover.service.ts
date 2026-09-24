@@ -171,10 +171,11 @@ export function createLeftoverService(
       personalLimitAmount: personalAmount,
       leftoverTargetEnabled: membership.leftoverTargetEnabled,
       leftoverTargetAmount: leftoverAmount,
+      budgetLayersEnabled: membership.budgetLayersEnabled,
     };
 
     let budgetLayers = null;
-    if (membership.space.budgetLayersEnabled) {
+    if (membership.budgetLayersEnabled) {
       const spent = {
         essential: 0,
         personal: 0,

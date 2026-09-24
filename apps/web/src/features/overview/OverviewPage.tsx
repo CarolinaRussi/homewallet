@@ -37,7 +37,6 @@ export function OverviewPage() {
 
   const members = membersQuery.data ?? [];
   const multiMember = members.length > 1;
-  const transparent = activeSpace?.privacyMode === "transparent";
   const myUserId = sessionQuery.data?.user.id;
   const peers = members.filter((member) => member.userId !== myUserId);
 
@@ -47,14 +46,9 @@ export function OverviewPage() {
       setMemberUserId(undefined);
       return;
     }
-    if (transparent) {
-      setScope("everyone");
-      setMemberUserId(undefined);
-      return;
-    }
-    setScope("me");
+    setScope("everyone");
     setMemberUserId(undefined);
-  }, [spaceId, multiMember, transparent]);
+  }, [spaceId, multiMember]);
 
   useEffect(() => {
     if (scope !== "member") {
@@ -71,9 +65,7 @@ export function OverviewPage() {
   const scopeReady =
     Boolean(spaceId) &&
     (scope !== "member" || Boolean(memberUserId)) &&
-    (scope === "me" ||
-      scope === "shared" ||
-      (transparent && (scope === "everyone" || scope === "member")));
+    (scope === "me" || scope === "everyone" || scope === "member");
 
   const seriesQuery = useQuery({
     queryKey: [
@@ -169,7 +161,6 @@ export function OverviewPage() {
               }
             >
               <OverviewScopeFilter
-                transparent={transparent}
                 scope={scope}
                 memberUserId={memberUserId}
                 peers={peers}

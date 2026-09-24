@@ -34,6 +34,7 @@ const EMPTY_MY_LIMITS: MyLimitSettings = {
   personalLimitAmount: null,
   leftoverTargetEnabled: false,
   leftoverTargetAmount: null,
+  budgetLayersEnabled: false,
 };
 
 function myLimitsFrom(membership: Membership): MyLimitSettings {
@@ -42,6 +43,7 @@ function myLimitsFrom(membership: Membership): MyLimitSettings {
     personalLimitAmount: amountOrNull(membership.personalLimitAmount),
     leftoverTargetEnabled: membership.leftoverTargetEnabled,
     leftoverTargetAmount: amountOrNull(membership.leftoverTargetAmount),
+    budgetLayersEnabled: membership.budgetLayersEnabled,
   };
 }
 
@@ -143,7 +145,7 @@ export function createSpaceService(
         space = await spaceRepository.create(manager, {
           name: input.name,
           currency: input.currency ?? "BRL",
-          privacyMode: "private",
+          privacyMode: "transparent",
           entryDateMode: input.entryDateMode ?? "month",
           spaceLimitEnabled: false,
           spaceLimitAmount: null,
@@ -154,7 +156,7 @@ export function createSpaceService(
         space = await spaceRepository.create(manager, {
           name: input.name,
           currency: input.currency ?? "BRL",
-          privacyMode: "private",
+          privacyMode: "transparent",
           entryDateMode: input.entryDateMode ?? "month",
           spaceLimitEnabled: false,
           spaceLimitAmount: null,
@@ -171,6 +173,7 @@ export function createSpaceService(
         personalLimitAmount: null,
         leftoverTargetEnabled: false,
         leftoverTargetAmount: null,
+        budgetLayersEnabled: false,
       });
       await categoryRepository.seedDefaults(space.id, manager);
       await reservePotRepository.ensureDefault(space.id, userId, manager);
@@ -203,6 +206,7 @@ export function createSpaceService(
         personalLimitAmount: null,
         leftoverTargetEnabled: false,
         leftoverTargetAmount: null,
+        budgetLayersEnabled: false,
       });
       await reservePotRepository.ensureDefault(
         space.id,
@@ -242,6 +246,9 @@ export function createSpaceService(
           : amountOrNull(membership.space.spaceLimitAmount);
       requirePositiveWhenEnabled(nextEnabled, nextAmount, "Space limit");
 
+      if (input.name !== undefined) {
+        membership.space.name = input.name;
+      }
       if (input.entryDateMode !== undefined) {
         membership.space.entryDateMode = input.entryDateMode;
       }
@@ -394,7 +401,7 @@ export function createSpaceService(
         throw new HttpError(403, "Email verification required");
       }
 
-      const joinUrl = `${webOrigin}/settings?join=${encodeURIComponent(membership.space.joinCode)}`;
+      const joinUrl = `${webOrigin}/space/settings?join=${encodeURIComponent(membership.space.joinCode)}`;
       await mailService.send({
         to: email.toLowerCase(),
         subject: `${inviter.name} invited you to ${membership.space.name} on ${APP_NAME}`,
@@ -503,6 +510,9 @@ export function createSpaceService(
             ? null
             : input.leftoverTargetAmount.toFixed(2);
       }
+      if (input.budgetLayersEnabled !== undefined) {
+        membership.budgetLayersEnabled = input.budgetLayersEnabled;
+      }
       if (!membership.personalLimitEnabled) {
         membership.personalLimitAmount = null;
       }
@@ -538,13 +548,13 @@ export function createSpaceService(
       }
 
       const { start, end } = monthBounds(month);
-      const sharedEntries = await entryRepository.listSharedForMonth(
+      const monthEntries = await entryRepository.listAllForMonth(
         spaceId,
         start,
         end,
         dataSource.manager
       );
-      const sharedExpense = sharedEntries.reduce((sum, entry) => {
+      const sharedExpense = monthEntries.reduce((sum, entry) => {
         return entry.type === "expense" ? sum + Number(entry.amount) : sum;
       }, 0);
 

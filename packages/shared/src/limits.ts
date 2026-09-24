@@ -55,6 +55,7 @@ export const updateMyLimitsBodySchema = z
       .finite()
       .nullable()
       .optional(),
+    budgetLayersEnabled: z.boolean().optional(),
   })
   .refine(
     (body) => Object.keys(body).length > 0,
@@ -81,6 +82,7 @@ export type MyLimitSettings = {
   personalLimitAmount: number | null;
   leftoverTargetEnabled: boolean;
   leftoverTargetAmount: number | null;
+  budgetLayersEnabled: boolean;
 };
 
 export type SpaceLimitProgress = {

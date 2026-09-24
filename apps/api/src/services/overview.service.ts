@@ -343,7 +343,11 @@ export function createOverviewService(
 
       const categoryAmounts = collectCategoryAmounts(entries, scope);
       const { totalExpense, slices } = buildCategoryBreakdown(categoryAmounts);
-      const budgetLayers = membership.space.budgetLayersEnabled
+      const layersEnabled =
+        scope === "me"
+          ? membership.budgetLayersEnabled
+          : membership.space.budgetLayersEnabled;
+      const budgetLayers = layersEnabled
         ? buildBudgetLayersFromAmounts(
             [...categoryAmounts, ...collectSavingLayerAmounts(entries)],
             scopedMonthIncome(entries, scope)

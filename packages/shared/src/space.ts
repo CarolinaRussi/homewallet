@@ -3,6 +3,8 @@ import type { MyLimitSettings } from "./limits.js";
 
 export const SPACE_CURRENCIES = ["BRL", "USD", "EUR"] as const;
 export const SPACE_PRIVACY_MODES = ["private", "transparent"] as const;
+/** Default household name — not "{person}'s space". */
+export const DEFAULT_SPACE_NAME = "Casa";
 export const MEMBERSHIP_ROLES = ["owner", "member"] as const;
 export const ENTRY_DATE_MODES = ["month", "day"] as const;
 
@@ -27,6 +29,7 @@ export const inviteSpaceEmailBodySchema = z.object({
 
 export const updateSpaceBodySchema = z
   .object({
+    name: z.string().trim().min(1).max(80).optional(),
     entryDateMode: z.enum(ENTRY_DATE_MODES).optional(),
     privacyMode: z.enum(SPACE_PRIVACY_MODES).optional(),
     spaceLimitEnabled: z.boolean().optional(),

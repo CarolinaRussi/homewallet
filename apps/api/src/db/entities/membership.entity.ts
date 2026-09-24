@@ -51,6 +51,9 @@ export class Membership extends BaseEntity {
   })
   leftoverTargetAmount!: string | null;
 
+  @Column({ name: "budget_layers_enabled", type: "boolean", default: false })
+  budgetLayersEnabled!: boolean;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 

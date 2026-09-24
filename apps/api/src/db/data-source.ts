@@ -38,6 +38,7 @@ import { RecurringRulesUserIndex20260905020000 } from "./migrations/202609050200
 import { UserSessionVersion20260909090000 } from "./migrations/20260909090000-user-session-version.js";
 import { UserEmailVerified20260909091000 } from "./migrations/20260909091000-user-email-verified.js";
 import { SpaceHistoryMoves20260923180000 } from "./migrations/20260923180000-space-history-moves.js";
+import { MembershipBudgetLayers20260924120000 } from "./migrations/20260924120000-membership-budget-layers.js";
 
 export function createDataSource(databaseUrl: string): DataSource {
   return new DataSource({
@@ -85,6 +86,7 @@ export function createDataSource(databaseUrl: string): DataSource {
       UserSessionVersion20260909090000,
       UserEmailVerified20260909091000,
       SpaceHistoryMoves20260923180000,
+      MembershipBudgetLayers20260924120000,
     ],
   });
 }

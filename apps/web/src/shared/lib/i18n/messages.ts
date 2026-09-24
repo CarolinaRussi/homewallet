@@ -33,7 +33,7 @@ export const messages = {
     "auth.forgotPass": "Esqueci a senha",
     "auth.forgotTitle": "Redefinir senha",
     "auth.forgotHint":
-      "Enviamos um link se existir uma conta com senha nesse e-mail.",
+      "Se existir uma conta com senha nesse e-mail, a gente manda um link.",
     "auth.forgotSubmit": "Enviar link",
     "auth.forgotSending": "Enviando…",
     "auth.forgotSent":
@@ -83,41 +83,42 @@ export const messages = {
     "auth.verifyDone":
       "E-mail confirmado. Você já pode usar convites e exportar.",
     "auth.verifyInvalid": "Link de confirmação inválido ou incompleto.",
-    "landing.headline": "Finanças pessoais e do espaço, sem bagunça.",
+    "landing.headline": "Seu mês e o da casa, sem bagunça.",
     "landing.support":
-      "Acompanhe sua sobra, marque o que é compartilhado e veja o espaço junto, sem inventar dívida entre membros.",
+      "Acompanhe a sobra e veja a casa junto. Sem inventar quem deve o quê pra quem.",
     "landing.ctaCreate": "Criar conta",
     "landing.ctaSignIn": "Entrar",
     "landing.featuresTitle": "O que você encontra",
     "landing.featuresIntro":
-      "Beta pública e gratuita pra organizar o mês sozinho ou em espaço.",
-    "landing.feature.space.title": "Espaço solo ou compartilhado",
+      "Beta pública e de graça, pra organizar o mês sozinho ou com quem mora com você.",
+    "landing.feature.space.title": "Uma casa, um livro",
     "landing.feature.space.body":
-      "Use sozinho ou convide quem mora com você. Cada pessoa registra o que pagou; o compartilhado aparece na visão do espaço, sem acerto de contas entre vocês.",
+      "Use sozinho ou chame quem mora com você. O espaço é da casa (Casa, Home ou o nome que vocês quiserem), não de uma pessoa só.",
     "landing.feature.month.title": "Seu mês e a sobra",
     "landing.feature.month.body":
-      "Receitas, despesas e a sobra que carrega pro mês seguinte. Marque o que é pessoal ou compartilhado e, se quiser, acompanhe limites.",
+      "Receitas, despesas e a sobra que passa pro mês seguinte. Limites, se você quiser.",
     "landing.feature.card.title": "Cartão, parcelas e contas fixas",
     "landing.feature.card.body":
-      "Lance a fatura do cartão e detalhe as linhas depois. Parcelas e recorrentes ficam separados, cada um no modelo certo.",
+      "Lance a fatura do cartão e detalhe as linhas quando der. Parcelas e contas fixas ficam cada uma no seu lugar.",
     "landing.feature.reserve.title": "Poupancinha",
     "landing.feature.reserve.body":
       "Guarde parte da sobra em caixinhas com nome. Quando usar, o valor volta pra sobra do mês.",
     "landing.feature.overview.title": "Visão geral",
     "landing.feature.overview.body":
-      "Tendência mês a mês e gastos por categoria. Filtre por você, pelo espaço ou por cada membro no modo transparente.",
-    "landing.feature.privacy.title": "Privacidade no seu ritmo",
+      "Tendência mês a mês e gastos por categoria. Filtre por você, por todos ou por cada membro.",
+    "landing.feature.privacy.title": "Entrar é ver tudo",
     "landing.feature.privacy.body":
-      "Por padrão o pessoal fica privado: o espaço vê o compartilhado e os totais. Se quiserem ver tudo, ativam o modo transparente.",
+      "Quem está no espaço vê todos os lançamentos. Se não quiser isso, sai do espaço.",
     "landing.closingTitle": "Pronto pra organizar o mês?",
     "landing.closingSupport":
       "Crie uma conta grátis e monte seu espaço em poucos minutos.",
     "landing.mockShared": "Mercado do mês",
-    "landing.mockCategory": "Compartilhado · Casa",
+    "landing.mockCategory": "Casa · Mercado",
     "landing.mockPersonal": "Salário",
-    "landing.mockIncomeCat": "Pessoal · Renda",
+    "landing.mockIncomeCat": "Renda",
     "me.title": "Meu mês",
-    "me.noSpace": "Crie ou entre num espaço em Configurações pra começar.",
+    "me.noSpace":
+      "Crie ou entre numa casa pra começar. O convite fica na engrenagem do espaço.",
     "me.activeSpace": "Espaço ativo",
     "me.income": "Receitas",
     "me.expense": "Despesas",
@@ -148,8 +149,8 @@ export const messages = {
     "me.reserveSeeded": "Saldo anterior informado na Poupancinha.",
     "me.reserveWithdrawn": "Valor usado da Poupancinha.",
     "me.reserveDeleted": "Movimento da Poupancinha excluído.",
-    "welcome.firstSpaceTitle": "Seu primeiro espaço foi criado!",
-    "welcome.newSpaceTitle": "Seu espaço foi criado!",
+    "welcome.firstSpaceTitle": "Seu primeiro espaço está pronto",
+    "welcome.newSpaceTitle": "Seu espaço está pronto",
     "welcome.hint":
       "Se quiser, informe a sobra e a Poupancinha que você já tinha pra começar deste mês. Pode pular e fazer isso depois.",
     "welcome.leftoverLabel": "Sobra que já tinha (opcional)",
@@ -177,11 +178,11 @@ export const messages = {
       "Remove os dois lados (quem enviou e quem recebeu).",
     "me.categoryOptional": "Categoria (opcional)",
     "me.savingHint":
-      "Sai da sobra do mês e vai pra uma caixinha. Não é despesa — é dinheiro guardado. Pra usar depois, vá em Poupancinha.",
+      "Sai da sobra do mês e vai pra uma caixinha. Não é despesa, é dinheiro guardado. Pra usar depois, abra a Poupancinha.",
     "me.kindRecurring": "Recorrente",
     "me.kindInstallment": "Parcelado",
     "me.installmentAmountHint":
-      "Valor de cada parcela (ex.: 12× de R$379 → 379). Se o boleto já começou, em “Começar na parcela nº” coloque a atual (ex.: 12 de 18) e em “Mês desta parcela” o mês de agora — assim não cria as que você já pagou. Ainda pode voltar e lançar meses antigos se quiser.",
+      "Valor de cada parcela (ex.: 12× de R$379 → 379). Se o boleto já começou, em “Começar na parcela nº” coloque a atual (ex.: 12 de 18) e em “Mês desta parcela” o mês de agora. Assim não cria as que você já pagou. Ainda pode voltar e lançar meses antigos se quiser.",
     "me.installmentAmountLabel": "Valor da parcela",
     "me.installmentStartMonth": "Mês desta parcela",
     "me.firstInstallmentNumber": "Começar na parcela nº",
@@ -287,9 +288,19 @@ export const messages = {
     "me.newCategory": "Nova categoria",
     "me.addCategory": "Criar categoria",
     "space.title": "Espaço",
-    "space.panelHint": "Quanto gastamos e em quê — o mês da casa.",
+    "space.settings": "Configurações do espaço",
+    "space.settingsBack": "Voltar",
+    "space.panelHint":
+      "Quanto vocês gastaram neste mês, e pra onde foi o dinheiro.",
     "space.monthSpend": "Gastos do mês",
     "space.categoriesTitle": "Em quê gastamos",
+    "space.matrixTitle": "Por pessoa",
+    "space.matrixHint": "Cada célula soma o mês. Toque pra ver os lançamentos.",
+    "space.matrixTotal": "Total",
+    "space.matrixEmpty": "Nenhum gasto neste mês.",
+    "space.matrixUncategorized": "Sem categoria",
+    "space.matrixEveryone": "Todos",
+    "space.matrixAllCategories": "Todas as categorias",
     "space.entriesTitle": "Lançamentos",
     "space.colDate": "Data",
     "space.colCategory": "Categoria",
@@ -310,12 +321,12 @@ export const messages = {
     "space.transparentHint":
       "Modo transparente: todos veem lançamentos pessoais e compartilhados.",
     "space.transparentBanner":
-      "Este espaço está em modo transparente — lançamentos pessoais de todos aparecem aqui.",
+      "Todo mundo neste espaço vê os lançamentos uns dos outros.",
     "space.emptyShared": "Nada compartilhado neste mês.",
     "space.emptyVisible": "Nenhum lançamento neste mês.",
     "overview.title": "Visão geral",
     "overview.hint":
-      "Tendência por período e gastos por categoria. Use os filtros acima para período e escopo.",
+      "Renda e gastos ao longo do tempo, e em quê o dinheiro foi. Os filtros de cima escolhem o período e de quem.",
     "overview.space": "Espaço",
     "overview.range": "Período",
     "overview.range.3": "Últimos 3 meses",
@@ -324,7 +335,7 @@ export const messages = {
     "overview.range.ytd": "Este ano",
     "overview.scope": "Quem",
     "overview.scopeLabel": "Mostrando dados de",
-    "overview.scopeHint.me": "Seus lançamentos — renda e gastos pessoais.",
+    "overview.scopeHint.me": "Sua renda e seus gastos.",
     "overview.scopeHint.shared":
       "Só gastos marcados como compartilhado (casa).",
     "overview.scopeHint.everyone":
@@ -352,11 +363,10 @@ export const messages = {
     "overview.compositionEmpty": "Sem gastos neste mês para o filtro atual.",
     "overview.layersTitle": "50 / 40 / 10",
     "settings.title": "Configurações",
-    "settings.tabSpaces": "Espaços",
+    "settings.tabMe": "Meu mês",
     "settings.tabAccount": "Conta",
     "account.title": "Conta",
-    "account.hint":
-      "Exporte seus lançamentos ou apague a conta de forma permanente.",
+    "account.hint": "Exporte seus lançamentos ou apague a conta de vez.",
     "account.verifyTitle": "Confirme seu e-mail",
     "account.verifyHint":
       "Convites por e-mail e exportação CSV pedem e-mail confirmado.",
@@ -379,9 +389,9 @@ export const messages = {
     "account.deleteSubmit": "Apagar conta definitivamente",
     "spaces.title": "Espaço",
     "spaces.hint":
-      "Convide pessoas, ajuste privacidade e limites do espaço em que você está.",
+      "Dê um nome à casa, chame quem mora com você e ajuste os limites.",
     "spaces.switchHint":
-      "O Me, a reserva e a visão geral usam o espaço ativo. Troque só aqui.",
+      "Meu mês, Poupancinha e Visão geral usam a casa ativa. Pra trocar, é só aqui.",
     "spaces.historySoloLabel": "histórico pessoal",
     "spaces.historySoloHint":
       "Este espaço é só seu. O dia a dia fica na casa compartilhada. Dá para trazer este histórico para lá.",
@@ -409,15 +419,15 @@ export const messages = {
     "spaces.historyImport.success":
       "Histórico trazido. Os totais podem atualizar em alguns segundos.",
     "spaces.configureSpace": "Espaço ativo",
-    "spaces.addSpace": "Criar ou entrar noutro espaço",
+    "spaces.addSpace": "Criar ou entrar em outro espaço",
     "spaces.empty":
-      "Ainda não fazes parte de nenhum espaço. Cria um ou entra com um código.",
+      "Você ainda não está em nenhum espaço. Crie um ou entre com um código.",
     "spaces.sectionPeople": "Pessoas",
     "spaces.sectionPeopleHint":
       "Quem está no espaço e como convidar alguém novo.",
     "spaces.sectionRules": "Regras do espaço",
     "spaces.sectionRulesHint":
-      "Só donos alteram estas opções. Valem para todo o espaço.",
+      "Só quem é dono muda isso. Vale pra todo mundo da casa.",
     "spaces.sectionCategories": "Detalhe por categoria",
     "spaces.sectionCategoriesMore": "mostrar",
     "spaces.categoriesEmpty": "Nenhuma categoria neste espaço.",
@@ -434,9 +444,12 @@ export const messages = {
     "spaces.inviteSubmit": "Enviar convite",
     "spaces.inviteSending": "Enviando…",
     "spaces.inviteSent":
-      "Convite enviado. A pessoa ainda precisa entrar com o código — o e-mail sozinho não adiciona.",
+      "Convite enviado. A pessoa ainda precisa entrar com o código. O e-mail sozinho não coloca ninguém no espaço.",
     "spaces.create": "Criar espaço",
-    "spaces.createName": "Nome do espaço",
+    "spaces.createName": "Casa",
+    "spaces.rename": "Nome do espaço",
+    "spaces.renameSubmit": "Salvar nome",
+    "spaces.renameSaving": "Salvando…",
     "spaces.createSubmit": "Criar",
     "spaces.join": "Entrar com código",
     "spaces.joinPlaceholder": "Código de convite",
@@ -469,7 +482,7 @@ export const messages = {
     "spaces.leaveTake.moveEntries": "{n} lançamentos pessoais vêm com você",
     "spaces.leaveTake.stayEntries": "{n} ficam na casa",
     "spaces.leaveTake.orphan":
-      "Tem transferência com alguém que já saiu — essa parte vai com você.",
+      "Tem transferência com alguém que já saiu. Essa parte vai com você.",
     "spaces.leaveTake.confirmTake": "Sair e levar",
     "spaces.leaveTake.taking": "Saindo…",
     "spaces.leaveTake.previewFailed": "Não deu para montar o resumo.",
@@ -483,11 +496,11 @@ export const messages = {
     "spaces.updating": "Atualizando…",
     "limits.personal": "Limite pessoal de despesas",
     "limits.leftoverTarget": "Meta de sobra",
-    "limits.space": "Limite de despesas compartilhadas",
+    "limits.space": "Limite de gastos da casa",
     "limits.spaceHint":
-      "Teto mensal pra o que o espaço marca como compartilhado (moradia, mercado da casa, etc.). Não inclui gastos só seus. Só avisa na tela — não bloqueia lançamento.",
+      "Teto mensal do que a casa gastou (aluguel, mercado, etc.). Só aparece um aviso. Não trava lançamento.",
     "limits.myLimits": "Meus limites (opcional)",
-    "limits.myLimitsHint": "Aviso suave na tela — não bloqueia lançamentos.",
+    "limits.myLimitsHint": "Só aparece um aviso na tela. Não trava lançamento.",
     "limits.enable": "Ativar",
     "limits.amount": "Valor",
     "limits.save": "Salvar limites",
@@ -497,10 +510,12 @@ export const messages = {
     "limits.toTarget": "Falta pra meta",
     "limits.targetMet": "Acima da meta",
     "limits.layersTitle": "50 / 40 / 10",
-    "limits.layersHint": "Alvos sobre a renda deste mês",
+    "limits.layersHint": "Metas em cima da renda deste mês",
     "limits.layersToggle": "Usar camadas 50/40/10",
-    "limits.layersExplain":
-      "Regra clássica: ~50% da renda em essencial (moradia, comida), ~40% em pessoal (lazer, assinaturas) e ~10% em futuro (poupança/investimentos). Você mapeia cada categoria numa camada; no Eu aparece o quanto gastou vs esses alvos. Opcional e só informativo.",
+    "limits.layersExplainMe":
+      "No seu mês: uns 50% essencial, 40% pessoal e 10% futuro. As categorias são da casa, então o mapa vale pra todo mundo.",
+    "limits.layersExplainSpace":
+      "Se vocês quiserem, a casa também usa 50/40/10 nos totais do espaço. Mesmas categorias, outra lente.",
     "limits.layersMapHint":
       "Escolha a camada de cada categoria. Categorias sem camada não entram nas barras.",
     "limits.layerEssential": "Essencial (50%)",
@@ -510,7 +525,7 @@ export const messages = {
     "limits.unmapped": "Despesas sem camada",
     "reserve.title": "Poupancinha",
     "reserve.hint":
-      "Caixinhas do dinheiro guardado. Guardar faz no Eu (novo lançamento); usar e saldo de abertura ficam aqui.",
+      "As caixinhas do que você guardou. Guardar é no Meu mês. Usar e o saldo que já tinha ficam aqui.",
     "reserve.total": "Total guardado",
     "reserve.saveViaEntry":
       "Pra guardar da sobra do mês, use Novo lançamento em",
@@ -559,7 +574,7 @@ export const messages = {
     "auth.forgotPass": "Forgot passcode",
     "auth.forgotTitle": "Reset passcode",
     "auth.forgotHint":
-      "We'll send a link if an account with a passcode exists for that email.",
+      "If there's an account with a passcode on that email, we send a link.",
     "auth.forgotSubmit": "Send link",
     "auth.forgotSending": "Sending…",
     "auth.forgotSent":
@@ -606,41 +621,42 @@ export const messages = {
     "auth.verifyConfirming": "Confirming…",
     "auth.verifyDone": "Email confirmed. You can use invites and export.",
     "auth.verifyInvalid": "Invalid or incomplete verify link.",
-    "landing.headline": "Personal and shared money, without the mess.",
+    "landing.headline": "Your month and the household’s, without the mess.",
     "landing.support":
-      "Track leftover, mark what's shared, and see the space together, without inventing who owes whom.",
+      "Track leftover and see the home together. No inventing who owes whom.",
     "landing.ctaCreate": "Create account",
     "landing.ctaSignIn": "Sign in",
     "landing.featuresTitle": "What's inside",
     "landing.featuresIntro":
-      "A free public beta for your month, solo or shared.",
-    "landing.feature.space.title": "Solo or shared space",
+      "A free public beta to organize the month alone or with the people you live with.",
+    "landing.feature.space.title": "One household, one book",
     "landing.feature.space.body":
-      "Use it alone or invite housemates. Each person logs what they paid; shared items show in the space view, with no settlement between you.",
+      "Use it alone or invite housemates. The space belongs to the home (Casa, Home, or whatever you name it), not to one person.",
     "landing.feature.month.title": "Your month and leftover",
     "landing.feature.month.body":
-      "Income, expenses, and leftover that carries into next month. Mark entries as personal or shared, and optionally track limits.",
+      "Income, expenses, and leftover that carries into next month. Limits, if you want them.",
     "landing.feature.card.title": "Cards, installments, and bills",
     "landing.feature.card.body":
-      "Log the credit-card statement total, then break down lines later. Installments and recurring bills stay as separate models.",
+      "Log the card statement, then break down the lines when you can. Installments and recurring bills each stay in their own place.",
     "landing.feature.reserve.title": "Reserve",
     "landing.feature.reserve.body":
       "Move leftover into named pots. When you withdraw, it returns to this month’s leftover.",
     "landing.feature.overview.title": "Overview",
     "landing.feature.overview.body":
-      "Month-to-month trends and spending by category. Filter by you, the space, or each member in transparent mode.",
-    "landing.feature.privacy.title": "Privacy at your pace",
+      "Month-to-month trends and spending by category. Filter by you, everyone, or each member.",
+    "landing.feature.privacy.title": "Joining means seeing everything",
     "landing.feature.privacy.body":
-      "Personal stays private by default: the space sees shared entries and totals. Turn on transparent mode if you want everything visible.",
+      "Anyone in the space sees every entry. Leave the space if you don’t want that.",
     "landing.closingTitle": "Ready to organize the month?",
     "landing.closingSupport":
       "Create a free account and set up your space in a few minutes.",
     "landing.mockShared": "Monthly groceries",
-    "landing.mockCategory": "Shared · Home",
+    "landing.mockCategory": "Home · Groceries",
     "landing.mockPersonal": "Salary",
-    "landing.mockIncomeCat": "Personal · Income",
+    "landing.mockIncomeCat": "Income",
     "me.title": "My month",
-    "me.noSpace": "Create or join a space in Settings to get started.",
+    "me.noSpace":
+      "Create or join a household to get started. The invite lives in the space gear.",
     "me.activeSpace": "Active space",
     "me.income": "Income",
     "me.expense": "Expenses",
@@ -671,8 +687,8 @@ export const messages = {
     "me.reserveSeeded": "Opening reserve balance recorded.",
     "me.reserveWithdrawn": "Used from reserve.",
     "me.reserveDeleted": "Reserve movement deleted.",
-    "welcome.firstSpaceTitle": "Your first space is ready!",
-    "welcome.newSpaceTitle": "Your space is ready!",
+    "welcome.firstSpaceTitle": "Your first space is ready",
+    "welcome.newSpaceTitle": "Your space is ready",
     "welcome.hint":
       "Optionally add leftover and reserve you already had to start this month. You can skip and do it later.",
     "welcome.leftoverLabel": "Opening leftover (optional)",
@@ -699,11 +715,11 @@ export const messages = {
     "me.transferDeleteHint": "Removes both sides (sender and receiver).",
     "me.categoryOptional": "Category (optional)",
     "me.savingHint":
-      "Leaves this month’s leftover and goes into a pot. Not an expense — saved money. To use it later, open Reserve.",
+      "Leaves this month’s leftover and goes into a pot. Not an expense, just money you set aside. To use it later, open Reserve.",
     "me.kindRecurring": "Recurring",
     "me.kindInstallment": "Installments",
     "me.installmentAmountHint":
-      "Amount per installment (e.g. 12× of 379 → 379). If the plan already started, set “Start at installment #” to the current one (e.g. 12 of 18) and “This installment’s month” to now — past paid ones won’t be created. You can still backfill older months later if you want.",
+      "Amount per installment (e.g. 12× of 379 → 379). If the plan already started, set “Start at installment #” to the current one (e.g. 12 of 18) and “This installment’s month” to now. That way the ones you already paid are not created. You can still backfill older months later if you want.",
     "me.installmentAmountLabel": "Installment amount",
     "me.installmentStartMonth": "This installment’s month",
     "me.firstInstallmentNumber": "Start at installment #",
@@ -809,9 +825,19 @@ export const messages = {
     "me.newCategory": "New category",
     "me.addCategory": "Add category",
     "space.title": "Space",
-    "space.panelHint": "How much we spent and on what — the household month.",
+    "space.settings": "Space settings",
+    "space.settingsBack": "Back",
+    "space.panelHint": "What you spent this month, and where the money went.",
     "space.monthSpend": "Monthly spending",
     "space.categoriesTitle": "Where it went",
+    "space.matrixTitle": "By person",
+    "space.matrixHint":
+      "Each cell is the month total. Tap to see what is in it.",
+    "space.matrixTotal": "Total",
+    "space.matrixEmpty": "No spending this month.",
+    "space.matrixUncategorized": "Uncategorized",
+    "space.matrixEveryone": "Everyone",
+    "space.matrixAllCategories": "All categories",
     "space.entriesTitle": "Entries",
     "space.colDate": "Date",
     "space.colCategory": "Category",
@@ -831,12 +857,12 @@ export const messages = {
     "space.transparentHint":
       "Transparent mode: everyone sees personal and shared entries.",
     "space.transparentBanner":
-      "This space is transparent — everyone’s personal entries show here.",
+      "Everyone in this space can see each other’s entries.",
     "space.emptyShared": "Nothing shared this month.",
     "space.emptyVisible": "No entries this month.",
     "overview.title": "Overview",
     "overview.hint":
-      "Trend by period and spending by category. Use the filters above for range and scope.",
+      "Income and spending over time, and where the money went. The filters above pick the range and whose numbers you see.",
     "overview.space": "Space",
     "overview.range": "Range",
     "overview.range.3": "Last 3 months",
@@ -845,7 +871,7 @@ export const messages = {
     "overview.range.ytd": "This year",
     "overview.scope": "Who",
     "overview.scopeLabel": "Showing data for",
-    "overview.scopeHint.me": "Your entries — personal income and spending.",
+    "overview.scopeHint.me": "Your income and spending.",
     "overview.scopeHint.shared": "Shared-marked spending only (household).",
     "overview.scopeHint.everyone":
       "Everyone’s spending in the space, excluding transfers between you.",
@@ -873,10 +899,10 @@ export const messages = {
       "No spending this month for the current filter.",
     "overview.layersTitle": "50 / 40 / 10",
     "settings.title": "Settings",
-    "settings.tabSpaces": "Spaces",
+    "settings.tabMe": "My month",
     "settings.tabAccount": "Account",
     "account.title": "Account",
-    "account.hint": "Export your entries or permanently delete your account.",
+    "account.hint": "Export your entries or delete the account for good.",
     "account.verifyTitle": "Confirm your email",
     "account.verifyHint":
       "Email invites and CSV export need a confirmed email.",
@@ -900,9 +926,9 @@ export const messages = {
     "account.deleteSubmit": "Delete account permanently",
     "spaces.title": "Space",
     "spaces.hint":
-      "Invite people, set privacy, and tune limits for the space you’re in.",
+      "Name the household, invite housemates, and tune limits for the space you’re in.",
     "spaces.switchHint":
-      "Me, Reserve, and Overview use the active space. Switch only here.",
+      "My month, Reserve, and Overview use the active household. Switch only here.",
     "spaces.historySoloLabel": "personal history",
     "spaces.historySoloHint":
       "This space is only yours. Daily life lives in the household space. You can bring this history there.",
@@ -955,9 +981,12 @@ export const messages = {
     "spaces.inviteSubmit": "Send invite",
     "spaces.inviteSending": "Sending…",
     "spaces.inviteSent":
-      "Invite sent. They still need to join with the code — the email alone does not add them.",
+      "Invite sent. They still need to join with the code. The email alone does not add them.",
     "spaces.create": "Create space",
-    "spaces.createName": "Space name",
+    "spaces.createName": "Home",
+    "spaces.rename": "Space name",
+    "spaces.renameSubmit": "Save name",
+    "spaces.renameSaving": "Saving…",
     "spaces.createSubmit": "Create",
     "spaces.join": "Join with code",
     "spaces.joinPlaceholder": "Join code",
@@ -990,7 +1019,7 @@ export const messages = {
     "spaces.leaveTake.moveEntries": "{n} personal entries come with you",
     "spaces.leaveTake.stayEntries": "{n} stay in the household",
     "spaces.leaveTake.orphan":
-      "There is a transfer with someone who already left — that part comes with you.",
+      "There is a transfer with someone who already left. That part comes with you.",
     "spaces.leaveTake.confirmTake": "Leave and take",
     "spaces.leaveTake.taking": "Leaving…",
     "spaces.leaveTake.previewFailed": "Could not build the summary.",
@@ -1004,11 +1033,12 @@ export const messages = {
     "spaces.updating": "Updating…",
     "limits.personal": "Personal expense limit",
     "limits.leftoverTarget": "Leftover target",
-    "limits.space": "Shared expense limit",
+    "limits.space": "Household spending limit",
     "limits.spaceHint":
-      "Monthly cap for entries marked shared in this space (rent, household groceries, etc.). Does not include personal-only spend. Soft warning only — never blocks entries.",
+      "A monthly cap on what the household spent (rent, groceries, and so on). It only shows a warning. It never blocks an entry.",
     "limits.myLimits": "My limits (optional)",
-    "limits.myLimitsHint": "Soft progress on screen — does not block entries.",
+    "limits.myLimitsHint":
+      "A quiet warning on screen. It never blocks an entry.",
     "limits.enable": "Enable",
     "limits.amount": "Amount",
     "limits.save": "Save limits",
@@ -1020,8 +1050,10 @@ export const messages = {
     "limits.layersTitle": "50 / 40 / 10",
     "limits.layersHint": "Targets against this month’s income",
     "limits.layersToggle": "Use 50/40/10 layers",
-    "limits.layersExplain":
-      "Classic rule of thumb: ~50% of income on essentials (housing, food), ~40% on personal wants (leisure, subscriptions), ~10% on future (saving/investing). Map each category to a layer; Me shows spend vs those targets. Optional and informational only.",
+    "limits.layersExplainMe":
+      "On your month: about 50% essential, 40% personal, and 10% future. Categories belong to the household, so the map is shared.",
+    "limits.layersExplainSpace":
+      "If you both want, the space also uses 50/40/10 on household totals. Same categories, another lens.",
     "limits.layersMapHint":
       "Pick a layer per category. Unmapped categories stay out of the bars.",
     "limits.layerEssential": "Essential (50%)",
@@ -1031,7 +1063,7 @@ export const messages = {
     "limits.unmapped": "Unmapped expenses",
     "reserve.title": "Reserve",
     "reserve.hint":
-      "Pots for saved money. Contribute from Me (new entry); withdraw and opening balance live here.",
+      "Pots for money you already set aside. Saving happens on My month. Withdrawals and opening balances live here.",
     "reserve.total": "Total saved",
     "reserve.saveViaEntry":
       "To save from this month’s leftover, use New entry on",

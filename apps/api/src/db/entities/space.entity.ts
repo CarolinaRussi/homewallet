@@ -22,7 +22,7 @@ export class Space extends BaseEntity {
   @Column({ type: "text" })
   currency!: SpaceCurrency;
 
-  @Column({ name: "privacy_mode", type: "text", default: "private" })
+  @Column({ name: "privacy_mode", type: "text", default: "transparent" })
   privacyMode!: SpacePrivacyMode;
 
   @Column({ name: "entry_date_mode", type: "text", default: "month" })

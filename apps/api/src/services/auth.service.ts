@@ -1,7 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes } from "node:crypto";
 import type { DataSource } from "typeorm";
-import { APP_NAME } from "@homewallet/shared";
+import { APP_NAME, DEFAULT_SPACE_NAME } from "@homewallet/shared";
 import type {
   ForgotPasswordBody,
   GoogleBody,
@@ -136,7 +136,7 @@ export function createAuthService(
 
           const space = await spaceService.createForOwner(
             user.id,
-            { name: `${input.name}'s space`, currency: "BRL" },
+            { name: DEFAULT_SPACE_NAME, currency: "BRL" },
             manager
           );
 
@@ -204,7 +204,7 @@ export function createAuthService(
 
         const space = await spaceService.createForOwner(
           user.id,
-          { name: `${name}'s space`, currency: "BRL" },
+          { name: DEFAULT_SPACE_NAME, currency: "BRL" },
           manager
         );
 

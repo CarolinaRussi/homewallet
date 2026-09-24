@@ -193,6 +193,7 @@ export function computeMonthSummary(
       personalLimitAmount: null,
       leftoverTargetEnabled: false,
       leftoverTargetAmount: null,
+      budgetLayersEnabled: false,
     },
     personalLimit: null,
     leftoverTarget: null,

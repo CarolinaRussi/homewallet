@@ -3,7 +3,6 @@ import type { OverviewScope, SpaceMemberSummary } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 
 type OverviewScopeFilterProps = {
-  transparent: boolean;
   scope: OverviewScope;
   memberUserId: string | undefined;
   peers: SpaceMemberSummary[];
@@ -37,7 +36,6 @@ function ScopePill({
 }
 
 export function OverviewScopeFilter({
-  transparent,
   scope,
   memberUserId,
   peers,
@@ -47,13 +45,10 @@ export function OverviewScopeFilter({
 
   let hintKey:
     | "overview.scopeHint.me"
-    | "overview.scopeHint.shared"
     | "overview.scopeHint.everyone"
     | "overview.scopeHint.member" = "overview.scopeHint.me";
 
-  if (scope === "shared") {
-    hintKey = "overview.scopeHint.shared";
-  } else if (scope === "everyone") {
+  if (scope === "everyone") {
     hintKey = "overview.scopeHint.everyone";
   } else if (scope === "member") {
     hintKey = "overview.scopeHint.member";
@@ -73,32 +68,21 @@ export function OverviewScopeFilter({
         <ScopePill active={scope === "me"} onClick={() => onScopeChange("me")}>
           {t("overview.scope.me")}
         </ScopePill>
-        {transparent ? (
-          <>
-            <ScopePill
-              active={scope === "everyone"}
-              onClick={() => onScopeChange("everyone")}
-            >
-              {t("overview.scope.everyone")}
-            </ScopePill>
-            {peers.map((peer) => (
-              <ScopePill
-                key={peer.userId}
-                active={scope === "member" && memberUserId === peer.userId}
-                onClick={() => onScopeChange("member", peer.userId)}
-              >
-                {peer.name}
-              </ScopePill>
-            ))}
-          </>
-        ) : (
+        <ScopePill
+          active={scope === "everyone"}
+          onClick={() => onScopeChange("everyone")}
+        >
+          {t("overview.scope.everyone")}
+        </ScopePill>
+        {peers.map((peer) => (
           <ScopePill
-            active={scope === "shared"}
-            onClick={() => onScopeChange("shared")}
+            key={peer.userId}
+            active={scope === "member" && memberUserId === peer.userId}
+            onClick={() => onScopeChange("member", peer.userId)}
           >
-            {t("overview.scope.shared")}
+            {peer.name}
           </ScopePill>
-        )}
+        ))}
       </div>
       <p className="text-xs text-muted">
         {scope === "member" && memberName

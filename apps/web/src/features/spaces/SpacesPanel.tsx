@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { DEFAULT_SPACE_NAME } from "@homewallet/shared";
 import type { SpaceSummary } from "@homewallet/shared";
 import { useLocale } from "../../shared/lib/i18n/locale-context";
 import { FeedbackBanner } from "../../shared/ui/FeedbackBanner";
@@ -127,7 +128,7 @@ export function SpacesPanel() {
                 {spaces.map((space) => (
                   <option key={space.id} value={space.id}>
                     {isHistorySoloSpace(space, spaces)
-                      ? `${space.name} — ${t("spaces.historySoloLabel")}`
+                      ? `${space.name} (${t("spaces.historySoloLabel")})`
                       : space.name}
                   </option>
                 ))}
@@ -162,6 +163,7 @@ export function SpacesPanel() {
                 <input
                   name="name"
                   required
+                  defaultValue={DEFAULT_SPACE_NAME}
                   placeholder={t("spaces.createName")}
                   className="rounded-md border border-border bg-bg px-3 py-2 text-fg"
                 />
