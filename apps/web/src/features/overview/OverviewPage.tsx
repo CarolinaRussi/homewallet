@@ -140,7 +140,6 @@ export function OverviewPage() {
         <h1 className="text-3xl font-semibold text-fg">
           {t("overview.title")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{activeSpace.name}</p>
         <p className="mt-1 text-sm text-muted">{t("overview.hint")}</p>
       </header>
 

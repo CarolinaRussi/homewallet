@@ -47,7 +47,8 @@ export function resolveThroughMonth(
     (latest, bucket) => (bucket.month > latest ? bucket.month : latest),
     fromMonth
   );
-  return earliestMonth(fromMonth, latestData, currentMonthKey());
+  const currentMonth = currentMonthKey();
+  return latestData > currentMonth ? latestData : currentMonth;
 }
 
 export function buildFlowBuckets(

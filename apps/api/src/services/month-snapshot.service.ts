@@ -1,5 +1,4 @@
 import type { DataSource, EntityManager } from "typeorm";
-import { monthBounds } from "../lib/entry-mappers.js";
 import { entryRepository } from "../repositories/entry.repository.js";
 import { leftoverSeedRepository } from "../repositories/leftover-seed.repository.js";
 import { memberMonthSnapshotRepository } from "../repositories/member-month-snapshot.repository.js";
@@ -8,7 +7,6 @@ import { reservePotRepository } from "../repositories/reserve-pot.repository.js"
 import {
   buildFlowBuckets,
   computeSnapshotsThrough,
-  currentMonthKey,
   earliestMonth,
   resolveThroughMonth,
   toSeedSummary,
@@ -58,27 +56,12 @@ export function createMonthSnapshotService(
     fromMonth: string,
     manager: EntityManager = dataSource.manager
   ): Promise<SnapshotCore[]> {
-    let throughDate = monthBounds(currentMonthKey()).end;
-    let flow = await loadFlowThrough(spaceId, userId, throughDate, manager);
-    let buckets = buildFlowBuckets(flow.entries, flow.movements, flow.seeds);
-    const latestDataMonth = buckets.reduce(
-      (latest, bucket) => (bucket.month > latest ? bucket.month : latest),
-      fromMonth
-    );
-    const throughMonth = resolveThroughMonth(fromMonth, buckets);
-    const neededEnd = monthBounds(
-      latestDataMonth > throughMonth ? latestDataMonth : throughMonth
-    ).end;
-    if (neededEnd > throughDate) {
-      throughDate = neededEnd;
-      flow = await loadFlowThrough(spaceId, userId, throughDate, manager);
-      buckets = buildFlowBuckets(flow.entries, flow.movements, flow.seeds);
-    }
+    const flow = await loadFlowThrough(spaceId, userId, "9999-12-31", manager);
+    const buckets = buildFlowBuckets(flow.entries, flow.movements, flow.seeds);
     const seedSummaries = flow.seeds.map(toSeedSummary);
-    const finalThroughMonth = resolveThroughMonth(fromMonth, buckets);
     return computeSnapshotsThrough(
       fromMonth,
-      finalThroughMonth,
+      resolveThroughMonth(fromMonth, buckets),
       buckets,
       flow.movements,
       seedSummaries,

@@ -4,6 +4,8 @@ import {
   buildFlowBuckets,
   computeSnapshotCore,
   computeSnapshotsThrough,
+  currentMonthKey,
+  resolveThroughMonth,
 } from "../services/month-snapshot.build.js";
 
 function assertEqual(actual: number, expected: number, label: string) {
@@ -127,5 +129,13 @@ assertEqual(rows.length, 2, "snapshot row count");
 assertEqual(rows[1]!.carriedIn, 800, "feb carriedIn from chain");
 assertEqual(rows[1]!.leftover, 1150, "feb leftover from chain");
 assertEqual(rows[1]!.reserveBalance, 50, "feb reserve after withdraw");
+
+if (resolveThroughMonth("2026-01", buckets) !== currentMonthKey()) {
+  throw new Error("rebuild from a past month must reach the current month");
+}
+const futureBuckets = [...buckets, { ...buckets[0]!, month: "2999-01" }];
+if (resolveThroughMonth("2026-01", futureBuckets) !== "2999-01") {
+  throw new Error("rebuild must reach the latest future month with data");
+}
 
 console.log("month-snapshot check ok");
